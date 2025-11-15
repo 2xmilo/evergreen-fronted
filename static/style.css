@@ -761,3 +761,89 @@ input::placeholder {
     text-decoration: underline;
     color: var(--ever-deep);
 }
+
+/* =========================================== */
+/* --- 5. DISEÑO RESPONSIVO (MÓVIL) --- */
+/* =========================================== */
+
+/* Se aplica a pantallas más pequeñas que 1024px (tablets) */
+@media (max-width: 1024px) {
+
+    /* --- Servicios (Pasa de 4 a 2 columnas) --- */
+    .service-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columnas */
+    }
+
+    /* --- Proyectos (Se apila 1 sobre 1) --- */
+    .projects-content-grid {
+        flex-direction: column; /* Apila el panel de info y el slider */
+    }
+
+    .projects-info-panel {
+        align-items: center; 
+        text-align: center;
+    }
+
+    .projects-info-panel h3, .experience-list {
+        text-align: left; 
+    }
+}
+
+
+/* Se aplica a pantallas más pequeñas que 768px (celulares) */
+@media (max-width: 768px) {
+
+    /* --- Header (Ajusta el padding) --- */
+    .main-header {
+        padding: 0.5rem 1rem;
+        flex-direction: column; /* Apila el logo, título y nav */
+        height: auto;
+    }
+
+    .header-center-text {
+        padding: 5px 0;
+    }
+
+    nav a {
+        margin-left: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    /* --- Hero (Texto más pequeño) --- */
+    .hero-content h1 {
+        font-size: 2.5rem; /* Achica el título principal */
+    }
+    .hero-content p {
+        font-size: 1.5rem; /* Achica el subtítulo */
+    }
+
+    /* --- Servicios (Pasa de 2 a 1 columna) --- */
+    .service-grid {
+        grid-template-columns: 1fr; /* 1 columna */
+    }
+    
+    .service-card {
+        padding: 2rem 1.5rem;
+    }
+
+    /* --- Proyectos (Ajusta la altura del slider) --- */
+    .project-slide-card {
+        height: auto; 
+        min-height: 400px;
+    }
+    .swiper-container.mySwiper {
+        height: auto; 
+        min-height: 450px;
+    }
+
+    /* --- Equipo (Pasa a 1 columna) --- */
+    .team-members {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .member-card {
+        width: 100%;
+        max-width: 300px;
+    }
+}
