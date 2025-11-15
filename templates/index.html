@@ -2,11 +2,239 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Evergreen - Consultoría Ambiental</title>
+    <title>Evergreen | Consultoría Ambiental</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
+    
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
 </head>
+
 <body>
-    <h1>¡Bienvenidos a Evergreen!</h1>
-    <p>Servicios de consultoría ambiental.</p>
-    <a href="{{ url_for('login') }}">Iniciar Sesión</a>
+    <header class="main-header">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo de Evergreen" class="logo">
+        </div>
+        <div class="header-center-text">
+            <h1>EVERGREEN</h1>
+            <span>Servicios Ambientales</span>
+        </div>
+        <nav>
+            <a href="#services">Servicios</a>
+            <a href="#projects">Proyectos</a>
+            <a href="#team">Equipo</a>
+            <a href="#contact">Contacto</a>
+            <a href="{{ url_for('login') }}" class="login-button">Iniciar Sesión</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero-section">
+            <video autoplay loop muted playsinline class="hero-video">
+                <source src="{{ url_for('static', filename='img/riofoco.mp4') }}" type="video/mp4">
+                Tu navegador no soporta video HTML5.
+            </video>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h1>Bienvenido a Evergreen Consulting</h1>
+                <p>Ciencia y naturaleza, un mismo horizonte.</p>
+                <a href="#services" class="hero-btn">Ver servicios</a>
+            </div>
+        </section>
+        
+        <section id="services" class="services-section">
+            <h2 class="section-title">Servicios</h2>
+            <p class="section-subtitle">
+                Servicios con enfoque ambiental, basado en estándares de investigación científica.
+            </p>
+            
+            <div class="service-grid">
+                
+                <div class="service-card reveal">
+                    <div class="service-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>Análisis de datos</h3>
+                    <p>Decisiones basadas en datos, analizamos información satelital y entregamos informes técnicos listos para acción.</p>
+                    <a href="#" class="service-button">Ver más</a>
+                </div>
+                
+                <div class="service-card reveal">
+                    <div class="service-icon">
+                        <i class="fas fa-file-contract"></i>
+                    </div>
+                    <h3>Soporte en Evaluación de Impacto Ambiental</h3>
+                    <p>Análisis de Declaraciones de Impacto Ambiental (DIA) y/o Estudios de Impacto Ambiental (EIA).</p>
+                    <a href="#" class="service-button">Ver más</a>
+                </div>
+                
+                <div class="service-card reveal">
+                    <div class="service-icon">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <h3>Cumplimiento en Biodiversidad</h3>
+                    <p>Servicio de cumplimiento ambiental aplicado en biodiversidad: verficamos compromisos post-RCA, monitoreo de flora y fauna y reportes conforme a SMA.</p>
+                    <a href="#" class="service-button">Ver más</a>
+                </div>
+                
+                <div class="service-card reveal">
+                    <div class="service-icon">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <h3>Productividad Hídrica</h3>
+                    <p>Evaluación técnica y precisa del volumen de agua disponible mediante medición de aforo y estimación de caudales con enfoque comunitario</p>
+                    <a href="#" class="service-button">Ver más</a>
+                </div>
+                
+            </div>
+        </section>
+
+        
+<section id="projects" class="projects-section">
+            <div class="projects-content-grid">
+                
+                <div class="projects-info-panel">
+                    <div class="satellite-image-container">
+                        <img src="{{ url_for('static', filename='img/Landsat8.png') }}" alt="Satélite Landsat 8" class="animated-satellite">
+                    </div>
+                    
+                    <h3>Nuestra experiencia</h3>
+                    <ul class="experience-list">
+                        <li><i class="fas fa-chart-bar"></i> Análisis avanzado de datos</li>
+                        <li><i class="fas fa-seedling"></i> Soluciones estratégicas en contexto de cambio climático</li>
+                        <li><i class="fas fa-cloud-sun-rain"></i> Planes de manejo forestal</li>
+                        <li><i class="fa-solid fa-solar-panel"></i> Levantamiento de información base con enfoque integral</li>
+                    </ul>
+                </div>
+
+                
+<div class="projects-slider-container">
+                    
+<div class="swiper-container mySwiper">
+                        <div class="swiper-wrapper">
+                            
+<div class="swiper-slide project-slide-card">
+                                <h3>Consultoría para el análisis de información satelital (DMC)</h3>
+                                <p>Implementamos un nuevo sistema de descarga de datos de precipitación y validación de productos satelitales, mejorando el monitoreo pluviométrico regional.</p>
+                            </div>
+                            
+<div class="swiper-slide project-slide-card">
+                                <h3>Consultoría para la determinación de umbrales de amenaza meteorológica (DMC)</h3>
+                                <p>Implementamos un servicio de cruce de información de variables meteorológicas con impactos en la actividad agrícola, identificando umbrales críticos para fortalecer el sistema de detección temprana de impactos en la actividad agrícola regional.</p>
+                            </div>
+                            
+<div class="swiper-slide project-slide-card">
+                                <h3>Asesoría en Certificación ISO (Geo & Minerals SPA)</h3>
+                                <p>Consultoría para la obtención de la certificación ISO 14001 a una empresa con proyección en el mercado minero.</p>
+                            </div>
+                            
+<div class="swiper-slide project-slide-card">
+                                <h3>Consultoría para el análisis hidrométrico de Río Mosco (MOP)</h3>
+                                <p>En ejecución.</p>
+                            </div>
+                        </div>
+                        
+<div class="swiper-pagination"></div>
+                    </div>
+                    
+                    
+<div class="my-swiper-button-prev"><i class="fas fa-chevron-left"></i></div>
+                    <div class="my-swiper-button-next"><i class="fas fa-chevron-right"></i></div>
+                </div>
+            </div>
+        </section>
+        
+<section id="team" class="team-section">
+            <h2>Nuestro Equipo</h2>
+            <p>Somos un equipo de Ingenieros en Recursos Naturales dedicados a la excelencia.</p>
+            <div class="team-members">
+                <div class="member-card">
+                    <img src="{{ url_for('static', filename='img/nico.jpg') }}" alt="Foto de Nicolás Carrasco">
+                    <h3>Nicolás Carrasco Ilabaca</h3>
+                    <p>Ingeniero en Conservación de Recursos Naturales.</p>
+                    <p>Mg(c) en Cs. Mención Bosque y Medio Ambiente.</p>
+                </div>
+                <div class="member-card">
+                    <img src="{{ url_for('static', filename='img/camilo.jpeg') }}" alt="Foto de Camilo Miranda">
+                    <h3>Camilo Miranda Lopez</h3>
+                    <p>Ingeniero en Conservación de Recursos Naturales.</p>
+                    <p>Gerente de proyectos.</p>
+                    
+                </div>
+                <div class="member-card">
+                    <img src="{{ url_for('static', filename='img/luis.jpg') }}" alt="Foto de Luis Gonzalez">
+                    <h3>Luis Gonzalez Rodriguez</h3>
+                    <p>Ingeniero en Conservación de Recursos Naturales</p>
+                    <p>Asistente de investigación</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="contact-section">
+            <div class="contact-content-wrap">
+                <h2>¿Listo para empezar tu proyecto?</h2>
+                <p class="subtitle">Contáctanos directamente o agenda una reunión con nuestro equipo de expertos.</p>
+                
+                <a href="mailto:evergreenconsultores@contacto.cl" class="cta-button big-cta">
+    <i class="fas fa-envelope"></i> Enviar Email y Solicitar Consulta
+                </a>
+        
+                <div class="contact-details">
+                    <div class="detail-item">
+                        <i class="fas fa-phone-alt"></i>
+                        <p>+56 9 50547403</p>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <p>Valdivia, Región de Los Ríos, Chile</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Evergreen Consultores. Derechos reservados.</p>
+    </footer>
+
+    
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+
+    
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const observer = new IntersectionObserver((entries) => {
+                for (const e of entries) {
+                    if (e.isIntersecting) {
+                        e.target.classList.add('in-view');
+                        observer.unobserve(e.target);
+                    }
+                }
+            }, { threshold: 0.12 });
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+            // Inicialización de Swiper (Slider de Proyectos)
+            if (document.querySelector('.mySwiper')) { 
+                new Swiper('.mySwiper', {
+                    slidesPerView: 1,
+                    spaceBetween: 30,
+                    loop: true, 
+                    autoHeight: true,
+                    pagination: {
+                        el: '.swiper-pagination',
+                        clickable: true,
+                    },
+                    autoplay: { 
+                        delay: 5000, 
+                        disableOnInteraction: false, 
+                    },
+                    
+                    navigation: {
+                        nextEl: '.my-swiper-button-next',
+                        prevEl: '.my-swiper-button-prev',
+                    },
+                });
+            }
+        });
+    </script>
 </body>
 </html>

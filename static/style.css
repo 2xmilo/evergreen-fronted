@@ -1,0 +1,763 @@
+/* =================================================== */
+/* VARIABLES DE COLOR (Earthy Forest Hues) */
+/* =================================================== */
+:root {
+    --ever-base: #DAD7CD;    /* Fondo claro */
+    --ever-soft: #A3B18A;    /* Fondo intermedio/suave */
+    --ever-main: #588157;    /* Color Principal (Botones, Acentos) */
+    --ever-dark: #3A5A40;    /* Texto principal, Títulos */
+    --ever-deep: #344E41;    /* Footer, Acentos Oscuros */
+
+    /* Variables de Espaciado/Altura */
+    --section-padding: 60px 40px;
+    --header-height: 70px; 
+}
+
+
+/* --- Estilos Generales --- */
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    background-color: var(--ever-base);
+    transition: background-color 0.5s ease;
+}
+
+section {
+    padding: var(--section-padding); 
+    text-align: center;
+}
+
+h2 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: var(--ever-dark);
+}
+
+
+/* --- HEADER RESTAURADO (ESTILOS ORIGINALES) --- */
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 3rem;
+    background-color: #dadfdc; 
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.371); 
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    height: 70px;
+}
+
+.logo-container .logo {
+    height: 90px; 
+}
+
+.header-center-text h1 {
+    font-size: 2rem;
+    margin: 0;
+    letter-spacing: 3px;
+    color: hsl(147, 95%, 17%); 
+}
+
+.header-center-text span {
+    font-size: 0.7rem;
+    color: #555;
+    font-weight: 280;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+nav a {
+    text-decoration: none;
+    color: #555; 
+    margin-left: 1.5rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: #00796b; 
+}
+
+.login-button {
+    background-color: #00796b; 
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    margin-left: 1.5rem; 
+}
+
+.login-button:hover {
+    background-color: #00796b; 
+}
+
+
+/* --- HERO (Restaurado) --- */
+.hero-section {
+    position: relative;
+    height: 80vh; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+    overflow: hidden;
+}
+
+.hero-video {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; 
+    z-index: -1; 
+}
+
+.hero-overlay {
+    position:absolute; inset:0; 
+    background:rgba(0,0,0,0.25);
+    pointer-events:none;
+    z-index:0;
+}
+
+.hero-content {
+    position:relative; z-index:1;
+}
+
+.hero-content h1 {
+    font-size: 3.2rem;
+    font-weight: bold;
+    color: #ffffff; 
+    text-shadow: 2px 2px 6px rgb(0, 0, 0); 
+}
+
+.hero-content p {
+    font-size: 2rem;
+    color: #d7d7d7; 
+    text-shadow: 2px 2px 6px rgb(0, 0, 0);
+}
+
+.hero-btn {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    background: #00796b; 
+    border: none;
+    border-radius: 30px; 
+    text-decoration: none;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.hero-btn:hover {
+    background: #256d36; 
+    transform: translateY(-3px);
+}
+
+
+/* Ajuste para el desplazamiento */
+#services, #projects, #team, #contact {
+    scroll-margin-top: calc(var(--header-height) + 16px);
+}
+
+
+/* =========================================== */
+/* --- 1. SECCIÓN SERVICIOS (CORRECCIÓN GRID) --- */
+/* =========================================== */
+.services-section {
+    background-color: var(--ever-soft); 
+    text-align: center; 
+}
+
+.services-section .section-title {
+    color: var(--ever-dark);
+    text-align: center;
+    margin-bottom:0.1rem; 
+}
+
+.section-subtitle {
+    font-size: 1.5rem;
+    color: var(--ever-dark); 
+    max-width: 600px; 
+    margin: 0 auto 3rem auto; 
+    line-height: 1.1;
+}
+
+/* === CORRECCIÓN CLAVE: CSS GRID === */
+.service-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 2rem; 
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.service-card {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08); 
+    border: 1px solid #eee; 
+    padding: 2.5rem 2rem;
+    text-align: center;
+    
+    /* CORRECCIÓN DE ALINEACIÓN CLAVE */
+    display: flex;
+    flex-direction: column; /* Apila los elementos verticalmente */
+    
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.service-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.service-icon {
+    font-size: 3rem; 
+    color: var(--ever-main); 
+    margin-bottom: 1.5rem;
+}
+
+.service-card h3 {
+    font-size: 1.3rem;
+    color: var(--ever-dark);
+    margin-bottom: 1rem;
+}
+
+.service-card p {
+    font-size: 0.95rem;
+    color: #555;
+    line-height: 1.6;
+    /* CLAVE: ESTO OCUPA EL ESPACIO EXTRA Y EMPUJA EL BOTÓN */
+    margin-bottom: auto; 
+}
+
+.service-button {
+    background-color: var(--ever-main);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 5px;
+    text-decoration: none;
+    display: inline-block;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+    
+    /* MÁRGEN EXTRA PARA SEPARAR DEL TEXTO */
+    margin-top: 1.5rem; 
+}
+
+.service-button:hover {
+    background-color: var(--ever-dark);
+}
+
+/* Responsive para que no se vean 4 columnas en móvil */
+@media (max-width: 1024px) {
+    .service-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columnas en pantallas medianas */
+    }
+}
+@media (max-width: 600px) {
+    .service-grid {
+        grid-template-columns: 1fr; /* 1 columna en móvil */
+    }
+}
+
+
+/* =========================================== */
+/* --- SECCIÓN PROYECTOS (ESTILO CANVA) --- */
+/* =========================================== */
+.projects-section {
+    background-color: var(--ever-base); 
+    padding: var(--section-padding);
+    position: relative;
+    z-index: 1;
+}
+
+.projects-content-grid {
+    display: flex;
+    gap: 3rem; 
+    max-width: 1200px; 
+    margin: 0 auto;
+    align-items: center; 
+    text-align: left;
+}
+
+
+.projects-info-panel {
+    flex: 1; 
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; 
+}
+
+.projects-info-panel h3 {
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--ever-dark);
+    margin-bottom: 1.5rem;
+}
+
+.satellite-image-container {
+    width: 100%;
+    max-width: 400px; 
+    margin: 0 0 1rem 0; 
+    border-radius: 10px;
+    transition: transform 0.7s ease;
+}
+
+.animated-satellite {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.3));
+    animation: subtleFloat 4s ease-in-out infinite alternate;
+}
+
+@keyframes subtleFloat {
+    from {
+        transform: translateY(0) scale(1);
+    }
+    to {
+        transform: translateY(-12px) scale(1.03); 
+    }
+}
+
+.experience-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 0; 
+}
+
+.experience-list li {
+    font-size: 1.1rem;
+    color: var(--ever-dark);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.experience-list li i {
+    color: var(--ever-main); 
+    margin-right: 12px;
+    font-size: 1.3rem;
+    width: 25px; 
+}
+
+
+/* Panel Derecho (Slider) */
+.projects-slider-container {
+    flex: 1; 
+    position: relative; 
+    width: 100%;
+    max-width: 550px; 
+}
+
+.swiper-container.mySwiper {
+    width: 100%;
+    background-color: var(--ever-soft); 
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); 
+    position: relative;
+    overflow: hidden; 
+    height: 470px;
+}
+
+.project-slide-card {
+    padding: 2.5rem;
+    text-align: left;
+    height: 100%; 
+    box-sizing: border-box; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center; 
+}
+
+.project-slide-card h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--ever-deep);
+    margin: calc(15px + 1.5rem) 0 0 0; 
+    padding-bottom: 10px;
+    position: relative;
+}
+
+.project-slide-card h3::after {
+    content: '';
+    display: block;
+    width: 50px;
+    height: 3px;
+    background-color: var(--ever-deep);
+    margin-top: 10px;
+}
+
+.project-slide-card p {
+    font-size: 1rem;
+    color: var(--ever-deep);
+    line-height: 1.6;
+    margin-top: 1.5rem;
+}
+
+.swiper-pagination {
+    position: absolute; 
+    bottom: 20px; 
+    left: 0;
+    width: 100%;
+    display: flex; 
+    justify-content: center;
+    align-items: center;
+    z-index: 20; 
+}
+.swiper-pagination-bullet-active {
+    background: var(--ever-deep); 
+}
+
+.my-swiper-button-prev,
+.my-swiper-button-next {
+    position: absolute;
+    bottom: 20px; 
+    z-index: 20; 
+    width: 45px; 
+    height: 45px;
+    background-color: var(--ever-main); 
+    border-radius: 50%; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    color: white; 
+}
+
+.my-swiper-button-prev:hover,
+.my-swiper-button-next:hover {
+    background-color: var(--ever-dark); 
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+.my-swiper-button-prev {
+    left: 20px; 
+}
+.my-swiper-button-next {
+    right: 20px; 
+}
+
+
+/* Responsive para la sección de Proyectos */
+@media (max-width: 992px) {
+    .projects-content-grid {
+        flex-direction: column; 
+    }
+    .projects-info-panel {
+        align-items: center; 
+        text-align: center;
+        padding-top: 0;
+    }
+    .projects-info-panel h3, .experience-list {
+        text-align: left; 
+    }
+    .projects-slider-container {
+        max-width: 100%; 
+    }
+}
+
+@media (max-width: 768px) {
+    .project-slide-card {
+        height: auto; 
+        min-height: 400px;
+    }
+    .swiper-container.mySwiper {
+        height: auto; 
+        min-height: 450px;
+    }
+}
+
+/* =========================================== */
+/* --- SECCIÓN EQUIPO (Usa Nueva Paleta) --- */
+/* =========================================== */
+.team-section {
+    background-color: var(--ever-soft);
+    padding: var(--section-padding); 
+    height: auto; 
+}
+
+.team-members {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 30px;
+}
+
+.member-card {
+    flex-basis: 250px; 
+    text-align: center;
+    background-color: white; 
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.member-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 25px rgba(51, 50, 50, 0.12);
+}
+
+.member-card img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 50%; 
+    border: 3px solid var(--ever-main); 
+    margin-bottom: 15px;
+    filter: grayscale(20%); 
+    transition: filter 0.3s ease;
+}
+
+.member-card img:hover {
+    filter: grayscale(0%); 
+}
+
+.member-card h3 {
+    font-size: 1.3rem;
+    color: var(--ever-dark);
+    margin-bottom: 5px;
+}
+
+
+/* --- SECCIÓN CONTACTO (Usa Nueva Paleta) --- */
+.contact-section {
+    background-color: var(--ever-dark); 
+    color: white;
+    padding: 60px 40px;
+    height: auto; 
+}
+
+.contact-content-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.contact-section h2 {
+    color: white;
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.contact-section .subtitle {
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    opacity: 0.9;
+}
+
+.big-cta {
+    font-size: 1.1rem;
+    padding: 12px 25px;
+    border-radius: 30px;
+    background-color: var(--ever-soft); 
+    color: var(--ever-deep);
+    font-weight: 700;
+    transition: background-color 0.3s, transform 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 40px;
+}
+
+.big-cta:hover {
+    background-color: var(--ever-base);
+    transform: translateY(-2px);
+}
+
+.big-cta i {
+    margin-right: 10px;
+}
+
+.contact-details {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+}
+
+.detail-item i {
+    font-size: 1.5rem;
+    color: var(--ever-soft);
+    margin-bottom: 5px;
+}
+
+.detail-item p,
+.detail-item a {
+    color: var(--ever-base);
+    text-decoration: none;
+}
+
+.detail-item a:hover {
+    text-decoration: underline;
+}
+
+
+/* --- FOOTER (Usa Nueva Paleta) --- */
+footer {
+    background-color: var(--ever-deep);
+    color: #ccc;
+    padding: 2rem 0;
+    text-align: center;
+}
+
+
+/* =========================================== */
+/* --- ESTILOS ESPECÍFICOS DE LOGIN (Glassmorphism) --- */
+/* =========================================== */
+
+/* Fondo del Body: Usamos un degradado sutil sobre tu color base */
+.login-body {
+    background: linear-gradient(135deg, var(--ever-base) 0%, var(--ever-soft) 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--ever-deep); /* Texto base oscuro */
+    margin: 0;
+}
+
+/* Contenedor principal del Glassmorphism */
+.glass-container {
+    /* Estilo Glassmorphism */
+    background: rgba(255, 255, 255, 0.2); /* Fondo ligeramente visible */
+    backdrop-filter: blur(8px); /* Desenfoque CLAVE */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15); /* Sombra elegante */
+    
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    position: relative;
+}
+
+.header-logo {
+    width: 100px; /* Tamaño del logo */
+    height: auto;
+    margin-bottom: 20px;
+}
+
+.glass-container h1 {
+    color: var(--ever-dark);
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+    font-weight: 500;
+}
+
+.error-message {
+    color: #cc0000; /* Rojo fuerte para errores */
+    background: rgba(255, 200, 200, 0.3);
+    padding: 8px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+
+/* Inputs y Contraseña */
+.input-group {
+    margin-bottom: 20px;
+}
+
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.8); /* Fondo de input casi blanco */
+    border: none;
+    border-radius: 8px;
+    color: var(--ever-deep);
+    font-size: 1em;
+    box-sizing: border-box;
+    transition: background 0.3s;
+}
+
+input::placeholder {
+    color: #888;
+}
+
+/* Estilo para el campo de contraseña y el botón del ojo */
+.input-group-password {
+    position: relative;
+}
+
+.input-group-password input {
+    padding-right: 45px; /* Deja espacio para el botón del ojo */
+}
+
+#toggle-pw {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto;
+    padding: 8px 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ever-dark);
+    font-size: 1.1em;
+    transition: color 0.2s;
+}
+
+#toggle-pw:hover {
+    color: var(--ever-main);
+}
+
+/* Botón de Entrar */
+#submit-btn {
+    width: 100%;
+    padding: 15px;
+    background: var(--ever-dark); /* Color oscuro de tu paleta */
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#submit-btn:hover {
+    background: var(--ever-main); /* Cambio de color al pasar el mouse */
+}
+
+#submit-btn:disabled {
+    background: #ccc;
+    cursor: wait;
+}
+
+/* Enlaces de Registro */
+.register-link-text {
+    margin-top: 15px;
+    font-size: 0.9em;
+    color: var(--ever-dark);
+}
+
+.register-link {
+    color: var(--ever-main);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+.register-link:hover {
+    text-decoration: underline;
+    color: var(--ever-deep);
+}

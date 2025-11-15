@@ -1,0 +1,237 @@
+/* =============================== */
+/* DASHBOARD STYLES */
+/* =============================== */
+
+:root {
+    --primary-color: #00796b; /* Evergreen Green */
+    --primary-dark: #004d40;
+    --background-light: #f4f6f9;
+    --card-bg: #ffffff;
+    --border-color: #e3e3e3;
+    --shadow-light: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-light);
+    min-height: 100vh;
+}
+
+.dashboard-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* --- Header --- */
+.dashboard-header {
+    background-color: var(--card-bg);
+    padding: 15px 40px;
+    box-shadow: var(--shadow-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.dashboard-logo img {
+    height: 30px;
+    margin-right: 10px;
+}
+
+.user-info {
+    font-size: 0.9em;
+    color: #666;
+    margin-right: 20px;
+}
+
+.logout-btn {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.logout-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+/* --- Contenido Principal --- */
+.page-title {
+    color: var(--primary-dark);
+    font-size: 2.2em;
+    margin-bottom: 5px;
+    text-align: left;
+}
+
+.page-subtitle {
+    color: #777;
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+/* --- Tarjeta del Formulario --- */
+.data-form-card {
+    background-color: var(--card-bg);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-light);
+    border-top: 5px solid var(--primary-color);
+    margin-bottom: 30px;
+}
+
+.data-form-card h2 {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    font-size: 1.5em;
+    text-align: left;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    text-align: left;
+}
+
+.form-column label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #444;
+}
+
+/* Estilos de Input/Select */
+.form-column input[type="date"],
+.form-column select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box;
+    background-color: #fcfcfc;
+}
+
+/* Estilo para el botón de archivo (simulación) */
+.file-label {
+    background-color: #eef;
+    padding: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    border: 1px dashed var(--primary-color);
+    display: block;
+    margin-top: 15px;
+    transition: background-color 0.3s;
+}
+
+.file-label:hover {
+    background-color: #e3e8f0;
+}
+
+.file-label .file-name-display {
+    display: block;
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+.form-column input[type="file"] {
+    display: none; /* Oculta el input de archivo nativo */
+}
+
+.input-hint {
+    font-size: 0.8em;
+    color: #999;
+    margin-top: 5px;
+    margin-bottom: 20px;
+}
+
+/* Botón de Enviar */
+.submit-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background-color 0.3s;
+}
+
+.submit-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+/* Área de Mensajes */
+.message-area {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.message-area.loading {
+    background-color: #fff3cd; /* Amarillo tenue */
+    color: #856404;
+}
+
+.message-area.success {
+    background-color: #d4edda; /* Verde tenue */
+    color: #155724;
+}
+
+.message-area.error {
+    background-color: #f8d7da; /* Rojo tenue */
+    color: #721c24;
+}
+
+/* Resumen de Estado */
+.status-summary {
+    padding: 20px;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: var(--shadow-light);
+    text-align: left;
+}
+.status-summary a {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+.status-summary h2 {
+    color: #333;
+    font-size: 1.3em;
+    margin-bottom: 10px;
+}
+
+/* Responsive para Dashboard */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr; /* Una sola columna en móvil */
+    }
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .header-right {
+        margin-top: 10px;
+    }
+}
