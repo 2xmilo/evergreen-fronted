@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Evergreen - Consultoría Ambiental especializada en ciencia, naturaleza y sostenibilidad">
+    <title>Evergreen | Consultoría Ambiental</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+</head>
+
+<body>
+    <div id="loading-screen" class="loading-screen active">
+        <video autoplay loop muted playsinline class="loading-video">
+            <source src="img/riofoco.mp4" type="video/mp4">
+        </video>
+        <div class="loading-overlay"></div>
+        <div class="loading-content">
+            <img src="img/logo.png" alt="Logo Evergreen" class="loading-logo">
+            <h1 class="loading-title">EVERGREEN</h1>
+            <p class="loading-subtitle">Consultores Ambientales</p>
+            <button id="enter-btn" class="enter-btn">
+                <span>Comenzar Asesoría</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+            <div class="loading-progress">
+                <div class="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-site" class="main-site">
+        <header class="main-header">
+            <div class="logo-container">
+                <img src="img/logo.png" alt="Logo de Evergreen" class="logo">
+            </div>
+            <div class="header-center-text">
+                <h1>EVERGREEN</h1>
+                <span>Consultores</span>
+            </div>
+            <nav>
+                <a href="#services">Servicios</a>
+                <a href="#projects">Proyectos</a>
+                <a href="#team">Equipo</a>
+                <a href="acceso-datos.html">Acceso a Datos</a>
+                <a href="#contact">Contacto</a>
+                <a href="login.html" class="login-button">Iniciar Sesión</a>
+            </nav>
+        </header>
+
+        <main>
+            <section id="services" class="services-fullscreen-section">
+                <div class="services-slider-wrapper">
+                    <div class="service-column" style="background-image: url('img/datascience.png');">
+                        <div class="service-overlay"></div>
+                        <div class="service-content">
+                            <div class="service-icon"><i class="fas fa-chart-line"></i></div>
+                            <h3>Análisis de Datos Avanzado</h3>
+                            <p>Decisiones basadas en datos precisos satelitales y de campo.</p>
+                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="service-column" style="background-image: url('img/equipo.png');">
+                        <div class="service-overlay"></div>
+                        <div class="service-content">
+                            <div class="service-icon"><i class="fas fa-file-contract"></i></div>
+                            <h3>Evaluación de Impacto Ambiental</h3>
+                            <p>Soporte en elaboración de DIA y EIA conforme a normativa.</p>
+                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="service-column" style="background-image: url('img/administrativo.png');">
+                        <div class="service-overlay"></div>
+                        <div class="service-content">
+                            <div class="service-icon"><i class="fas fa-leaf"></i></div>
+                            <h3>Cumplimiento en Biodiversidad</h3>
+                            <p>Verificación post-RCA y monitoreo de flora y fauna.</p>
+                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="service-column" style="background-image: url('img/ambiental.png');">
+                        <div class="service-overlay"></div>
+                        <div class="service-content">
+                            <div class="service-icon"><i class="fas fa-water"></i></div>
+                            <h3>Gestión Hídrica</h3>
+                            <p>Evaluación técnica mediante medición de aforo.</p>
+                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="service-column" style="background-image: url('img/pozo.png');">
+                        <div class="service-overlay"></div>
+                        <div class="service-content">
+                            <div class="service-icon"><i class="fas fa-tint"></i></div>
+                            <h3>Asesoría Legal de Pozos DGA</h3>
+                            <p>Gestión de derechos de aguas subterráneas.</p>
+                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="service-column" style="background-image: url('img/clima.png');">
+                        <div class="service-overlay"></div>
+                        <div class="service-content">
+                            <div class="service-icon"><i class="fas fa-cloud-sun"></i></div>
+                            <h3>Estudio Agroclimático</h3>
+                            <p>Análisis con enfoque en cambio climático.</p>
+                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="services-nav-btn services-prev"><i class="fas fa-chevron-left"></i></button>
+                <button class="services-nav-btn services-next"><i class="fas fa-chevron-right"></i></button>
+
+                <div class="scroll-indicator">
+                    <span>Desliza para continuar</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </section>
+
+            <section id="projects" class="projects-section-pro" style="background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('img/fondo_musgo.jpg');">
+            <h2 class="section-title-light">Proyectos Destacados</h2>
+                <p class="section-subtitle-light">Casos de éxito en excelencia ambiental</p>
+                
+                <div class="projects-slider-container-pro">
+                    <div class="swiper projectsSwiperPro">
+                        <div class="swiper-wrapper">
+                            <div class="swiper-slide">
+                                <div class="projects-grid-pro">
+                                    <div class="project-card-pro">
+                                        <div class="project-image-overlay" style="background-image: url('img/');"></div>
+                                        <div class="project-content-overlay">
+                                            <div class="project-icon-pro"><i class="fas fa-satellite"></i></div>
+                                            <h3>Análisis de Información Satelital</h3>
+                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                                        </div>
+                                    </div>
+                                    <div class="project-card-pro">
+                                        <div class="project-image-overlay" style="background-image: url('img/project2.jpg');"></div>
+                                        <div class="project-content-overlay">
+                                            <div class="project-icon-pro"><i class="fas fa-cloud-rain"></i></div>
+                                            <h3>Umbrales de Amenaza Meteorológica</h3>
+                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                                        </div>
+                                    </div>
+                                    <div class="project-card-pro">
+                                        <div class="project-image-overlay" style="background-image: url('img/project3.jpg');"></div>
+                                        <div class="project-content-overlay">
+                                            <div class="project-icon-pro"><i class="fas fa-certificate"></i></div>
+                                            <h3>Certificación ISO 14001</h3>
+                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="swiper-slide">
+                                <div class="projects-grid-pro">
+                                    <div class="project-card-pro">
+                                        <div class="project-image-overlay" style="background-image: url('img/project4.jpg');"></div>
+                                        <div class="project-content-overlay">
+                                            <div class="project-icon-pro"><i class="fas fa-water"></i></div>
+                                            <h3>Análisis Hidrométrico Río Mosco</h3>
+                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                                        </div>
+                                    </div>
+                                    <div class="project-card-pro">
+                                        <div class="project-image-overlay" style="background-image: url('img/project5.jpg');"></div>
+                                        <div class="project-content-overlay">
+                                            <div class="project-icon-pro"><i class="fas fa-leaf"></i></div>
+                                            <h3>Monitoreo de Biodiversidad</h3>
+                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                                        </div>
+                                    </div>
+                                    <div class="project-card-pro">
+                                        <div class="project-image-overlay" style="background-image: url('img/project6.jpg');"></div>
+                                        <div class="project-content-overlay">
+                                            <div class="project-icon-pro"><i class="fas fa-mountain"></i></div>
+                                            <h3>Gestión Ambiental Territorial</h3>
+                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="swiper-button-prev-pro"></div>
+                        <div class="swiper-button-next-pro"></div>
+                        <div class="swiper-pagination-pro"></div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="team" class="team-section">
+                <h2>Nuestro Equipo</h2>
+                <p>Profesionales dedicados a la excelencia en gestión ambiental</p>
+                <div class="team-members">
+                    <div class="member-card">
+                        <img src="img/nico.jpg" alt="Nicolás Carrasco">
+                        <h3>Nicolás Carrasco Ilabaca</h3>
+                        <p>Ingeniero en Conservación de Recursos Naturales</p>
+                        <p>Mg(c) en Cs. Mención Bosque y Medio Ambiente</p>
+                    </div>
+                    <div class="member-card">
+                        <img src="img/camilo.jpeg" alt="Camilo Miranda">
+                        <h3>Camilo Miranda López</h3>
+                        <p>Ingeniero en Conservación de Recursos Naturales</p>
+                        <p>Gerente de Proyectos</p>
+                    </div>
+                    <div class="member-card">
+                        <img src="img/luis.jpg" alt="Luis González">
+                        <h3>Luis González Rodríguez</h3>
+                        <p>Ingeniero en Conservación de Recursos Naturales</p>
+                        <p>Asistente de Investigación</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contact" class="contact-section">
+                <div class="contact-content-wrap">
+                    <h2>¿Listo para tu Proyecto?</h2>
+                    <p class="subtitle">Contáctanos o agenda una reunión con nuestros expertos</p>
+                    <a href="mailto:contacto@evergreenclima.com" class="cta-button big-cta">
+                        <i class="fas fa-envelope"></i> Solicitar Consulta
+                    </a>
+                    <div class="contact-details">
+                        <div class="detail-item">
+                            <i class="fas fa-phone-alt"></i>
+                            <p>+56 9 5054 7403</p>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <p>Valdivia, Región de Los Ríos, Chile</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Evergreen Consultores. Todos los derechos reservados.</p>
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
