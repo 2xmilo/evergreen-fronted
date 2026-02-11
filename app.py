@@ -16,7 +16,8 @@ from supabase import create_client, Client
 load_dotenv()
 
 app = Flask(__name__)
-
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 # ¡IMPORTANTE! En producción, usa una clave por variable de entorno.
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "tu_clave_secreta_aqui")
 
@@ -189,6 +190,10 @@ def start_export_task(product_name, product_info, point, start_date, end_date, s
 @app.route("/")
 def index():
     return render_template("index.html")
+@app.route("/acceso-datos")  # ← AGREGAR ESTA RUTA
+def acceso_datos():
+    return render_template("acceso-datos.html")
+
 
 # ---------- Auth ----------
 @app.route("/login", methods=["GET", "POST"])
@@ -304,8 +309,4 @@ def download_data_web():
 # RUN (DESARROLLO)
 # ===============================
 if __name__ == '__main__':
-    # Puedes cambiar host/port si lo necesitas:
-    # app.run(host="0.0.0.0", port=5000, debug=True)
-    app.run(debug=True) 
-    
-    # Commit de prueba para forzar despliegue
+    app.run(host='0.0.0.0', port=5001, debug=True)

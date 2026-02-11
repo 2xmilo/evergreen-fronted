@@ -2,39 +2,50 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Evergreen | Dashboard de Datos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Evergreen Data</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
+
 <body class="dashboard-body">
-    
+    <!-- HEADER -->
     <header class="dashboard-header">
         <div class="header-left">
             <a href="{{ url_for('index') }}" class="dashboard-logo">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Evergreen">
                 <span>Evergreen Data</span>
             </a>
         </div>
         <div class="header-right">
-            <span class="user-info">Bienvenido, Usuario ID: {{ session.get('user_id', 'Invitado') }}</span>
-            <a href="{{ url_for('logout') }}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+            <span class="user-info">Bienvenido, {{ session.get('user_id', 'Usuario') }}</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> 
+                Cerrar Sesión
+            </a>
         </div>
     </header>
 
+    <!-- MAIN CONTENT -->
     <main class="dashboard-main">
         <div class="dashboard-container">
-            
-            <h1 class="page-title">📊 Herramienta de Extracción de Datos Satelitales (GEE)</h1>
-            <p class="page-subtitle">Utiliza este panel para solicitar datos de precipitación en formato CSV directamente a tu Google Drive.</p>
+            <h1 class="page-title">📊 Panel de Datos Satelitales</h1>
+            <p class="page-subtitle">
+                Herramienta de extracción de datos de precipitación desde Google Earth Engine
+            </p>
 
+            <!-- FORM SECTION -->
             <section class="data-form-card">
                 <h2>1. Configuración de Extracción</h2>
+                
                 <form id="download-form" action="{{ url_for('download_data_web') }}" method="POST" enctype="multipart/form-data">
-                    
                     <div class="form-grid">
-                        
+                        <!-- Left Column -->
                         <div class="form-column">
-                            <label for="product_type"><i class="fas fa-satellite"></i> Producto Satelital:</label>
+                            <label for="product_type">
+                                <i class="fas fa-satellite"></i> 
+                                Producto Satelital:
+                            </label>
                             <select name="product_type" id="product_type" required>
                                 <option value="" disabled selected>Selecciona un producto...</option>
                                 <option value="CHIRPS">CHIRPS (Precipitación Diaria)</option>
@@ -44,50 +55,68 @@
                                 <option value="ERA5-Land">ERA5-Land</option>
                             </select>
 
-                            <label for="start_date"><i class="fas fa-calendar-alt"></i> Fecha de Inicio:</label>
+                            <label for="start_date">
+                                <i class="fas fa-calendar-alt"></i> 
+                                Fecha de Inicio:
+                            </label>
                             <input type="date" name="start_date" id="start_date" required>
                             
-                            <label for="end_date"><i class="fas fa-calendar-alt"></i> Fecha de Fin:</label>
+                            <label for="end_date">
+                                <i class="fas fa-calendar-alt"></i> 
+                                Fecha de Fin:
+                            </label>
                             <input type="date" name="end_date" id="end_date" required>
                         </div>
                         
+                        <!-- Right Column -->
                         <div class="form-column">
                             <label for="stations_file" class="file-label">
-                                <i class="fas fa-upload"></i> Cargar Archivo de Estaciones (.CSV):
+                                <i class="fas fa-upload"></i>
+                                Cargar Archivo de Estaciones (.CSV)
                                 <span class="file-name-display">Ningún archivo seleccionado</span>
                             </label>
                             <input type="file" name="stations_file" id="stations_file" accept=".csv" required>
-                            <p class="input-hint">El archivo debe contener las columnas: **estacion**, **latitud**, **longitud** (separadas por punto y coma `;`).</p>
+                            
+                            <p class="input-hint">
+                                El archivo debe contener las columnas: <strong>estacion</strong>, <strong>latitud</strong>, <strong>longitud</strong> (separadas por punto y coma <code>;</code>)
+                            </p>
                             
                             <button type="submit" class="submit-btn">
-                                <i class="fas fa-cloud-download-alt"></i> Enviar Tareas de Exportación a Drive
+                                <i class="fas fa-cloud-download-alt"></i> 
+                                Enviar Tareas a Google Drive
                             </button>
                         </div>
                     </div>
-
                 </form>
 
+                <!-- Message Box -->
                 <div id="message-box" class="message-area">
-                    Las tareas de extracción se enviarán a Google Drive, carpeta **GEE_precipitation**.
+                    Las tareas de extracción se enviarán a Google Drive, carpeta <strong>GEE_precipitation</strong>.
                 </div>
-
             </section>
-            <div class="status-summary">
+
+            <!-- STATUS SECTION -->
+            <section class="status-summary">
                 <h2>2. Estado de Tareas</h2>
-                <p>El estado de las tareas de Google Earth Engine (exportación) debe ser revisado directamente en su <a href="https://code.earthengine.google.com/tasks" target="_blank">**Consola de Tareas GEE** <i class="fas fa-external-link-alt"></i></a>.</p>
-                </div>
-            
+                <p>
+                    El estado de las tareas de Google Earth Engine debe ser revisado directamente en la 
+                    <a href="https://code.earthengine.google.com/tasks" target="_blank">
+                        Consola de Tareas GEE <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </p>
+            </section>
         </div>
     </main>
 
+    <!-- SCRIPTS -->
     <script>
-        // Lógica de feedback de nombre de archivo
+        // File input feedback
         document.getElementById('stations_file').addEventListener('change', function() {
             const fileName = this.files.length > 0 ? this.files[0].name : 'Ningún archivo seleccionado';
             document.querySelector('.file-name-display').textContent = fileName;
         });
 
-        // Script de envío de formulario (copia mejorada de tu index.html)
+        // Form submission
         const form = document.getElementById('download-form');
         const messageBox = document.getElementById('message-box');
         
@@ -102,14 +131,13 @@
                 method: 'POST', 
                 body: formData 
             })
-            .then(r => {
-                if (!r.ok) {
-                    // Si el estado HTTP no es 200 (ej: 401 Unauthorized), lanza un error
-                    return r.json().then(errorData => {
-                        throw new Error(errorData.message || `Error HTTP: ${r.status}`);
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || `Error HTTP: ${response.status}`);
                     });
                 }
-                return r.json();
+                return response.json();
             })
             .then(result => {
                 messageBox.textContent = result.success 
@@ -118,7 +146,7 @@
                 messageBox.className = result.success ? 'message-area success' : 'message-area error';
             })
             .catch(error => {
-                console.error('Error de fetch:', error);
+                console.error('Error:', error);
                 messageBox.textContent = `❌ Ocurrió un error: ${error.message}`;
                 messageBox.className = 'message-area error';
             });
