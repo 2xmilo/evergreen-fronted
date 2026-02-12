@@ -32,27 +32,7 @@
         </nav>
     </header>
 
-    <main>
-        <section id="datos-hero">
-            <div class="container">
-                <h1>Acceso a Datos Meteorológicos</h1>
-                <p class="subtitle">Explora y descarga datos satelitales gratuitos para tus proyectos</p>
-            </div>
-        </section>
 
-        <section id="variable-selector">
-            <div class="container">
-                <div class="variable-tabs">
-                    <button class="variable-tab active" data-variable="precipitacion">
-                        🌧️ Precipitación
-                    </button>
-                    <button class="variable-tab disabled" data-variable="temperatura" disabled>
-                        🌡️ Temperatura
-                        <span class="coming-soon">Próximamente</span>
-                    </button>
-                </div>
-            </div>
-        </section>
 
         <section id="datos-app">
             <div class="app-container">
@@ -85,32 +65,53 @@
                     <div class="panel-section">
                         <h4>📦 Productos Satelitales</h4>
                         <div class="checkbox-group" id="productos-grupo">
-                            <label>
-                                <input type="checkbox" value="CHIRPS" checked>
-                                <span>CHIRPS</span>
-                                <small>Recomendado - 5km</small>
-                            </label>
-                            <label>
-                                <input type="checkbox" value="GPM">
-                                <span>GPM-IMERG</span>
-                                <small>10km, desde 2000</small>
-                            </label>
-                            <label>
-                                <input type="checkbox" value="ERA5">
-                                <span>ERA5-Land</span>
-                                <small>9km, desde 1950</small>
-                            </label>
-                            <label>
-                                <input type="checkbox" value="PERSIANN">
-                                <span>PERSIANN-CDR</span>
-                                <small>25km, desde 1983</small>
-                            </label>
-                            <label>
-                                <input type="checkbox" value="CMORPH">
-                                <span>CMORPH</span>
-                                <small>25km, desde 1998</small>
-                            </label>
-                        </div>
+    <p style="font-size: 0.75rem; font-weight: bold; color: #4a7c44; margin: 5px 0;">🌧️ Precipitación</p>
+    
+    <label>
+        <input type="checkbox" value="CHIRPS" checked>
+        <span>CHIRPS</span>
+        <small>Recomendado - 5km</small>
+    </label>
+    <label>
+        <input type="checkbox" value="GPM">
+        <span>GPM-IMERG</span>
+        <small>10km, desde 2000</small>
+    </label>
+    <label>
+        <input type="checkbox" value="ERA5">
+        <span>ERA5-Precip</span>
+        <small>9km, desde 1950</small>
+    </label>
+    <label>
+        <input type="checkbox" value="PERSIANN">
+        <span>PERSIANN-CDR</span>
+        <small>25km, desde 1983</small>
+    </label>
+    <label>
+        <input type="checkbox" value="CMORPH">
+        <span>CMORPH</span>
+        <small>25km, desde 1998</small>
+    </label>
+
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 12px 0;">
+    <p style="font-size: 0.75rem; font-weight: bold; color: #4a7c44; margin-bottom: 5px;">🌡️ Temperaturas (ERA5-Land)</p>
+    
+    <label>
+        <input type="checkbox" value="T_MAX">
+        <span>Temp. Máxima</span>
+        <small>Máxima diaria a 2m</small>
+    </label>
+    <label>
+        <input type="checkbox" value="T_MIN">
+        <span>Temp. Mínima</span>
+        <small>Mínima diaria a 2m</small>
+    </label>
+    <label>
+        <input type="checkbox" value="T_MEAN">
+        <span>Temp. Media</span>
+        <small>Promedio diario a 2m</small>
+    </label>
+</div>
                     </div>
 
                     <div class="panel-section">
@@ -118,11 +119,11 @@
                         <div class="date-inputs">
                             <label>
                                 Desde:
-                                <input type="date" id="fecha-inicio" value="2023-01-01">
+                                <input type="date" id="fecha-inicio" value="2025-01-01">
                             </label>
                             <label>
                                 Hasta:
-                                <input type="date" id="fecha-fin" value="2023-12-31">
+                                <input type="date" id="fecha-fin" value="2025-12-31">
                             </label>
                         </div>
                         <small class="hint">Máximo 10 años de datos</small>

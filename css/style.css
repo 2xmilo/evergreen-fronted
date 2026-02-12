@@ -1,6 +1,123 @@
 /* ========================================
    EVERGREEN - FINAL CLEAN VERSION
    ======================================== */
+#datos-hero {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: rgb(246, 246, 246);
+    padding: 60px 0 40px;
+    text-align: center;
+}
+
+#datos-hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+#datos-hero .subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+/* Variable Selector */
+#variable-selector {
+    background: white;
+    padding: 20px 0;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.variable-tabs {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.variable-tab {
+    padding: 15px 30px;
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.variable-tab:hover:not(.disabled) {
+    background: #e9ecef;
+    border-color: #59b045;
+}
+
+.variable-tab.active {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.variable-tab.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.coming-soon {
+    display: inline-block;
+    background: #ffc107;
+    color: #333;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+    font-weight: bold;
+}
+
+/* App Container */
+#datos-app {
+    padding: 0;
+    background: #f8f9fa;
+}
+
+.app-container {
+    display: flex;
+    height: calc(100vh - 280px);
+    min-height: 600px;
+}
+
+/* Panel de Control */
+.control-panel {
+    width: 380px;
+    background: white;
+    overflow-y: auto;
+    border-right: 2px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    /* Usamos exactamente las mismas variables de tu header principal */
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%) !important;
+    color: white;
+    padding: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    /* Eliminamos bordes antiguos que puedan dar otra tonalidad */
+    border: none !important;
+    box-shadow: var(--shadow-sm);
+    
+    /* Alineación para que combine con el estilo de marca */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-family: var(--font-display); /* Tipografía elegante de Evergreen */
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: white;
+}
+
 
 :root {
     --color-primary: #2D5016;
@@ -210,11 +327,12 @@ body {
 }
 
 /* ========================================
-   HEADER
+   HEADER (ESTILIZADO Y COMPACTO)
    ======================================== */
 .main-header {
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-    padding: 1.25rem 5%;
+    /* Reducimos el padding vertical de 1.25rem a 0.7rem para ganar espacio */
+    padding: 0.7rem 5%; 
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -222,11 +340,15 @@ body {
     position: sticky;
     top: 0;
     z-index: 1000;
+    /* Altura mínima controlada para consistencia */
+    min-height: 65px; 
 }
 
 .logo-container .logo {
-    height: 50px;
+    /* Achicamos el logo ligeramente para acompañar el nuevo header */
+    height: 80px; 
     filter: brightness(0) invert(1);
+    transition: var(--transition-smooth);
 }
 
 .header-center-text {
@@ -236,21 +358,24 @@ body {
 
 .header-center-text h1 {
     font-family: var(--font-display);
-    font-size: 1.8rem;
+    /* Reducimos la fuente de 1.8rem a 1.4rem */
+    font-size: 1.8rem; 
     font-weight: 700;
     letter-spacing: 0.1em;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.1rem;
 }
 
 .header-center-text span {
-    font-size: 0.9rem;
+    /* Ajustamos el subtítulo a un tamaño más discreto */
+    font-size: 0.8rem; 
     letter-spacing: 0.15em;
-    opacity: 0.9;
+    opacity: 0.85;
 }
 
 .main-header nav {
     display: flex;
-    gap: 2rem;
+    /* Ajustamos el espacio entre links */
+    gap: 1.5rem; 
     align-items: center;
 }
 
@@ -258,11 +383,12 @@ body {
     color: white;
     text-decoration: none;
     font-weight: 500;
-    font-size: 1rem;
+    font-size: 0.95rem; /* Un poco más pequeño para elegancia */
     transition: var(--transition-smooth);
     position: relative;
 }
 
+/* El resto del código (::after y login-button) se mantiene igual */
 .main-header nav a::after {
     content: '';
     position: absolute;
@@ -280,7 +406,7 @@ body {
 
 .login-button {
     background: rgba(255, 255, 255, 0.15);
-    padding: 0.625rem 1.5rem;
+    padding: 0.5rem 1.25rem; /* Botón un poco más compacto */
     border-radius: 50px;
     border: 1px solid rgba(255, 255, 255, 0.3);
 }

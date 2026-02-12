@@ -1,426 +1,311 @@
-/* ================================
-   ACCESO A DATOS METEOROLÓGICOS
-   ================================ */
+/* ========================================
+   ACCESO A DATOS METEOROLÓGICOS - CLEAN VERSION
+   ======================================== */
 
-#datos-hero {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    padding: 60px 0 40px;
-    text-align: center;
-}
-
-#datos-hero h1 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-}
-
-#datos-hero .subtitle {
-    font-size: 1.2rem;
-    opacity: 0.9;
-}
-
-/* Variable Selector */
-#variable-selector {
-    background: white;
-    padding: 20px 0;
-    border-bottom: 2px solid #e0e0e0;
-}
-
-.variable-tabs {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-}
-
-.variable-tab {
-    padding: 15px 30px;
-    background: #f8f9fa;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    position: relative;
-}
-
-.variable-tab:hover:not(.disabled) {
-    background: #e9ecef;
-    border-color: #28a745;
-}
-
-.variable-tab.active {
-    background: #28a745;
-    color: white;
-    border-color: #28a745;
-}
-
-.variable-tab.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.coming-soon {
-    display: inline-block;
-    background: #ffc107;
-    color: #333;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.75rem;
-    margin-left: 8px;
-    font-weight: bold;
-}
-
-/* App Container */
-#datos-app {
-    padding: 0;
-    background: #f8f9fa;
-}
-
-.app-container {
-    display: flex;
-    height: calc(100vh - 280px);
-    min-height: 600px;
-}
-
-/* Panel de Control */
-.control-panel {
-    width: 380px;
-    background: white;
-    overflow-y: auto;
-    border-right: 2px solid #e0e0e0;
-    display: flex;
-    flex-direction: column;
-}
-
-.panel-header {
-    background: #28a745;
-    color: white;
-    padding: 20px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.panel-header h3 {
-    margin: 0;
-    font-size: 1.3rem;
-}
-
-.panel-section {
-    padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.panel-section h4 {
-    margin: 0 0 15px 0;
-    font-size: 1rem;
-    color: #333;
-}
-
-.hint {
-    display: block;
-    font-size: 0.85rem;
-    color: #666;
-    margin: 5px 0 10px 0;
-}
-
-/* Location Stats */
-.location-stats {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 5px;
-}
-
-.location-stats .stat {
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.location-stats .stat strong {
-    font-size: 1.2rem;
-    color: #28a745;
-}
-
-/* Location List */
-.location-list {
-    max-height: 200px;
-    overflow-y: auto;
-    margin-bottom: 10px;
-}
-
-.location-item {
-    background: #f8f9fa;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 5px;
-    border-left: 3px solid #28a745;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.location-item.poligono {
-    border-left-color: #007bff;
-}
-
-.location-item strong {
-    display: block;
-    margin-bottom: 3px;
-}
-
-.location-item small {
-    color: #666;
-    font-size: 0.85rem;
-}
-
-.location-item button {
-    background: #dc3545;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 0.85rem;
-}
-
-.location-item button:hover {
-    background: #c82333;
-}
-
-/* Clear All Button */
-.btn-clear-all {
-    width: 100%;
-    padding: 8px;
-    background: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    margin-top: 10px;
-}
-
-.btn-clear-all:hover {
-    background: #5a6268;
-}
-
-/* Checkbox Group */
-.checkbox-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.checkbox-group label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.checkbox-group label:hover {
-    background: #e9ecef;
-}
-
-.checkbox-group input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-}
-
-.checkbox-group label span {
-    font-weight: 500;
-    flex: 1;
-}
-
-.checkbox-group label small {
-    color: #666;
-    font-size: 0.8rem;
-}
-
-/* Date Inputs */
-.date-inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.date-inputs label {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.date-inputs input[type="date"] {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-}
-
-/* Estimation */
-.estimation {
-    background: #e7f3ff;
-    padding: 15px;
-    border-radius: 5px;
-    border-left: 3px solid #007bff;
-}
-
-.estimation strong {
-    display: block;
-    margin-bottom: 5px;
-    color: #007bff;
-}
-
-.estimation p {
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-/* Download Button */
-.btn-download {
-    width: calc(100% - 40px);
-    margin: 20px;
-    padding: 15px;
-    background: #28a745;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.btn-download:hover {
-    background: #218838;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-.btn-download:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* Panel Footer */
-.panel-footer {
-    margin-top: auto;
-    padding: 20px;
-    background: #fff3cd;
-    border-top: 1px solid #ffc107;
-}
-
-.service-info {
-    font-size: 0.9rem;
-    color: #856404;
-}
-
-.service-info p {
-    margin: 5px 0;
-}
-
-.link-servicios {
-    display: inline-block;
-    margin-top: 10px;
-    color: #28a745;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.link-servicios:hover {
-    text-decoration: underline;
-}
-
-/* Map Container */
+/* Contenedor Principal Ajustado al nuevo Header */
 .map-container {
     flex: 1;
+    height: 100%; /* Ocupa el 100% del app-container, ni un pixel más */
     position: relative;
+    z-index: 1; /* Se mantiene bajo los controles pero sobre el fondo */
 }
 
 #map {
     width: 100%;
     height: 100%;
+    /* Esto es clave para que Leaflet no recalcule mal las posiciones */
+    display: block; 
 }
 
-/* Loading Overlay */
-.loading-overlay {
-    position: absolute;
+/* Panel de Control Estilo Profesional */
+.control-panel {
+    width: 380px;
+    background: white;
+    overflow-y: auto;
+    border-right: 1px solid var(--color-neutral-100);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Encabezado del Panel - Estilo Minimalista */
+.panel-header {
+    background: white !important;
+    color: var(--color-primary);
+    padding: 20px;
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
+    z-index: 10;
+    border-bottom: 2px solid var(--color-accent) !important;
     display: flex;
     align-items: center;
-    justify-content: center;
-    z-index: 1000;
+    gap: 12px;
 }
 
-.loading-content {
-    text-align: center;
+.panel-header h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-primary) !important;
+}
+
+/* Secciones Internas */
+.panel-section {
+    padding: 25px 20px;
+    border-bottom: 1px solid var(--color-neutral-100);
+}
+
+.panel-section h4 {
+    margin: 0 0 15px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-primary-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hint {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-secondary);
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+/* Estadísticas de Ubicación */
+.location-stats {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 12px;
+    background: var(--color-neutral-50);
+    border-radius: 8px;
+    border: 1px solid var(--color-neutral-100);
+}
+
+.location-stats .stat {
+    font-size: 0.85rem;
+    color: var(--color-neutral-800);
+}
+
+.location-stats .stat strong {
+    font-size: 1.1rem;
+    color: var(--color-primary);
+}
+
+/* Lista de Ubicaciones */
+.location-list {
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.location-item {
+    background: var(--color-neutral-50);
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border-left: 4px solid var(--color-primary-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition-smooth);
+}
+
+.location-item.poligono {
+    border-left-color: var(--color-accent);
+}
+
+.location-item strong {
+    font-size: 0.9rem;
+    color: var(--color-neutral-900);
+}
+
+.location-item small {
+    color: var(--color-secondary);
+}
+
+.location-item button {
+    background: transparent;
+    color: #dc3545;
+    border: 1px solid #dc3545;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.3s;
+}
+
+.location-item button:hover {
+    background: #dc3545;
     color: white;
-    max-width: 400px;
+}
+
+/* Botón Limpiar Todo */
+.btn-clear-all {
+    width: 100%;
+    padding: 10px;
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-800);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: var(--transition-smooth);
+}
+
+.btn-clear-all:hover {
+    background: #e5e5e4;
+    color: var(--color-neutral-900);
+}
+
+/* Checkbox Group */
+.checkbox-group label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: white;
+    border: 1px solid var(--color-neutral-100);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.checkbox-group label:hover {
+    border-color: var(--color-primary-light);
+    background: var(--color-neutral-50);
+}
+
+.checkbox-group input[type="checkbox"] {
+    accent-color: var(--color-primary);
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+}
+
+/* Date Inputs */
+.date-inputs input[type="date"] {
+    padding: 12px;
+    border: 1px solid var(--color-neutral-100);
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    width: 100%;
+}
+
+/* Estimación Estilizada */
+.estimation {
+    background: #fdfaf6; /* Un tono crema suave */
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--color-accent);
+}
+
+.estimation strong {
+    color: var(--color-primary);
+    font-size: 1rem;
+}
+
+/* Botón de Descarga Evergreen */
+.btn-download {
+    width: calc(100% - 40px);
+    margin: 20px;
+    padding: 18px;
+    background: var(--color-primary) !important;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-smooth);
+}
+
+.btn-download:hover {
+    background: var(--color-primary-light) !important;
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Mapa y Overlays */
+.map-container {
+    flex: 1;
+    position: relative;
+    border-left: 1px solid var(--color-neutral-100);
+}
+
+#map { width: 100%; height: 100%; }
+
+.loading-overlay {
+    background: rgba(24, 24, 27, 0.9);
+    backdrop-filter: blur(4px);
 }
 
 .spinner {
-    width: 60px;
-    height: 60px;
-    border: 5px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #28a745;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 20px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--color-accent);
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.loading-tip {
-    margin-top: 15px;
-    font-size: 0.9rem;
-    opacity: 0.8;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-    .control-panel {
-        width: 320px;
-    }
-}
-
+/* Responsividad mejorada */
 @media (max-width: 768px) {
-    .app-container {
-        flex-direction: column;
-        height: auto;
-    }
-    
-    .control-panel {
-        width: 100%;
-        max-height: 60vh;
-    }
-    
-    .map-container {
-        height: 50vh;
-        min-height: 400px;
-    }
-    
-    .variable-tabs {
-        flex-direction: column;
-    }
-    
-    .variable-tab {
-        width: 100%;
-    }
+    .app-container { height: auto; flex-direction: column; }
+    .control-panel { width: 100%; height: 60vh; }
+    .map-container { height: 400px; }
+}
+
+/* Ocultar el footer global solo en la herramienta de datos */
+footer {
+    display: none !important;
+}
+
+/* Ajustar el contenedor para que use TODO el espacio inferior */
+.app-container {
+    display: flex;
+    height: calc(100vh - 65px); /* Altura total menos el header compacto */
+    overflow: hidden;
+}
+
+/* Ajustes para la nueva sección de productos multivariable */
+
+/* 1. Permite que la lista de productos sea desplazable si crece mucho */
+#productos-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 350px; /* Evita que el panel se estire demasiado */
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* 2. Estilo para los títulos de categoría (Precipitación / Temperatura) */
+#productos-grupo p {
+    margin: 10px 0 5px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-display);
+}
+
+/* 3. Estilo para los textos internos de cada opción */
+.checkbox-group label span {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-neutral-900);
+}
+
+.checkbox-group label small {
+    display: block;
+    color: var(--color-secondary);
+    font-size: 0.75rem;
 }
