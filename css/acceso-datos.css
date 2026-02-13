@@ -309,3 +309,38 @@ footer {
     color: var(--color-secondary);
     font-size: 0.75rem;
 }
+
+/* Popup de Cuencas */
+.cuenca-popup h4 {
+    margin: 0 0 10px 0;
+    color: #0080FF;
+    font-size: 1rem;
+}
+
+.cuenca-popup p {
+    margin: 5px 0;
+    font-size: 0.85rem;
+}
+
+/* Animaciones para notificaciones */
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
