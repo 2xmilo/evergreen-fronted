@@ -102,7 +102,7 @@
     /* Eliminamos bordes antiguos que puedan dar otra tonalidad */
     border: none !important;
     box-shadow: var(--shadow-sm);
-    
+
     /* Alineación para que combine con el estilo de marca */
     display: flex;
     align-items: center;
@@ -111,7 +111,8 @@
 
 .panel-header h3 {
     margin: 0;
-    font-family: var(--font-display); /* Tipografía elegante de Evergreen */
+    font-family: var(--font-display);
+    /* Tipografía elegante de Evergreen */
     font-size: 1.3rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -128,10 +129,10 @@
     --color-neutral-100: #F5F5F4;
     --color-neutral-800: #27272A;
     --color-neutral-900: #18181B;
-    
+
     --font-display: 'Playfair Display', 'Georgia', serif;
     --font-body: 'Source Sans Pro', -apple-system, system-ui, sans-serif;
-    
+
     --shadow-sm: 0 2px 8px rgba(45, 80, 22, 0.08);
     --shadow-md: 0 4px 20px rgba(45, 80, 22, 0.12);
     --shadow-lg: 0 10px 40px rgba(45, 80, 22, 0.15);
@@ -166,7 +167,7 @@ body {
     display: none;
     opacity: 0;
 }
- 
+
 
 .loading-screen.active {
     display: block;
@@ -189,11 +190,9 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        135deg,
-        rgba(45, 80, 22, 0.3) 0%,
-        rgba(74, 124, 46, 0.4) 100%
-    );
+    background: linear-gradient(135deg,
+            rgba(45, 80, 22, 0.3) 0%,
+            rgba(74, 124, 46, 0.4) 100%);
 }
 
 .loading-content {
@@ -290,6 +289,7 @@ body {
         opacity: 0;
         transform: scale(0.8);
     }
+
     to {
         opacity: 1;
         transform: scale(1);
@@ -301,6 +301,7 @@ body {
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -332,7 +333,7 @@ body {
 .main-header {
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
     /* Reducimos el padding vertical de 1.25rem a 0.7rem para ganar espacio */
-    padding: 0.7rem 5%; 
+    padding: 0.7rem 5%;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -341,12 +342,12 @@ body {
     top: 0;
     z-index: 1000;
     /* Altura mínima controlada para consistencia */
-    min-height: 65px; 
+    min-height: 65px;
 }
 
 .logo-container .logo {
     /* Achicamos el logo ligeramente para acompañar el nuevo header */
-    height: 80px; 
+    height: 80px;
     filter: brightness(0) invert(1);
     transition: var(--transition-smooth);
 }
@@ -359,7 +360,7 @@ body {
 .header-center-text h1 {
     font-family: var(--font-display);
     /* Reducimos la fuente de 1.8rem a 1.4rem */
-    font-size: 1.8rem; 
+    font-size: 1.8rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     margin-bottom: 0.1rem;
@@ -367,7 +368,7 @@ body {
 
 .header-center-text span {
     /* Ajustamos el subtítulo a un tamaño más discreto */
-    font-size: 0.8rem; 
+    font-size: 0.8rem;
     letter-spacing: 0.15em;
     opacity: 0.85;
 }
@@ -375,7 +376,7 @@ body {
 .main-header nav {
     display: flex;
     /* Ajustamos el espacio entre links */
-    gap: 1.5rem; 
+    gap: 1.5rem;
     align-items: center;
 }
 
@@ -383,7 +384,8 @@ body {
     color: white;
     text-decoration: none;
     font-weight: 500;
-    font-size: 0.95rem; /* Un poco más pequeño para elegancia */
+    font-size: 0.95rem;
+    /* Un poco más pequeño para elegancia */
     transition: var(--transition-smooth);
     position: relative;
 }
@@ -406,7 +408,8 @@ body {
 
 .login-button {
     background: rgba(255, 255, 255, 0.15);
-    padding: 0.5rem 1.25rem; /* Botón un poco más compacto */
+    padding: 0.5rem 1.25rem;
+    /* Botón un poco más compacto */
     border-radius: 50px;
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
@@ -472,16 +475,14 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        135deg,
-        rgba(45, 80, 22, 0.1) 0%,
-        rgba(74, 124, 46, 0.2) 100%
-    );
+    background: linear-gradient(135deg,
+            rgba(45, 80, 22, 0.1) 0%,
+            rgba(74, 124, 46, 0.2) 100%);
     transition: all 0.5s ease;
 }
 
 .service-column:hover .service-overlay {
-    background: 
+    background:
         radial-gradient(circle at center, transparent 0%, rgba(36, 35, 35, 0.419) 100%),
         linear-gradient(135deg, rgba(38, 57, 38, 0.7) 0%, rgba(24, 36, 24, 0.653) 100%);
 }
@@ -615,9 +616,12 @@ body {
 }
 
 @keyframes bounce {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translate(-50%, 0);
     }
+
     50% {
         transform: translate(-50%, 10px);
     }
@@ -665,7 +669,7 @@ body {
 
 .project-card-pro {
     position: relative;
-    height: 400px;
+    height: 500px;
     border-radius: 20px;
     overflow: hidden;
     box-shadow: var(--shadow-lg);
@@ -699,37 +703,63 @@ body {
     width: 100%;
     height: 100%;
     z-index: 2;
-    background: linear-gradient(
-        to top,
-        rgba(45, 80, 22, 0.95) 0%,
-        rgba(45, 80, 22, 0.3) 100%
-    );
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, 0.9) 0%,
+            rgba(0, 0, 0, 0.2) 100%);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     padding: 2.5rem;
-    transition: var(--transition-smooth);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .project-card-pro:hover .project-content-overlay {
-    background: linear-gradient(
-        to top,
-        rgba(45, 80, 22, 0.85) 0%,
-        rgba(45, 80, 22, 0.2) 100%
-    );
+    background: rgba(20, 40, 20, 0.4);
+    /* Verde oscuro sutil */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .project-icon-pro {
     font-size: 3rem;
     color: var(--color-accent);
     margin-bottom: 1.5rem;
+    transition: transform 0.5s ease;
+}
+
+.project-card-pro:hover .project-icon-pro {
+    transform: scale(1.1) translateY(-10px);
 }
 
 .project-content-overlay h3 {
     font-family: var(--font-display);
     font-size: 1.75rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.5rem;
     line-height: 1.3;
+    transition: transform 0.5s ease;
+}
+
+.project-card-pro:hover .project-content-overlay h3 {
+    transform: translateY(-10px);
+}
+
+.project-desc-pro {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 1.5rem;
+    /* Efecto de revelado */
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.project-card-pro:hover .project-desc-pro {
+    max-height: 150px;
+    opacity: 1;
+    transform: translateY(-10px);
 }
 
 .project-btn-pro {
@@ -740,38 +770,43 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    transition: gap 0.3s ease;
+    transition: all 0.3s ease;
+    opacity: 0.8;
 }
 
-.project-btn-pro:hover {
+.project-card-pro:hover .project-btn-pro {
+    opacity: 1;
     gap: 1rem;
+    transform: translateY(-5px);
 }
 
 /* ========================================
    SWIPER CONTROLS - UNIFORMIDAD TOTAL
    ======================================== */
 .projects-slider-container-pro {
-    position: relative; /* Contexto de posicionamiento absoluto */
+    position: relative;
+    /* Contexto de posicionamiento absoluto */
 }
 
 .swiper-button-prev-pro,
 .swiper-button-next-pro {
     /* Posicionamiento */
     position: absolute !important;
-    top: 50% !important;
+    top: 10% !important;
     transform: translateY(-50%);
-    
+
     /* Estilo e Identidad Visual (Igual a Servicios) */
     background: rgba(255, 255, 255, 0.1) !important;
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255, 255, 255, 0.2);
     color: white !important;
-    
+
+
     /* Dimensiones (Igual a Servicios) */
     width: 40px !important;
     height: 40px !important;
-    border-radius: 50%;
-    
+    border-radius: 40%;
+
     /* Comportamiento */
     display: flex !important;
     align-items: center;
@@ -783,14 +818,17 @@ body {
 
 /* --- ICONOS (Flechas Font Awesome) --- */
 .swiper-button-prev-pro::after {
-    content: '\f053' !important; /* Chevron-left */
+    content: '\f053' !important;
+    /* Chevron-left */
     font-family: "Font Awesome 6 Free" !important;
     font-weight: 900 !important;
-    font-size: 0.7rem !important; /* Mismo tamaño que servicios */
+    font-size: 0.7rem !important;
+    /* Mismo tamaño que servicios */
 }
 
 .swiper-button-next-pro::after {
-    content: '\f054' !important; /* Chevron-right */
+    content: '\f054' !important;
+    /* Chevron-right */
     font-family: "Font Awesome 6 Free" !important;
     font-weight: 900 !important;
     font-size: 0.7rem !important;
@@ -838,7 +876,7 @@ body {
     z-index: 0;
 }
 
-.team-section > * {
+.team-section>* {
     position: relative;
     z-index: 2;
 }
@@ -850,7 +888,7 @@ body {
     margin-bottom: 1rem;
 }
 
-.team-section > p {
+.team-section>p {
     font-size: 1.2rem;
     color: var(--color-secondary);
     margin-bottom: 4rem;
@@ -980,7 +1018,7 @@ footer {
     .service-column {
         flex: 0 0 33.333%;
     }
-    
+
     .services-nav-btn {
         width: 50px;
         height: 50px;
@@ -994,31 +1032,31 @@ footer {
         gap: 1rem;
         padding: 1rem 5%;
     }
-    
+
     .main-header nav {
         flex-wrap: wrap;
         gap: 1rem;
         justify-content: center;
     }
-    
+
     .service-column {
         flex: 0 0 50%;
     }
-    
+
     .projects-grid-pro {
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
-    
+
     .team-members {
         grid-template-columns: 1fr;
     }
-    
+
     .contact-details {
         flex-direction: column;
         gap: 2rem;
     }
-    
+
     /* Desactivar parallax en móvil */
     .projects-section-pro,
     .team-section,
@@ -1031,26 +1069,26 @@ footer {
     .loading-title {
         font-size: 2.5rem;
     }
-    
+
     .enter-btn {
         padding: 1rem 2rem;
         font-size: 1rem;
     }
-    
+
     .service-column {
         flex: 0 0 100%;
     }
-    
+
     .services-nav-btn {
         width: 40px;
         height: 40px;
         font-size: 1rem;
     }
-    
+
     .services-prev {
         left: 15px;
     }
-    
+
     .services-next {
         right: 15px;
     }

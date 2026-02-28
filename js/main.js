@@ -2,8 +2,8 @@
 // EVERGREEN - MAIN JAVASCRIPT
 // ============================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    
+document.addEventListener('DOMContentLoaded', function () {
+
     // ============================================
     // LOADING SCREEN FUNCTIONALITY
     // ============================================
@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const mainSite = document.getElementById('main-site');
     const enterBtn = document.getElementById('enter-btn');
     const progressBar = document.querySelector('.progress-bar');
-    
+
     let autoAdvanceTimer;
-    
+
     // Progress bar animation (10 seconds)
     function startProgressBar() {
         setTimeout(() => {
@@ -21,18 +21,18 @@ document.addEventListener('DOMContentLoaded', function() {
             progressBar.style.width = '100%';
         }, 100);
     }
-    
+
     // Function to transition to main site
     function transitionToMainSite() {
         clearTimeout(autoAdvanceTimer);
         loadingScreen.style.transition = 'opacity 1s ease';
         loadingScreen.style.opacity = '0';
-        
+
         setTimeout(() => {
             loadingScreen.classList.remove('active');
             loadingScreen.style.display = 'none';
             mainSite.classList.add('active');
-            
+
             // Start services auto-slide after transition
             setTimeout(() => {
                 if (typeof startAutoSlide === 'function') {
@@ -41,147 +41,66 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1000);
         }, 1000);
     }
-    
+
     // Auto-advance after 10 seconds
     autoAdvanceTimer = setTimeout(transitionToMainSite, 10000);
-    
+
     // Start progress bar
     startProgressBar();
-    
+
     // Manual button click
     if (enterBtn) {
         enterBtn.addEventListener('click', transitionToMainSite);
     }
-    
+
     // ============================================
-    // SERVICES SLIDER FUNCTIONALITY
+    // SERVICES SWIPER (Vertical Cards Carousel)
     // ============================================
-    const servicesWrapper = document.querySelector('.services-slider-wrapper');
-    const serviceColumns = document.querySelectorAll('.service-column');
-    const prevBtn = document.querySelector('.services-prev');
-    const nextBtn = document.querySelector('.services-next');
-    
-    if (servicesWrapper && serviceColumns.length > 0) {
-        let currentIndex = 0;
-        const totalServices = serviceColumns.length;
-        let visibleColumns = 4;
-        let autoSlideInterval;
-        
-        // Adjust visible columns based on screen size
-        function updateVisibleColumns() {
-            const width = window.innerWidth;
-            if (width <= 480) {
-                visibleColumns = 1;
-            } else if (width <= 768) {
-                visibleColumns = 2;
-            } else if (width <= 1024) {
-                visibleColumns = 3;
-            } else {
-                visibleColumns = 4;
-            }
-        }
-        
-        // Function to update slider position
-        function updateSlider() {
-            updateVisibleColumns();
-            const offset = currentIndex * (100 / visibleColumns);
-            servicesWrapper.style.transform = `translateX(-${offset}%)`;
-            
-            // Update button states
-            if (prevBtn && nextBtn) {
-                prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
-                prevBtn.style.pointerEvents = currentIndex === 0 ? 'none' : 'auto';
-                
-                nextBtn.style.opacity = currentIndex >= totalServices - visibleColumns ? '0.5' : '1';
-                nextBtn.style.pointerEvents = currentIndex >= totalServices - visibleColumns ? 'none' : 'auto';
-            }
-        }
-        
-        // Next slide
-        function nextSlide() {
-            if (currentIndex < totalServices - visibleColumns) {
-                currentIndex++;
-                updateSlider();
-            }
-        }
-        
-        // Previous slide
-        function prevSlide() {
-            if (currentIndex > 0) {
-                currentIndex--;
-                updateSlider();
-            }
-        }
-        
-        // Auto-slide every 8 seconds
-        window.startAutoSlide = function() {
-            autoSlideInterval = setInterval(() => {
-                if (currentIndex < totalServices - visibleColumns) {
-                    nextSlide();
-                } else {
-                    currentIndex = 0;
-                    updateSlider();
+    const servicesSwiperElement = document.querySelector('.servicesSwiper');
+
+    if (servicesSwiperElement && typeof Swiper !== 'undefined') {
+        const servicesSwiper = new Swiper('.servicesSwiper', {
+            slidesPerView: 1,
+            spaceBetween: 20,
+            loop: true,
+            autoplay: {
+                delay: 4000,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true
+            },
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+            navigation: {
+                nextEl: '.services-nav-next',
+                prevEl: '.services-nav-prev',
+            },
+            breakpoints: {
+                // Móviles grandes
+                576: {
+                    slidesPerView: 2,
+                    spaceBetween: 20,
+                },
+                // Tablets
+                768: {
+                    slidesPerView: 3,
+                    spaceBetween: 30,
+                },
+                // Escritorio
+                1024: {
+                    slidesPerView: 3, /* Bajado a 3 para evitar espacios vacíos gigantes */
+                    spaceBetween: 40, /* Un poco más de aire central pero con tarjetas más grandes */
                 }
-            }, 8000);
-        };
-        
-        // Stop auto-slide on user interaction
-        function stopAutoSlide() {
-            clearInterval(autoSlideInterval);
-        }
-        
-        // Event listeners for navigation buttons
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                stopAutoSlide();
-                nextSlide();
-                startAutoSlide();
-            });
-        }
-        
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                stopAutoSlide();
-                prevSlide();
-                startAutoSlide();
-            });
-        }
-        
-        // Hover effects for service columns
-        serviceColumns.forEach(column => {
-            column.addEventListener('mouseenter', () => {
-                stopAutoSlide();
-                serviceColumns.forEach(col => {
-                    if (col !== column) {
-                        col.style.opacity = '0.4';
-                    }
-                });
-                column.style.transform = 'scale(1.02)';
-            });
-            
-            column.addEventListener('mouseleave', () => {
-                serviceColumns.forEach(col => {
-                    col.style.opacity = '1';
-                });
-                column.style.transform = 'scale(1)';
-                startAutoSlide();
-            });
+            }
         });
-        
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            updateSlider();
-        });
-        
-        // Initialize slider
-        updateSlider();
     }
-    
+
     // ============================================
     // PROJECTS SWIPER
     // ============================================
     const swiperProElement = document.querySelector('.projectsSwiperPro');
-    
+
     if (swiperProElement && typeof Swiper !== 'undefined') {
         const swiperPro = new Swiper('.projectsSwiperPro', {
             slidesPerView: 1,
@@ -206,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // ============================================
     // SMOOTH SCROLL FOR NAVIGATION
     // ============================================
@@ -222,12 +141,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // ============================================
     // SCROLL INDICATOR HIDE ON SCROLL
     // ============================================
     const scrollIndicator = document.querySelector('.scroll-indicator');
-    
+
     if (scrollIndicator) {
         window.addEventListener('scroll', () => {
             if (window.scrollY > 100) {
@@ -239,27 +158,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // ============================================
     // HEADER SCROLL EFFECT
     // ============================================
     const header = document.querySelector('.main-header');
-    
+
     if (header) {
         let lastScroll = 0;
         window.addEventListener('scroll', () => {
             const currentScroll = window.scrollY;
-            
+
             if (currentScroll > 100) {
                 header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.15)';
             } else {
                 header.style.boxShadow = '0 4px 20px rgba(45, 80, 22, 0.12)';
             }
-            
+
             lastScroll = currentScroll;
         });
     }
-    
+
     // ============================================
     // INTERSECTION OBSERVER FOR ANIMATIONS
     // ============================================
@@ -296,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
         element.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
         fadeInObserver.observe(element);
     });
-    
+
     // ============================================
     // KEYBOARD NAVIGATION
     // ============================================
@@ -307,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
             prevBtn.click();
         }
     });
-    
+
 });
 
 // ============================================
@@ -317,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 // SOLUCIÓN PARA SERVICIOS EVERGREEN
 // ============================================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const serviceColumns = document.querySelectorAll('.service-column');
     const servicesSection = document.querySelector('.services-fullscreen-section');
 
@@ -340,9 +259,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 3. Gestión de eventos (Hover)
     serviceColumns.forEach(column => {
-        column.addEventListener('mouseenter', function() {
+        column.addEventListener('mouseenter', function () {
             const imageToDisplay = this.getAttribute('data-bg');
-            
+
             // A. Cambiamos el fondo de la SECCIÓN completa
             bgOverlay.style.backgroundImage = imageToDisplay;
             bgOverlay.style.opacity = '1';
@@ -359,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        column.addEventListener('mouseleave', function() {
+        column.addEventListener('mouseleave', function () {
             // A. Apagamos el fondo de la sección
             bgOverlay.style.opacity = '0';
 

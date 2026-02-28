@@ -1,0 +1,361 @@
+/* ========================================
+   VERTICAL SLIDER SERVICES SECTION 
+   ======================================== */
+
+.services-section {
+    padding: 3.5rem 5% 1rem 5%;
+    /* Reducido para evitar exceso de blanco */
+    background-color: var(--color-neutral-100);
+    overflow-x: hidden;
+    /* Solo bloquea el horizontal para evitar el scroll del Swiper, NO oculta las flechas */
+}
+
+.services-section h2 {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    text-align: center;
+    color: var(--color-primary);
+    margin-bottom: 0.2rem;
+}
+
+.section-subtitle {
+    text-align: center;
+    color: var(--color-neutral-800);
+    margin-bottom: 1.5rem;
+    /* Reducido drásticamente de 4rem */
+    font-size: 1.1rem;
+}
+
+
+/* Eliminamos el outline azul de foco en todos los botones del swiper */
+.services-swiper-container .swiper-button-next:focus,
+.services-swiper-container .swiper-button-prev:focus,
+.services-swiper-container .swiper-button-next:focus-visible,
+.services-swiper-container .swiper-button-prev:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+.servicesSwiper {
+    width: 100%;
+    height: 100%;
+    /* Añadimos padding para que la sombra de hover no se corte */
+    padding: 20px 10px 20px !important;
+}
+
+/* Vertical Service Card */
+.vertical-service-card {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    /* Altura fija para el aspecto vertical */
+    border-radius: 20px;
+    overflow: hidden;
+    background: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-bounce);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+
+    /* Importante para el swiper slide inline-block behavior en móviles */
+    display: block;
+}
+
+.vertical-service-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-elevated), var(--glow-primary);
+}
+
+/* Fondo con imagen */
+.service-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.8s ease;
+    z-index: 0;
+}
+
+.vertical-service-card:hover .service-bg {
+    transform: scale(1.1);
+}
+
+/* Contenido en Overlay */
+.service-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    /* Gradiente Glassmorphism: oscuro abajo, transparente arriba */
+    background: linear-gradient(to top,
+            rgba(24, 24, 27, 0.95) 0%,
+            rgba(39, 39, 42, 0.7) 40%,
+            rgba(255, 255, 255, 0) 100%);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 2rem;
+    color: white;
+    z-index: 1;
+    transition: all 0.4s ease;
+}
+
+.vertical-service-card:hover .service-content {
+    background: linear-gradient(to top,
+            rgba(45, 80, 22, 0.95) 0%,
+            rgba(74, 124, 46, 0.9) 60%,
+            rgba(0, 0, 0, 0.2) 100%);
+    /* Eliminado backdrop-filter por problemas severos de rendimiento (lag) en el carrusel */
+}
+
+/* Elementos de la Tarjeta */
+.service-icon {
+    font-size: 2.2rem;
+    color: var(--color-accent);
+    margin-bottom: auto;
+    /* Empuja el ícono hacia arriba */
+    background: rgba(255, 255, 255, 0.15);
+    /* Reemplazo de blur por semitransparente para mejor performance */
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    transition: all 0.5s ease;
+
+    /* Comportamiento inicial */
+    transform: translateY(-20px);
+    opacity: 0.8;
+}
+
+.vertical-service-card:hover .service-icon {
+    transform: translateY(0) rotate(10deg);
+    opacity: 1;
+    background: white;
+    color: var(--color-primary);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.service-content h3 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    transform: translateY(30px);
+    transition: transform 0.4s ease;
+}
+
+.service-content p {
+    font-size: 0.95rem;
+    color: #e4e4e7;
+    line-height: 1.5;
+    opacity: 0;
+    max-height: 0;
+    /* Oculto inicialmente para efecto acordeón sutil */
+    overflow: hidden;
+    transition: all 0.4s ease;
+}
+
+.vertical-service-card:hover h3 {
+    transform: translateY(0);
+}
+
+.vertical-service-card:hover p {
+    opacity: 1;
+    max-height: 120px;
+    margin-bottom: 1.5rem;
+}
+
+/* Botón Flotante Redondo a Píldora */
+.service-action-btn {
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+    height: 45px;
+    width: 45px;
+    background: white;
+    color: var(--color-primary);
+    border-radius: 50px;
+    /* Redondo a píldora */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+    z-index: 10;
+    overflow: hidden;
+    /* Oculta el texto inicialmente */
+    padding: 0;
+}
+
+.vertical-service-card:hover .service-action-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.service-action-btn .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    height: 45px;
+    flex-shrink: 0;
+}
+
+.service-action-btn .btn-icon i {
+    font-size: 0.9rem;
+    /* Disminuido el tamaño de la flecha */
+}
+
+.service-action-btn .btn-text {
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.9rem;
+    opacity: 0;
+    max-width: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.service-action-btn:hover {
+    background: var(--color-accent);
+    /* Color arena o verde claro según variable */
+    color: white;
+    width: auto;
+    padding-right: 15px;
+    /* Espacio para el texto extra */
+}
+
+.service-action-btn:hover .btn-text {
+    opacity: 1;
+    max-width: 150px;
+    margin-left: 5px;
+}
+
+
+/* ========================================
+   BOTONES DE NAVEGACIÓN CUSTOM
+   ======================================== */
+
+
+.services-nav-prev,
+.services-nav-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    outline: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    padding: 0;
+}
+
+.services-nav-prev {
+    left: 10px;
+}
+
+.services-nav-next {
+    right: 10px;
+}
+
+/* Flecha SVG — cambiá width/height aquí para ajustar el tamaño */
+.services-nav-prev svg,
+.services-nav-next svg {
+    width: 30px;
+    height: 30px;
+    stroke: white;
+    display: block;
+    flex-shrink: 0;
+}
+
+.services-nav-prev:hover,
+.services-nav-next:hover {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: translateY(-50%) scale(1.08);
+}
+
+.services-nav-prev.swiper-button-disabled,
+.services-nav-next.swiper-button-disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+
+@media (min-width: 1400px) {
+    .services-swiper-container .swiper-button-prev {
+        left: 10px;
+    }
+
+    .services-swiper-container .swiper-button-next {
+        right: 10px;
+    }
+}
+
+.services-swiper-container .swiper-pagination-bullet {
+    background: rgba(255, 255, 255, 0.4);
+    opacity: 1;
+}
+
+.services-swiper-container .swiper-pagination-bullet-active {
+    background: var(--color-accent);
+    opacity: 1;
+    transform: scale(0.8);
+    box-shadow: 0 0 8px rgba(200, 169, 137, 0.6);
+    /* Glow arena, coherente con las flechas de navegación */
+}
+
+/* ========================================
+   RESPONSIVIDAD (Ajustes finos para Mobile)
+   ======================================== */
+@media (max-width: 768px) {
+    .vertical-service-card {
+        height: 400px;
+    }
+
+    .service-content h3 {
+        font-size: 1.35rem;
+        transform: translateY(0);
+        /* Siempre visible en móvil */
+    }
+
+    .service-content p {
+        opacity: 1;
+        max-height: 100px;
+        margin-bottom: 40px;
+        /* Espacio para el botón */
+    }
+
+    .service-action-btn {
+        opacity: 1;
+        transform: translateY(0);
+        bottom: 1.5rem;
+        right: 1.5rem;
+    }
+
+    .service-icon {
+        transform: translateY(0);
+        opacity: 1;
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
+    }
+}

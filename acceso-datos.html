@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso a Datos Meteorológicos - Evergreen</title>
-    
+
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
+
     <link rel="stylesheet" href="css/acceso-datos.css">
-    
+    <link rel="stylesheet" href="css/dashboard-pro.css">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 </head>
+
 <body>
     <header class="main-header">
         <div class="logo-container">
@@ -34,136 +37,125 @@
 
 
 
-        <section id="datos-app">
-            <div class="app-container">
-                <aside class="control-panel">
-                    <div class="panel-header">
-                        <h3>📍 Configuración</h3>
-                    </div>
-                    
-                    <div class="panel-section">
-                        <h4>Ubicaciones</h4>
-                        <p class="hint">Click en el mapa para agregar puntos o dibuja polígonos</p>
-                        
-                        <div class="location-stats">
-                            <span class="stat">
-                                <strong id="puntos-count">0</strong> Puntos (máx. 10)
-                            </span>
-                            <span class="stat">
-                                <strong id="poligonos-count">0</strong> Polígonos (máx. 3)
-                            </span>
-                        </div>
-                        
-                        <div id="puntos-lista" class="location-list"></div>
-                        <div id="poligonos-lista" class="location-list"></div>
-                        
-                        <button class="btn-clear-all" onclick="limpiarTodo()">
-                            🗑️ Limpiar Todo
-                        </button>
-                    </div>
+    <section id="datos-app">
+        <div class="app-container">
+            <aside class="control-panel">
+                <div class="panel-header-compact">
+                    <span class="app-title">EVERGREEN DATA-APP</span>
+                    <span class="status-badge-active">
+                        <span class="status-dot"></span>
+                        Activo
+                    </span>
+                </div>
 
-                    <div class="panel-section">
-                        <h4>📦 Productos Satelitales</h4>
-                        <div class="checkbox-group" id="productos-grupo">
-    <p style="font-size: 0.75rem; font-weight: bold; color: #4a7c44; margin: 5px 0;">🌧️ Precipitación</p>
-    
-    <label>
-        <input type="checkbox" value="CHIRPS" checked>
-        <span>CHIRPS</span>
-        <small>Recomendado - 5km</small>
-    </label>
-    <label>
-        <input type="checkbox" value="GPM">
-        <span>GPM-IMERG</span>
-        <small>10km, desde 2000</small>
-    </label>
-    <label>
-        <input type="checkbox" value="ERA5">
-        <span>ERA5-Precip</span>
-        <small>9km, desde 1950</small>
-    </label>
-    <label>
-        <input type="checkbox" value="PERSIANN">
-        <span>PERSIANN-CDR</span>
-        <small>25km, desde 1983</small>
-    </label>
-    <label>
-        <input type="checkbox" value="CMORPH">
-        <span>CMORPH</span>
-        <small>25km, desde 1998</small>
-    </label>
-
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 12px 0;">
-    <p style="font-size: 0.75rem; font-weight: bold; color: #4a7c44; margin-bottom: 5px;">🌡️ Temperaturas (ERA5-Land)</p>
-    
-    <label>
-        <input type="checkbox" value="T_MAX">
-        <span>Temp. Máxima</span>
-        <small>Máxima diaria a 2m</small>
-    </label>
-    <label>
-        <input type="checkbox" value="T_MIN">
-        <span>Temp. Mínima</span>
-        <small>Mínima diaria a 2m</small>
-    </label>
-    <label>
-        <input type="checkbox" value="T_MEAN">
-        <span>Temp. Media</span>
-        <small>Promedio diario a 2m</small>
-    </label>
-</div>
+                <!-- SECCIÓN 1: Ubicaciones -->
+                <div class="accordion-section" id="accordion-ubicaciones">
+                    <div class="accordion-header" onclick="toggleAccordion('ubicaciones')">
+                        <span class="accordion-icon">📍</span>
+                        <span class="accordion-title">UBICACIONES</span>
+                        <span class="accordion-badge empty" id="ubicaciones-badge">0</span>
+                        <span class="accordion-chevron">▼</span>
                     </div>
+                    <div class="accordion-content" id="content-ubicaciones">
+                        <div class="accordion-body">
+                            <p class="hint">Click en mapa o dibuja polígonos</p>
 
-                    <div class="panel-section">
-                        <h4>📅 Período Temporal</h4>
-                        <div class="date-inputs">
-                            <label>
-                                Desde:
-                                <input type="date" id="fecha-inicio" value="2025-01-01">
-                            </label>
-                            <label>
-                                Hasta:
-                                <input type="date" id="fecha-fin" value="2025-12-31">
-                            </label>
-                        </div>
-                        <small class="hint">Máximo 10 años de datos</small>
-                    </div>
+                            <div class="location-stats">
+                                <span class="stat"><strong id="puntos-count">0</strong> Puntos</span>
+                                <span class="stat"><strong id="poligonos-count">0</strong> Polígonos <small>(máx
+                                        10/3)</small></span>
+                            </div>
 
-                    <div class="panel-section">
-                        <div class="estimation" id="estimation">
-                            <strong>📊 Estimación:</strong>
-                            <p id="estimation-text">Agrega ubicaciones para calcular</p>
+                            <div id="puntos-lista" class="location-list"></div>
+                            <div id="poligonos-lista" class="location-list"></div>
+
+                            <button class="btn-clear-all" onclick="limpiarTodo()">Limpiar todo</button>
                         </div>
                     </div>
+                </div>
 
-                    <button class="btn-download" id="btn-descargar" onclick="descargar()">
-                        ⬇️ Descargar Datos
-                    </button>
+                <!-- SECCIÓN 2: Productos -->
+                <div class="accordion-section" id="accordion-productos">
+                    <div class="accordion-header" onclick="toggleAccordion('productos')">
+                        <span class="accordion-icon">📦</span>
+                        <span class="accordion-title">PRODUCTOS SATELITALES</span>
+                        <span class="accordion-badge" id="productos-badge">1</span>
+                        <span class="accordion-chevron">▼</span>
+                    </div>
+                    <div class="accordion-content" id="content-productos">
+                        <div class="accordion-body">
+                            <div class="checkbox-group" id="productos-grupo">
+                                <p>🌧️ PRECIPITACIÓN</p>
+                                <label><input type="checkbox" value="CHIRPS"
+                                        checked><span>CHIRPS</span><small>5km</small></label>
+                                <label><input type="checkbox"
+                                        value="GPM"><span>GPM-IMERG</span><small>10km</small></label>
+                                <label><input type="checkbox"
+                                        value="ERA5"><span>ERA5-Precip</span><small>9km</small></label>
+                                <label><input type="checkbox"
+                                        value="PERSIANN"><span>PERSIANN-CDR</span><small>25km</small></label>
+                                <label><input type="checkbox"
+                                        value="CMORPH"><span>CMORPH</span><small>25km</small></label>
 
-                    <div class="panel-footer">
-                        <div class="service-info">
-                            <p>💡 <strong>Servicio gratuito</strong> para exploración</p>
-                            <p>⚠️ Datos satelitales sin corrección local</p>
-                            <a href="index.html#contact" class="link-servicios">
-                                ¿Necesitas corrección profesional?
-                            </a>
+                                <hr>
+                                <p>🌡️ TEMPERATURA</p>
+                                <label><input type="checkbox" value="T_MAX"><span>Temp.
+                                        Máxima</span><small>9km</small></label>
+                                <label><input type="checkbox" value="T_MIN"><span>Temp.
+                                        Mínima</span><small>9km</small></label>
+                                <label><input type="checkbox" value="T_MEAN"><span>Temp.
+                                        Media</span><small>9km</small></label>
+                            </div>
                         </div>
                     </div>
-                </aside>
+                </div>
 
-                <main class="map-container">
-                    <div id="map"></div>
-                    
-                    <div id="loading" class="loading-overlay" style="display: none;">
-                        <div class="loading-content">
-                            <div class="spinner"></div>
-                            <h3>⏳ Procesando solicitud...</h3>
-                            <p id="loading-message">Esto puede tardar 1-3 minutos</p>
+                <!-- SECCIÓN 3: Tiempo -->
+                <div class="accordion-section" id="accordion-tiempo">
+                    <div class="accordion-header" onclick="toggleAccordion('tiempo')">
+                        <span class="accordion-icon">📅</span>
+                        <span class="accordion-title">RANGO TEMPORAL</span>
+                        <span class="accordion-chevron">▼</span>
+                    </div>
+                    <div class="accordion-content" id="content-tiempo">
+                        <div class="accordion-body">
+                            <div class="date-inputs">
+                                <label>Desde: <input type="date" id="fecha-inicio" value="2025-01-01"></label>
+                                <label>Hasta: <input type="date" id="fecha-fin" value="2025-12-31"></label>
+                            </div>
                         </div>
                     </div>
-                </main>
-            </div>
-        </section>
+                </div>
+
+                <!-- ESTIMACIÓN Y DESCARGA -->
+                <div class="accordion-body" style="border-top: 1px solid #e0e0e0;">
+                    <div class="estimation-panel" id="estimation">
+                        <strong>📊 Estimación:</strong>
+                        <p id="estimation-text">Agrega ubicaciones para calcular</p>
+                    </div>
+                </div>
+
+                <button class="btn-download" id="btn-descargar" onclick="descargar()">⬇️ DESCARGAR DATOS</button>
+
+                <div class="panel-disclaimer">
+                    <p>⚠️ Datos crudos sin corrección</p>
+                    <a href="index.html#contact" class="disclaimer-link">¿Necesitas servicios de validación?</a>
+                </div>
+            </aside>
+
+            <main class="map-container">
+                <div id="map"></div>
+
+                <div id="loading" class="loading-overlay" style="display: none;">
+                    <div class="loading-content">
+                        <div class="spinner"></div>
+                        <h3>⏳ Procesando solicitud...</h3>
+                        <p id="loading-message">Esto puede tardar 1-3 minutos</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </section>
     </main>
 
     <footer>
@@ -174,5 +166,7 @@
     <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
     <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
     <script src="js/acceso-datos.js"></script>
+    <script src="js/dashboard-pro.js"></script>
 </body>
+
 </html>

@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Evergreen - Consultoría Ambiental especializada en ciencia, naturaleza y sostenibilidad">
+    <meta name="description"
+        content="Evergreen - Consultoría Ambiental especializada en ciencia, naturaleza y sostenibilidad">
     <title>Evergreen | Consultoría Ambiental</title>
-    
+
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="css/services-grid.css">
+    <link rel="stylesheet" href="css/news.css">
 </head>
 
 <body>
@@ -51,122 +55,206 @@
         </header>
 
         <main>
-            <section id="services" class="services-fullscreen-section">
-                <div class="services-slider-wrapper">
-                    <div class="service-column" style="background-image: url('img/compu.jpg');">
-                        <div class="service-overlay"></div>
-                        <div class="service-content">
-                            <div class="service-icon"><i class="fas fa-chart-line"></i></div>
-                            <h3>Análisis de Datos Avanzado</h3>
-                            <p>Decisiones basadas en datos precisos satelitales y de campo.</p>
-                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </div>
+            <section id="services" class="services-section">
+                <h2 data-aos="fade-up">Nuestros Servicios</h2>
+                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">Soluciones ambientales integrales
+                    con tecnología de punta</p>
 
-                    <div class="service-column" style="background-image: url('img/eolica.jpg');">
-                        <div class="service-overlay"></div>
-                        <div class="service-content">
-                            <div class="service-icon"><i class="fas fa-file-contract"></i></div>
-                            <h3>Evaluación de Impacto Ambiental</h3>
-                            <p>Soporte en elaboración de DIA y EIA conforme a normativa.</p>
-                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </div>
-
-                    <div class="service-column" style="background-image: url('img/guanaco.jpg');">
-                        <div class="service-overlay"></div>
-                        <div class="service-content">
-                            <div class="service-icon"><i class="fas fa-leaf"></i></div>
-                            <h3>Cumplimiento en Biodiversidad</h3>
-                            <p>Verificación post-RCA y monitoreo de flora y fauna.</p>
-                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </div>
-
-                    <div class="service-column" style="background-image: url('img/aforo.jpeg');">
-                        <div class="service-overlay"></div>
-                        <div class="service-content">
-                            <div class="service-icon"><i class="fas fa-water"></i></div>
-                            <h3>Gestión recursos hídricos</h3>
-                            <p>Evaluación técnica mediante medición de aforo.</p>
-                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </div>
-
-                    <div class="service-column" style="background-image: url('img/pozo.png');">
-                        <div class="service-overlay"></div>
-                        <div class="service-content">
-                            <div class="service-icon"><i class="fas fa-tint"></i></div>
-                            <h3>Asesoría Legal de Pozos DGA</h3>
-                            <p>Gestión de derechos de aguas subterráneas.</p>
-                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </div>
-
-                    <div class="service-column" style="background-image: url('img/clima.png');">
-                        <div class="service-overlay"></div>
-                        <div class="service-content">
-                            <div class="service-icon"><i class="fas fa-cloud-sun"></i></div>
-                            <h3>Estudio Agroclimático</h3>
-                            <p>Análisis con enfoque en cambio climático.</p>
-                            <a href="#contact" class="service-discover-btn">Descubrir <i class="fas fa-arrow-right"></i></a>
-                        </div>
-                    </div>
-                </div>
-
-                <button class="services-nav-btn services-prev"><i class="fas fa-chevron-left"></i></button>
-                <button class="services-nav-btn services-next"><i class="fas fa-chevron-right"></i></button>
-
-                <div class="scroll-indicator">
-                    <span>Desliza para continuar</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-            </section>
-
-            <section id="projects" class="projects-section-pro" style="background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('img/fondo_musgo.jpg');">
-            <h2 class="section-title-light">Proyectos Destacados</h2>
-                <p class="section-subtitle-light">Casos de éxito en excelencia ambiental</p>
-                
-                <div class="projects-slider-container-pro">
-                    <div class="swiper projectsSwiperPro">
+                <!-- Swiper -->
+                <div class="services-swiper-container" data-aos="fade-up" data-aos-delay="200">
+                    <div class="swiper servicesSwiper">
                         <div class="swiper-wrapper">
+                            <!-- Servicio 1 -->
                             <div class="swiper-slide">
-                                <div class="projects-grid-pro">
-                                    <div class="project-card-pro">
-                                        <div class="project-image-overlay" style="background-image: url('img/');"></div>
-                                        <div class="project-content-overlay">
-                                            <div class="project-icon-pro"><i class="fas fa-satellite"></i></div>
-                                            <h3>Análisis de Información Satelital</h3>
-                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
-                                        </div>
-                                    </div>
-                                    <div class="project-card-pro">
-                                        <div class="project-image-overlay" style="background-image: url('img/project2.jpg');"></div>
-                                        <div class="project-content-overlay">
-                                            <div class="project-icon-pro"><i class="fas fa-cloud-rain"></i></div>
-                                            <h3>Umbrales de Amenaza Meteorológica</h3>
-                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
-                                        </div>
-                                    </div>
-                                    <div class="project-card-pro">
-                                        <div class="project-image-overlay" style="background-image: url('img/project3.jpg');"></div>
-                                        <div class="project-content-overlay">
-                                            <div class="project-icon-pro"><i class="fas fa-certificate"></i></div>
-                                            <h3>Certificación ISO 14001</h3>
-                                            <a href="#contact" class="project-btn-pro">Descubrir →</a>
-                                        </div>
+                                <div class="vertical-service-card">
+                                    <div class="service-bg" style="background-image: url('img/compu.jpg')"></div>
+                                    <div class="service-content">
+                                        <div class="service-icon"><i class="fas fa-seedling"></i></div>
+                                        <h3>Cuantificación y Gestión de Huellas Ambientales</h3>
+                                        <p>Medición y gestión de impactos cuantificables: huella de carbono, huella
+                                            hídrica, biomasa y stocks de carbono, y propuestas de reducción para
+                                            actividades productivas y municipales.</p>
+                                        <a href="#contact" class="service-action-btn">
+                                            <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                                            <span class="btn-text">Saber más</span>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
-        
-    
-                        <div class="swiper-button-prev-pro"></div>
-                        <div class="swiper-button-next-pro"></div>
-                        <div class="swiper-pagination-pro"></div>
+
+                            <!-- Servicio 2 -->
+                            <div class="swiper-slide">
+                                <div class="vertical-service-card">
+                                    <div class="service-bg" style="background-image: url('img/eolica.jpg')"></div>
+                                    <div class="service-content">
+                                        <div class="service-icon"><i class="fas fa-file-contract"></i></div>
+                                        <h3>Elaboración de DIA/EIA</h3>
+                                        <p>Elaboración de Declaraciones e Informes de Impacto Ambiental para proyectos
+                                            productivos, energéticos e inmobiliarios, conforme a Ley 19.300 y DS
+                                            40/2012.</p>
+                                        <a href="#contact" class="service-action-btn">
+                                            <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                                            <span class="btn-text">Saber más</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Servicio 3 -->
+                            <div class="swiper-slide">
+                                <div class="vertical-service-card">
+                                    <div class="service-bg" style="background-image: url('img/guanaco.jpg')"></div>
+                                    <div class="service-content">
+                                        <div class="service-icon"><i class="fas fa-paw"></i></div>
+                                        <h3>Monitoreo y Línea de Base de Biodiversidad</h3>
+                                        <p>Levantamiento de líneas de base, prospección de especies y monitoreo de flora
+                                            y fauna para proyectos en evaluación ambiental y seguimiento post-RCA.</p>
+                                        <a href="#contact" class="service-action-btn">
+                                            <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                                            <span class="btn-text">Saber más</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Servicio 4 -->
+                            <div class="swiper-slide">
+                                <div class="vertical-service-card">
+                                    <div class="service-bg" style="background-image: url('img/aforo.jpeg')"></div>
+                                    <div class="service-content">
+                                        <div class="service-icon"><i class="fas fa-water"></i></div>
+                                        <h3>Hidrología Aplicada y Gestión del Recurso Hídrico</h3>
+                                        <p>Aforo y medición de caudales, análisis de cuencas, eficiencia en sistemas de
+                                            riego, estimación de demanda hídrica y gestión de derechos de agua ante DGA.
+                                        </p>
+                                        <a href="#contact" class="service-action-btn">
+                                            <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                                            <span class="btn-text">Saber más</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Servicio 5 -->
+                            <div class="swiper-slide">
+                                <div class="vertical-service-card">
+                                    <div class="service-bg" style="background-image: url('img/pozo.png')"></div>
+                                    <div class="service-content">
+                                        <div class="service-icon"><i class="fas fa-robot"></i></div>
+                                        <h3>Automatización Geoespacial con IA</h3>
+                                        <p>Procesamiento de datos satelitales, modelos predictivos y flujos
+                                            automatizados con GEE y Python para análisis ambientales a escala.</p>
+                                        <a href="#contact" class="service-action-btn">
+                                            <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                                            <span class="btn-text">Saber más</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Servicio 6 -->
+                            <div class="swiper-slide">
+                                <div class="vertical-service-card">
+                                    <div class="service-bg" style="background-image: url('img/clima.png')"></div>
+                                    <div class="service-content">
+                                        <div class="service-icon"><i class="fas fa-temperature-high"></i></div>
+                                        <h3>Estudio Climatológico con Proyección en Cambio Climático</h3>
+                                        <p>Caracterización climatológica territorial y análisis de tendencias:
+                                            diagnóstico de vulnerabilidad, proyecciones climáticas e informes para PACCC
+                                            conforme a Ley 21.455.</p>
+                                        <a href="#contact" class="service-action-btn">
+                                            <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                                            <span class="btn-text">Saber más</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- Navigation and Pagination -->
+                        <div class="swiper-pagination"></div>
+                        <button class="services-nav-prev" aria-label="Anterior">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                        </button>
+                        <button class="services-nav-next" aria-label="Siguiente">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </section>
-            
+
+
+            <section id="projects" class="projects-section-pro"
+                style="background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('img/fondo_musgo.jpg');">
+                <h2 class="section-title-light">Proyectos Destacados</h2>
+                <p class="section-subtitle-light">Casos de éxito en excelencia ambiental</p>
+
+                <div class="projects-slider-container-pro">
+                    <div class="projects-grid-pro">
+                        <div class="project-card-pro">
+                            <div class="project-image-overlay"
+                                style="background-image: url('img/Analisis info satelital.png');"></div>
+                            <div class="project-content-overlay">
+                                <div class="project-icon-pro"><i class="fas fa-satellite"></i></div>
+                                <h3>Análisis de Información Satelital &mdash; DMC</h3>
+                                <p class="project-desc-pro"> Análisis y validación de datos de la red meteorológica de
+                                    la región de Valparaíso.</p>
+                                <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                            </div>
+                        </div>
+                        <div class="project-card-pro">
+                            <div class="project-image-overlay" style="background-image: url('img/umbrales.png');"></div>
+                            <div class="project-content-overlay">
+                                <div class="project-icon-pro"><i class="fas fa-cloud-rain"></i></div>
+                                <h3>Umbrales de Amenaza Meteorológica &mdash; DMC </h3>
+                                <p class="project-desc-pro">Modelación climática para la detección de umbrales de
+                                    amenaza meteorológica.</p>
+                                <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                            </div>
+                        </div>
+                        <div class="project-card-pro">
+                            <div class="project-image-overlay" style="background-image: url('img/carbono.png');"></div>
+                            <div class="project-content-overlay">
+                                <div class="project-icon-pro"><i class="fas fa-tree"></i></div>
+                                <h3>Inventario Forestal y Cómputo de Carbono Biomasa &mdash; Predio Relmu</h3>
+                                <p class="project-desc-pro">Cuantificación de biomasa aérea y reservas de carbono en el
+                                    predio Relmu, integrando parcelas de muestreo y modelos alométricos de alta
+                                    precisión.</p>
+                                <a href="#contact" class="project-btn-pro">Descubrir →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NASA News Section -->
+            <section id="noticias" class="news-section"
+                style="padding: 5rem 5%; background-color: var(--color-neutral-50);">
+                <div class="section-header" style="text-align: center; margin-bottom: 3rem;">
+                    <h2 class="section-title"
+                        style="font-family: var(--font-display); font-size: clamp(2.5rem, 5vw, 3.5rem); color: var(--color-primary); margin-bottom: 0.5rem;">
+                        Insights & Publicaciones</h2>
+                    <p class="section-subtitle" style="color: var(--color-neutral-800); font-size: 1.1rem;">Análisis
+                        satelital y actualidad ambiental global en tiempo real (NASA Earth Observatory)</p>
+                </div>
+
+                <div id="nasa-news-container" class="news-grid"
+                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; max-width: 1200px; margin: 0 auto;">
+                    <!-- Loading Skeleton -->
+                    <div style="text-align: center; grid-column: 1 / -1; padding: 2rem;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #1e3a8a;"></i>
+                        <p style="margin-top: 1rem; color: #64748b;">Conectando satélites NASA...</p>
+                    </div>
+                </div>
+            </section>
+
             <section id="team" class="team-section">
                 <h2>Nuestro Equipo</h2>
                 <p>Profesionales dedicados a la excelencia en gestión ambiental</p>
@@ -220,5 +308,7 @@
 
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/news-loader.js"></script>
 </body>
+
 </html>
