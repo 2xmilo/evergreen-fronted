@@ -6,9 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso a Datos Meteorológicos - Evergreen</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
+    <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
 
@@ -16,28 +20,54 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 </head>
 
-<body>
-    <header class="main-header">
-        <div class="logo-container">
-            <img src="img/logo.png" alt="Logo de Evergreen" class="logo">
-        </div>
-        <div class="header-center-text">
-            <h1>EVERGREEN</h1>
-            <span>Consultores</span>
-        </div>
-        <nav>
-            <a href="index.html#services">Servicios</a>
-            <a href="index.html#projects">Proyectos</a>
-            <a href="index.html#team">Equipo</a>
-            <a href="acceso-datos.html" class="active">Acceso a Datos</a>
-            <a href="index.html#contact">Contacto</a>
-            <a href="login.html" class="login-button">Iniciar Sesión</a>
-        </nav>
-    </header>
+<body
+    style="background: var(--green-900); height: 100vh; display: flex; flex-direction: column; overflow: hidden; margin: 0;">
+    <!-- ── NAV ── -->
+    <nav id="nav" class="scrolled" style="position: relative; z-index: 100; flex-shrink: 0;">
+        <a href="index.html" class="nav-brand">
+            <div class="nav-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="#C8A882" stroke-width="1.3">
+                    <path d="M8 2 C5 5 3 7 3 10 C3 13 5.2 15 8 15 C10.8 15 13 13 13 10 C13 7 11 5 8 2Z" />
+                    <line x1="8" y1="15" x2="8" y2="17" />
+                    <line x1="5" y1="17" x2="11" y2="17" />
+                </svg>
+            </div>
+            <span class="nav-wordmark">Evergreen <sub>Asesoría Ambiental</sub></span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html#servicios">Servicios</a></li>
+            <li><a href="index.html#proyectos">Proyectos</a></li>
+            <li><a href="index.html#enfoque">Enfoque</a></li>
+            <li><a href="index.html#contacto">Contacto</a></li>
+            <li>
+                <a href="acceso-datos.html" class="nav-btn"
+                    style="border-color: rgba(200, 168, 130, 0.4); background: rgba(200, 168, 130, 0.1);">
+                    API LAB
+                    <svg viewBox="0 0 16 16" fill="none" class="nav-btn-icon">
+                        <path d="M8 1L10 6L15 8L10 10L8 15L6 10L1 8L6 6z" fill="currentColor" />
+                    </svg>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <!-- Removed fixed spacer, nav is relative now -->
 
 
 
-    <section id="datos-app">
+    <!-- TAB SWITCHER -->
+    <div class="tool-tabs-bar">
+        <button class="tool-tab active" id="tab-datos" onclick="switchTool('datos')">
+            <span class="tool-tab-icon">🌧️</span>
+            <span class="tool-tab-label">Descarga de Datos</span>
+        </button>
+        <button class="tool-tab" id="tab-dem" onclick="switchTool('dem')">
+            <span class="tool-tab-icon">🏔️</span>
+            <span class="tool-tab-label">Modelo de Elevación DEM</span>
+        </button>
+    </div>
+
+    <!-- PANEL 1: Descarga de Datos Satelitales -->
+    <div id="datos-app" class="tool-panel active">
         <div class="app-container">
             <aside class="control-panel">
                 <div class="panel-header-compact">
@@ -60,10 +90,18 @@
                         <div class="accordion-body">
                             <p class="hint">Click en mapa o dibuja polígonos</p>
 
+                            <!-- MANUAL INPUT -->
+                            <div class="manual-coord-input">
+                                <input type="number" id="manual-lat" placeholder="Lat (-39.81)" step="0.0001">
+                                <input type="number" id="manual-lon" placeholder="Lon (-73.24)" step="0.0001">
+                                <button onclick="agregarPuntoManual()" title="Agregar Punto">+</button>
+                            </div>
+
                             <div class="location-stats">
-                                <span class="stat"><strong id="puntos-count">0</strong> Puntos</span>
+                                <span class="stat"><strong id="puntos-count">0</strong> Puntos <small>(máx
+                                        3)</small></span>
                                 <span class="stat"><strong id="poligonos-count">0</strong> Polígonos <small>(máx
-                                        10/3)</small></span>
+                                        1)</small></span>
                             </div>
 
                             <div id="puntos-lista" class="location-list"></div>
@@ -86,25 +124,25 @@
                         <div class="accordion-body">
                             <div class="checkbox-group" id="productos-grupo">
                                 <p>🌧️ PRECIPITACIÓN</p>
-                                <label><input type="checkbox" value="CHIRPS"
-                                        checked><span>CHIRPS</span><small>5km</small></label>
-                                <label><input type="checkbox"
-                                        value="GPM"><span>GPM-IMERG</span><small>10km</small></label>
-                                <label><input type="checkbox"
-                                        value="ERA5"><span>ERA5-Precip</span><small>9km</small></label>
-                                <label><input type="checkbox"
-                                        value="PERSIANN"><span>PERSIANN-CDR</span><small>25km</small></label>
-                                <label><input type="checkbox"
-                                        value="CMORPH"><span>CMORPH</span><small>25km</small></label>
+                                <label><input type="checkbox" value="CHIRPS" checked><span>CHIRPS</span><small>5.5
+                                        km</small></label>
+                                <label><input type="checkbox" value="GPM"><span>GPM-IMERG</span><small>11
+                                        km</small></label>
+                                <label><input type="checkbox" value="ERA5"><span>ERA5-Precip</span><small>11
+                                        km</small></label>
+                                <label><input type="checkbox" value="PERSIANN"><span>PERSIANN-CDR</span><small>28
+                                        km</small></label>
+                                <label><input type="checkbox" value="CMORPH"><span>CMORPH</span><small>25
+                                        km</small></label>
 
                                 <hr>
                                 <p>🌡️ TEMPERATURA</p>
                                 <label><input type="checkbox" value="T_MAX"><span>Temp.
-                                        Máxima</span><small>9km</small></label>
+                                        Máxima</span><small>9 km</small></label>
                                 <label><input type="checkbox" value="T_MIN"><span>Temp.
-                                        Mínima</span><small>9km</small></label>
+                                        Mínima</span><small>9 km</small></label>
                                 <label><input type="checkbox" value="T_MEAN"><span>Temp.
-                                        Media</span><small>9km</small></label>
+                                        Media</span><small>9 km</small></label>
                             </div>
                         </div>
                     </div>
@@ -155,12 +193,90 @@
                 </div>
             </main>
         </div>
-    </section>
+    </div>
+
+    <!-- PANEL 2: Modelo Digital de Elevación (GEE) -->
+    <div id="dem-app" class="tool-panel">
+        <div class="dem-container">
+            <div class="dem-info-bar">
+                <div class="dem-info-left">
+                    <span class="dem-badge">🛰️ Google Earth Engine</span>
+                    <span class="dem-title">Modelo Digital de Elevación · Copernicus GLO-30 &amp; ALOS AW3D30</span>
+                </div>
+                <div class="dem-info-right">
+                    <span class="dem-hint">Dibuja un polígono en el mapa para generar el análisis</span>
+                    <a href="https://camilo-miranda.users.earthengine.app/view/dem-copernicus" target="_blank"
+                        class="dem-ext-link" title="Abrir en nueva pestaña">↗ Abrir en pantalla completa</a>
+                </div>
+            </div>
+            <div class="dem-iframe-wrapper">
+                <iframe id="dem-iframe" src=""
+                    data-src="https://camilo-miranda.users.earthengine.app/view/dem-copernicus" allow="fullscreen"
+                    loading="lazy" title="Modelo Digital de Elevación - Evergreen"></iframe>
+                <div class="dem-loading-overlay" id="dem-loading">
+                    <div class="dem-spinner"></div>
+                    <p>Cargando app de elevación...</p>
+                </div>
+            </div>
+        </div>
+    </div>
     </main>
 
     <footer>
         <p>&copy; 2025 Evergreen Consultores. Todos los derechos reservados.</p>
     </footer>
+
+    <!-- MODAL POST-DESCARGA -->
+    <div id="modal-descarga" class="modal-des-overlay">
+        <div class="modal-des-content">
+            <div class="modal-des-header">
+                <h2>✅ Descarga Completada</h2>
+                <button class="close-modal-des" onclick="cerrarModalDescarga()" title="Cerrar modal">&times;</button>
+            </div>
+            <div class="modal-des-body">
+                <div class="warning-box">
+                    <strong>⚠️ IMPORTANTE:</strong>
+                    <ul>
+                        <li>Datos satelitales crudos sin validación local</li>
+                        <li>Margen de error típico: 20-30%</li>
+                        <li>Uso estrictamente educativo/exploratorio</li>
+                        <li>No utilizar en decisiones comerciales críticas ni declaraciones juradas</li>
+                    </ul>
+                </div>
+                <div class="usage-rules">
+                    <div class="rule-col">
+                        <strong>📚 USO PERMITIDO:</strong>
+                        <ul class="allowed">
+                            <li>✓ Investigación científica</li>
+                            <li>✓ Tesis universitarias</li>
+                            <li>✓ Exploración inicial de área</li>
+                            <li>✓ Diseño de metodologías</li>
+                        </ul>
+                    </div>
+                    <div class="rule-col">
+                        <strong>❌ NO PERMITIDO:</strong>
+                        <ul class="forbidden">
+                            <li>✗ Reportes corporativos finales</li>
+                            <li>✗ Estudios de Impacto Ambiental (sin corrección)</li>
+                            <li>✗ Reventa comercial del dataset</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="premium-pitch">
+                    <div class="premium-icon">💼</div>
+                    <div>
+                        <strong>¿Necesitas datos validados y corregidos?</strong>
+                        <p>Evergreen ofrece servicios profesionales de interpolación, corrección de sesgo local y
+                            validación con estaciones en superficie.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-des-footer">
+                <button class="btn-des-secondary" onclick="cerrarModalDescarga()">Entendido</button>
+                <a href="index.html#contact" class="btn-des-primary">Ver Servicios Profesionales</a>
+            </div>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>

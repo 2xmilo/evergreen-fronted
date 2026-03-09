@@ -5,16 +5,18 @@
 /* Contenedor Principal Ajustado al nuevo Header */
 .map-container {
     flex: 1;
-    height: 100%; /* Ocupa el 100% del app-container, ni un pixel más */
+    height: 100%;
+    /* Ocupa el 100% del app-container, ni un pixel más */
     position: relative;
-    z-index: 1; /* Se mantiene bajo los controles pero sobre el fondo */
+    z-index: 1;
+    /* Se mantiene bajo los controles pero sobre el fondo */
 }
 
 #map {
     width: 100%;
     height: 100%;
     /* Esto es clave para que Leaflet no recalcule mal las posiciones */
-    display: block; 
+    display: block;
 }
 
 /* Panel de Control Estilo Profesional */
@@ -204,7 +206,8 @@
 
 /* Estimación Estilizada */
 .estimation {
-    background: #fdfaf6; /* Un tono crema suave */
+    background: #fdfaf6;
+    /* Un tono crema suave */
     padding: 15px;
     border-radius: 8px;
     border-left: 4px solid var(--color-accent);
@@ -246,7 +249,10 @@
     border-left: 1px solid var(--color-neutral-100);
 }
 
-#map { width: 100%; height: 100%; }
+#map {
+    width: 100%;
+    height: 100%;
+}
 
 .loading-overlay {
     background: rgba(24, 24, 27, 0.9);
@@ -260,9 +266,19 @@
 
 /* Responsividad mejorada */
 @media (max-width: 768px) {
-    .app-container { height: auto; flex-direction: column; }
-    .control-panel { width: 100%; height: 60vh; }
-    .map-container { height: 400px; }
+    .app-container {
+        height: auto;
+        flex-direction: column;
+    }
+
+    .control-panel {
+        width: 100%;
+        height: 60vh;
+    }
+
+    .map-container {
+        height: 400px;
+    }
 }
 
 /* Ocultar el footer global solo en la herramienta de datos */
@@ -273,7 +289,8 @@ footer {
 /* Ajustar el contenedor para que use TODO el espacio inferior */
 .app-container {
     display: flex;
-    height: calc(100vh - 65px); /* Altura total menos el header compacto */
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -284,7 +301,8 @@ footer {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-height: 350px; /* Evita que el panel se estire demasiado */
+    max-height: 350px;
+    /* Evita que el panel se estire demasiado */
     overflow-y: auto;
     padding-right: 5px;
 }
@@ -328,6 +346,7 @@ footer {
         transform: translateX(400px);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;
@@ -339,8 +358,536 @@ footer {
         transform: translateX(0);
         opacity: 1;
     }
+
     to {
         transform: translateX(400px);
         opacity: 0;
     }
+}
+
+/* ========================================
+   TOOL TAB SWITCHER
+   ======================================== */
+.tool-tabs-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 64px;
+    background: rgba(14, 26, 14, 0.90);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(244, 247, 241, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 90;
+}
+
+.tool-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: rgba(244, 247, 241, 0.03);
+    border: 1px solid rgba(244, 247, 241, 0.15);
+    border-radius: 50px;
+    color: var(--white-60);
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tool-tab:hover {
+    background: rgba(244, 247, 241, 0.08);
+    color: var(--white);
+    border-color: rgba(244, 247, 241, 0.35);
+}
+
+.tool-tab.active {
+    background: rgba(200, 168, 130, 0.1);
+    border-color: rgba(200, 168, 130, 0.4);
+    color: var(--white);
+}
+
+.tool-tab-icon {
+    font-size: 1.1rem;
+}
+
+/* Panel visibility toggling */
+.tool-panel {
+    display: none;
+}
+
+.tool-panel.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Keep datos-app section height intact */
+#datos-app.tool-panel.active {
+    display: flex;
+}
+
+/* ========================================
+   DEM PANEL (GEE IFRAME)
+   ======================================== */
+#dem-app.tool-panel.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.dem-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    background: var(--green-800);
+}
+
+/* Info bar above iframe */
+.dem-info-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 64px;
+    background: #0f172a;
+    border-bottom: 3px solid var(--color-accent);
+    flex-shrink: 0;
+}
+
+.dem-info-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dem-badge {
+    background: rgba(76, 175, 80, 0.15);
+    color: #81e08a;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.dem-title {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.dem-info-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dem-hint {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.78rem;
+}
+
+.dem-ext-link {
+    color: #81e08a;
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border: 1px solid rgba(76, 175, 80, 0.4);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.dem-ext-link:hover {
+    background: rgba(76, 175, 80, 0.15);
+    color: #a8f0b0;
+}
+
+/* Iframe wrapper */
+.dem-iframe-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.dem-iframe-wrapper iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* DEM Loading overlay */
+.dem-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: #0d0d1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 5;
+    transition: opacity 0.4s ease;
+}
+
+.dem-loading-overlay p {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+}
+
+.dem-loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dem-spinner {
+    width: 44px;
+    height: 44px;
+    border: 3px solid rgba(255, 255, 255, 0.08);
+    border-top-color: #4CAF50;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tool-tabs-bar {
+        padding: 6px 10px;
+    }
+
+    .tool-tab {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+
+    .dem-info-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .dem-hint {
+        display: none;
+    }
+}
+
+/* ========================================
+   MODAL POST-DESCARGA
+   ======================================== */
+.modal-des-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(14, 26, 14, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+/* LEAFLET GLASSMORPHISM OVERRIDES */
+.leaflet-control-layers,
+.leaflet-bar {
+    background: rgba(14, 26, 14, 0.65) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(244, 247, 241, 0.15) !important;
+    color: var(--white) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.leaflet-control-layers-expanded {
+    padding: 12px 16px !important;
+    background: rgba(14, 26, 14, 0.85) !important;
+    color: var(--white) !important;
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+    background-color: transparent !important;
+    color: var(--white) !important;
+    border-bottom: 1px solid rgba(244, 247, 241, 0.1) !important;
+}
+
+/* Fix leaflet draw icons rendering in dark mode */
+.leaflet-draw-toolbar a {
+    background-image: url('https://unpkg.com/leaflet-draw@1.0.4/dist/images/spritesheet.png') !important;
+    background-color: transparent !important;
+    filter: invert(1) grayscale(1) brightness(2) !important;
+    /* Make colored icons white */
+}
+
+.leaflet-bar a.leaflet-disabled {
+    background-color: transparent !important;
+    color: var(--white-30) !important;
+    opacity: 0.5 !important;
+}
+
+/* Fix generic Leaflet zoom buttons (since we override .leaflet-bar a background) */
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+    color: var(--white) !important;
+    background: transparent !important;
+}
+
+.leaflet-control-layers label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    color: var(--white-60) !important;
+    font-family: var(--sans) !important;
+    font-size: 13px !important;
+}
+
+.leaflet-control-layers label:hover {
+    color: var(--white) !important;
+}
+
+/* Force override any internal form styling from Leaflet */
+.leaflet-control-layers-list,
+.leaflet-control-layers-base,
+.leaflet-control-layers-overlays {
+    background: transparent !important;
+}
+
+.leaflet-control-layers-separator {
+    border-top: 1px solid rgba(244, 247, 241, 0.1) !important;
+}
+
+.modal-des-content {
+    background: rgba(14, 26, 14, 0.95);
+    border: 1px solid rgba(244, 247, 241, 0.15);
+    width: 90%;
+    max-width: 600px;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: modalSlideIn 0.3s ease-out forwards;
+    color: var(--white);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-des-header {
+    background: rgba(244, 247, 241, 0.03);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(244, 247, 241, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-des-header h2 {
+    font-size: 1.25rem;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.close-modal-des {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--white-60);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-modal-des:hover {
+    color: var(--accent);
+}
+
+.modal-des-body {
+    padding: 1.5rem;
+}
+
+.warning-box {
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 4px solid #f59e0b;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+}
+
+.warning-box strong {
+    color: #fcd34d;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.warning-box ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: rgba(244, 247, 241, 0.8);
+    font-size: 0.9rem;
+}
+
+.warning-box li {
+    margin-bottom: 0.25rem;
+}
+
+.usage-rules {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.rule-col strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.rule-col ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.rule-col li {
+    margin-bottom: 0.25rem;
+}
+
+.allowed li {
+    color: #86efac;
+}
+
+.forbidden li {
+    color: #fca5a5;
+}
+
+.premium-pitch {
+    background: rgba(200, 168, 130, 0.05);
+    border: 1px solid rgba(200, 168, 130, 0.2);
+    padding: 1rem;
+    border-radius: 8px;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.premium-icon {
+    font-size: 2rem;
+}
+
+.premium-pitch strong {
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.premium-pitch p {
+    color: var(--white-60);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.modal-des-footer {
+    padding: 1rem 1.5rem;
+    background: rgba(244, 247, 241, 0.02);
+    border-top: 1px solid rgba(244, 247, 241, 0.1);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.btn-des-secondary {
+    background: transparent;
+    border: 1px solid rgba(244, 247, 241, 0.3);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    color: var(--white-60);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-des-secondary:hover {
+    background: rgba(244, 247, 241, 0.05);
+    color: var(--white);
+}
+
+.btn-des-primary {
+    background: rgba(244, 247, 241, 0.05);
+    color: var(--white);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(244, 247, 241, 0.2);
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-des-primary:hover {
+    background: rgba(244, 247, 241, 0.1);
+    border-color: rgba(244, 247, 241, 0.4);
+}
+
+/* ========================================
+   MANUAL COORD INPUT 
+   ======================================== */
+.manual-coord-input {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    align-items: center;
+}
+
+.manual-coord-input input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+}
+
+.manual-coord-input button {
+    width: 32px;
+    height: 32px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.manual-coord-input button:hover {
+    background: var(--color-primary-light);
 }

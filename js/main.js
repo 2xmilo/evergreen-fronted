@@ -293,3 +293,43 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+// ============================================
+// CONTACT FORM - FORMSPREE AJAX HANDLER
+// ============================================
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('contact-form');
+    const successDiv = document.getElementById('form-success');
+    const submitBtn = document.getElementById('submit-btn');
+
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoading = submitBtn.querySelector('.btn-loading');
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'flex';
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (response.ok) {
+                form.style.display = 'none';
+                successDiv.style.display = 'block';
+            } else {
+                throw new Error('Error en el envío');
+            }
+        } catch (err) {
+            btnText.style.display = 'flex';
+            btnLoading.style.display = 'none';
+            submitBtn.disabled = false;
+            alert('Hubo un problema al enviar. Por favor intenta nuevamente o contáctanos a contacto@evergreenclima.com');
+        }
+    });
+});

@@ -4,11 +4,12 @@
 
 .services-section {
     padding: 3.5rem 5% 1rem 5%;
-    /* Reducido para evitar exceso de blanco */
     background-color: var(--color-neutral-100);
     overflow-x: hidden;
-    /* Solo bloquea el horizontal para evitar el scroll del Swiper, NO oculta las flechas */
+    position: relative;
 }
+
+
 
 .services-section h2 {
     font-family: var(--font-display);
