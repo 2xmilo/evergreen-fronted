@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌿 Explorador de Biodiversidad Evergreen</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dark-theme">
+
+    <!-- HEADER -->
+    <header class="topbar">
+        <div class="brand">
+            <i class="fa-solid fa-leaf brand-icon"></i>
+            <div>
+                <h1>Evergreen Servicios Ambientales</h1>
+                <h2>Explorador de Biodiversidad y RCE</h2>
+            </div>
+        </div>
+        <div class="actions">
+            <button class="btn btn-secondary" onclick="exportCSV()" id="exportBtn" disabled>
+                <i class="fa-solid fa-download"></i> Exportar a CSV
+            </button>
+        </div>
+    </header>
+
+    <div class="app-container">
+        <!-- BARRA LATERAL (CONTROLES) -->
+        <aside class="sidebar">
+
+            <section class="control-group">
+                <h3><i class="fa-solid fa-map-location-dot"></i> Paso 1: Definir Área</h3>
+                <p class="help-text">Dibuja un polígono en el mapa, haz clic en un área protegida, o importa un archivo.
+                </p>
+                <div class="area-status" id="areaStatus">Área no definida</div>
+
+                <!-- Importador de archivo GeoJSON / KML -->
+                <label class="btn btn-secondary btn-block" style="margin-top:0.5rem; text-align:center; cursor:pointer;"
+                    title="Formatos soportados: .geojson, .json, .kml">
+                    <i class="fa-solid fa-file-arrow-up"></i> Importar GeoJSON / KML
+                    <input type="file" id="aoiFileInput" accept=".geojson,.json,.kml" style="display:none;"
+                        onchange="importAOIFile(this)">
+                </label>
+            </section>
+
+            <section class="control-group">
+                <h3><i class="fa-solid fa-leaf"></i> Paso 2: Reinos a Consultar</h3>
+                <p class="help-text" style="font-size:0.78rem;">El análisis base consulta <strong>Plantae + Fungi +
+                        Animalia</strong> en GBIF automáticamente. Usa el botón secundario para agregar Chromista y
+                    Protozoa si el estudio lo requiere.</p>
+            </section>
+
+
+
+            <section class="control-group">
+                <h3><i class="fa-solid fa-play"></i> Paso 3: Ejecutar</h3>
+                <button class="btn btn-primary btn-block" id="runBtn" disabled>
+                    <i class="fa-solid fa-magnifying-glass"></i> Ejecutar Análisis (GBIF)
+                </button>
+                <button class="btn btn-secondary btn-block" id="addBtn" disabled
+                    style="margin-top:0.4rem; font-size:0.8rem;">
+                    <i class="fa-solid fa-plus"></i> Agregar grupos adicionales
+                    <span
+                        style="font-size:0.7rem; display:block; color:var(--text-secondary); margin-top:0.15rem;">Chromista
+                        +
+                        Protozoa &mdash; acumula resultados</span>
+                </button>
+
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <span class="progress-text" id="progressText">Inicializando...</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progressBar"></div>
+                    </div>
+                </div>
+            </section>
+
+
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL (DASHBOARD) -->
+        <main class="dashboard">
+
+            <!-- PANEL 3: MAPA (arriba, dominante) -->
+            <div class="panel map-panel">
+                <div class="panel-header">
+                    <h3><i class="fa-solid fa-map-location-dot"></i> Panel 3: Contexto Geográfico</h3>
+                    <div class="layer-toggles">
+                        <label><input type="checkbox" class="layer-cb" value="snaspe"> SNASPE</label>
+                        <label><input type="checkbox" class="layer-cb" value="sp19300"> SP 19.300</label>
+                        <label><input type="checkbox" class="layer-cb" value="sperb"> SP ERB</label>
+                        <label><input type="checkbox" class="layer-cb" value="pisos"> Pisos Veg</label>
+                        <label><input type="checkbox" class="layer-cb" value="simbioHumedales"> Humedales</label>
+                        <label><input type="checkbox" class="layer-cb" value="simbioPlanesRecoge"> Plan
+                            RECOGE</label>
+                    </div>
+                </div>
+                <p class="help-text"
+                    style="padding:0.25rem 0.8rem; font-size:0.7rem; background:rgba(0,0,0,0.2); margin:0;">
+                    <i class="fa-solid fa-hand-pointer"></i> Haz clic en un área protegida para usarla como AOI. O
+                    dibuja un polígono personalizado con las herramientas del mapa.
+                </p>
+                <div class="panel-body" id="map"></div>
+                <div class="map-legend">
+                    <div><span class="color-box" style="background:rgba(255,0,0,0.4); border:1px solid red;"></span>
+                        SNASPE</div>
+                    <div><span class="color-box"
+                            style="background:rgba(255,165,0,0.4); border:1px solid orange;"></span> SP
+                        19.300</div>
+                    <div><span class="color-box"
+                            style="background:rgba(255,255,0,0.4); border:1px solid yellow;"></span> SP
+                        ERB</div>
+                    <div><span class="color-box"
+                            style="background:rgba(0,255,100,0.2); border:1px solid rgba(0,255,100,0.5);"></span> Pisos
+                        Veg</div>
+                    <div><span class="color-box"
+                            style="background:rgba(0,188,212,0.25); border:1px solid #00bcd4;"></span> Humedales</div>
+                    <div><span class="color-box"
+                            style="background:rgba(233,30,99,0.25); border:1px solid #e91e63;"></span> Plan RECOGE</div>
+                </div>
+            </div>
+
+            <!-- FILA MEDIA -->
+            <div class="dashboard-row">
+
+                <!-- PANEL 1: RESUMEN EJECUTIVO + todo lo que era el Panel 4 -->
+                <div class="panel summary-panel">
+                    <div class="panel-header">
+                        <h3>Panel 1: Resumen Ejecutivo</h3>
+                    </div>
+
+                    <!-- Parte superior original del Panel 1: stats + doughnut + alertas -->
+                    <div class="panel-body row-split">
+                        <div class="stats-col">
+                            <div class="stat-box">
+                                <span class="stat-value" id="statTotalSpp">-</span>
+                                <span class="stat-label">Especies Registradas</span>
+                            </div>
+                            <div class="stat-box warning">
+                                <span class="stat-value" id="statRceSpp">-</span>
+                                <span class="stat-label">Especies RCE</span>
+                            </div>
+
+                            <hr class="divider">
+
+                            <div class="intersection-alerts" id="intersectionAlerts">
+                                <h4>Proximidad a Áreas Protegidas</h4>
+                                <div class="alert-item" id="alert-snaspe"><i class="fa-solid fa-shield"></i> SNASPE:
+                                    <span>Pendiente</span>
+                                </div>
+                                <div class="alert-item" id="alert-19300"><i class="fa-solid fa-landmark"></i> SP 19.300:
+                                    <span>Pendiente</span>
+                                </div>
+                                <div class="alert-item" id="alert-erb"><i class="fa-solid fa-map"></i> SP ERB:
+                                    <span>Pendiente</span>
+                                </div>
+                                <div class="alert-item" id="alert-humedales"><i class="fa-solid fa-water"></i> Humedal
+                                    SIMBIO:
+                                    <span>Cargando...</span>
+                                </div>
+                                <div class="alert-item" id="alert-recoge"><i class="fa-solid fa-seedling"></i> Plan
+                                    RECOGE:
+                                    <span>Cargando...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-col">
+                            <canvas id="taxaChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Métricas de biodiversidad (contenido del antiguo Panel 4) -->
+                    <div class="panel-body" style="border-top:1px solid var(--border-color); padding-top:1rem;">
+                        <div class="metrics-grid">
+                            <div class="metric-row">
+                                <span class="m-label">Riqueza observada (S)</span>
+                                <span class="m-val" id="idxS">-</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="m-label">Riqueza estimada (Chao1)</span>
+                                <span class="m-val" id="idxChao1">-</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="m-label">Completitud del muestreo</span>
+                                <span class="m-val" id="idxCompletitud">-</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="m-label">Proporción con clasificación RCE</span>
+                                <span class="m-val" id="idxRcePct">-</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="m-label">Proporción amenazadas (CR+EN+VU)</span>
+                                <span class="m-val" id="idxAmenPct">-</span>
+                            </div>
+                            <div class="metric-row" title="Especies con ≤3 observaciones validas">
+                                <span class="m-label">Especies detección marginal</span>
+                                <span class="m-val warning-text" id="idxMarginales">-</span>
+                            </div>
+                        </div>
+
+                        <div class="ivc-box" style="margin-top:0.75rem;">
+                            <div class="ivc-header">
+                                <span>Índice de Valor de Conservación (IVC)</span>
+                                <span class="ivc-score" id="ivcScore">-</span>
+                            </div>
+                            <div class="ivc-interp" id="ivcInterp">A la espera de datos</div>
+                        </div>
+                    </div>
+
+                    <!-- Bioestáßstica colapsable -->
+                    <details class="bio-drawer">
+                        <summary>
+                            <i class="fa-solid fa-calculator"></i>&nbsp; Bioestadística Complementaria (Gráfico
+                            Regional, H', J', Cobertura Temporal)
+                        </summary>
+                        <div class="bio-drawer-body">
+                            <h4 style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                                <i class="fa-solid fa-chart-gantt"></i> Cobertura RCE Regional (<span
+                                    id="regionalName">Detectando...</span>)
+                            </h4>
+                            <div style="height:200px; width:100%;">
+                                <canvas id="regionalChart"></canvas>
+                            </div>
+                            <div id="ausentesContainer" style="margin-top:0.75rem; font-size:0.75rem;"></div>
+
+                            <!-- NUEVO: Histograma de registros por década -->
+                            <h4 style="font-size:0.85rem; color:var(--text-secondary); margin:1rem 0 0.5rem;">
+                                <i class="fa-solid fa-timeline"></i> Cobertura Temporal (registros GBIF por década)
+                            </h4>
+                            <div style="height:150px; width:100%;">
+                                <canvas id="decadaChart"></canvas>
+                            </div>
+                            <p style="font-size:0.7rem; color:var(--text-secondary); margin-top:0.35rem;">Indica si el
+                                conocimiento del área es reciente (observaciones post-2010) o se basa principalmente en
+                                colecciones históricas. Relevante metodológicamente para el SEIA.</p>
+
+                            <div style="margin-top:1rem;">
+                                <div class="indices-grid" style="margin-bottom:0.5rem">
+                                    <div class="index-box">
+                                        <span class="index-symbol">H'</span>
+                                        <span class="index-name">Shannon</span>
+                                        <span class="index-value" id="idxShannon">-</span>
+                                    </div>
+                                    <div class="index-box">
+                                        <span class="index-symbol">J'</span>
+                                        <span class="index-name">Pielou</span>
+                                        <span class="index-value" id="idxPielou">-</span>
+                                    </div>
+                                </div>
+                                <div class="disclaimer-text">
+                                    <i class="fa-solid fa-circle-info"></i> <strong>Nota metodológica:</strong> H' y J'
+                                    calculados usando
+                                    <code>individualCount</code> de GBIF (proxy de abundancia relativa; null=1).
+                                    Chao1 se calcula solo sobre registros HUMAN_OBSERVATION.
+                                    Complementar con muestreos dirigidos.
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                </div>
+
+                <!-- PANEL 5: RESUMEN CONSERVACIÓN (RCE / IUCN) -->
+                <div class="panel alerts-panel">
+                    <div class="panel-header">
+                        <h3>Panel 5: Resumen Conservación (RCE / IUCN)</h3>
+                    </div>
+                    <div class="panel-body" style="display:flex; flex-direction:column; gap:1.5rem;">
+                        <div class="threat-badges">
+                            <div class="threat-badge" style="border-left-color: var(--cr-color)">
+                                <span class="badge-num" id="countCR" style="color:var(--cr-color)">0</span>
+                                <span class="badge-lbl">Crítico</span>
+                            </div>
+                            <div class="threat-badge" style="border-left-color: var(--en-color)">
+                                <span class="badge-num" id="countEN" style="color:var(--en-color)">0</span>
+                                <span class="badge-lbl">Peligro</span>
+                            </div>
+                            <div class="threat-badge" style="border-left-color: var(--vu-color)">
+                                <span class="badge-num" id="countVU" style="color:var(--vu-color)">0</span>
+                                <span class="badge-lbl">Vulnerable</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h4
+                                style="font-size:0.8rem; margin-bottom:0.75rem; color:var(--text-secondary); border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Mayores Focos (Top 5)
+                            </h4>
+                            <ul class="threatened-list" id="threatenedList">
+                                <li class="empty-state">Ejecute el análisis para ver especies CR, EN o VU.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Gráfico Comparativo RCE vs IUCN -->
+                        <div style="margin-top:0.5rem;">
+                            <h4 style="font-size:0.8rem; margin-bottom:0.5rem; color:var(--text-secondary);">
+                                <i class="fa-solid fa-scale-balanced"></i> Proporción RCE vs IUCN
+                            </h4>
+                            <div style="height:160px; width:100%;">
+                                <canvas id="rceIucnChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Botón Generador SEIA -->
+                        <button class="btn btn-secondary" id="seiaBtn" onclick="generateSEIAParagraph()" disabled
+                            style="width:100%; margin-top:0.5rem;">
+                            <i class="fa-solid fa-file-lines"></i> Generar Párrafo Línea Base SEIA
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA INFERIOR: solo Panel 2 (tabla a pantalla completa) -->
+            <div class="dashboard-row">
+                <div class="panel table-panel" style="flex:1;">
+                    <div class="panel-header">
+                        <h3>Panel 2: Detalle de Especies <span
+                                style="font-size:0.7rem; color:var(--text-secondary); font-weight:normal;">(GBIF)</span>
+                        </h3>
+                        <span class="badge" id="tableCountBadge">0 Registros</span>
+                    </div>
+
+                    <!-- Filtros rápidos por clase (solo fauna — client-side, sin re-consultar GBIF) -->
+                    <div
+                        style="padding:0.5rem 1rem; display:flex; gap:0.4rem; flex-wrap:wrap; border-bottom:1px solid var(--border-color);">
+                        <span style="font-size:0.75rem; color:var(--text-secondary); align-self:center;">Fauna:</span>
+                        <button class="class-filter-btn" data-class="Aves"
+                            style="padding:0.2rem 0.6rem; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Aves</button>
+                        <button class="class-filter-btn" data-class="Mammalia"
+                            style="padding:0.2rem 0.6rem; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Mamíferos</button>
+                        <button class="class-filter-btn" data-class="Reptilia"
+                            style="padding:0.2rem 0.6rem; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Reptiles</button>
+                        <button class="class-filter-btn" data-class="Amphibia"
+                            style="padding:0.2rem 0.6rem; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Anfibios</button>
+                        <button class="class-filter-btn" data-class="Actinopterygii"
+                            style="padding:0.2rem 0.6rem; font-size:0.75rem; border-radius:4px; border:1px solid var(--border-color); background:transparent; color:var(--text-primary); cursor:pointer;">Peces</button>
+                        <span
+                            style="font-size:0.7rem; color:var(--text-secondary); align-self:center; margin-left:0.4rem;">(clic
+                            de nuevo para quitar filtro)</span>
+                    </div>
+
+                    <!-- Cambio 3 — Sugerencia de ampliación -->
+                    <div id="piso-banner-container" style="display:none; background:rgba(255, 193, 7, 0.15); border:1px solid #ffc107; color:var(--text-primary); padding:0.75rem 1rem; margin:0.5rem 1rem; border-radius:4px; justify-content:space-between; align-items:center;">
+                        <span id="piso-banner-text" style="font-size:0.8rem;"></span>
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            <button onclick="console.log('ampliar búsqueda por piso solicitada')" style="background:#ffc107; color:#000; border:none; padding:0.3rem 0.8rem; border-radius:4px; font-weight:600; font-size:0.75rem; cursor:pointer;">Ampliar búsqueda</button>
+                            <button onclick="document.getElementById('piso-banner-container').style.display='none'; appState.pisoBannerDismissed=true;" style="background:transparent; color:#ccc; border:none; cursor:pointer; font-size:1.1rem; padding:0 0.2rem;" title="Descartar sugerencia">&times;</button>
+                        </div>
+                    </div>
+
+                    <div class="panel-body table-responsive">
+
+                        <table class="data-table" id="speciesTable">
+                            <thead>
+                                <tr>
+                                    <th>Nombre Científico</th>
+                                    <th>Nombre Común</th>
+                                    <th>Grupo</th>
+                                    <th>Obs</th>
+                                    <th>Categoría RCE</th>
+                                    <th>Categoría IUCN</th>
+                                    <th>Especial</th>
+                                    <th>Piso Veg.</th>
+                                    <th>Riesgo Geoespacial (SNASPE/19.300/ERB)</th>
+                                    <th>Distribución</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="8" class="text-center">Sin datos</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modal: Advertencia de Área Grande -->
+    <div id="aoi-large-modal"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:var(--panel-bg,#1c2621); border:1px solid var(--border-color,#2b3a32); border-radius:8px; padding:1.5rem; max-width:420px; margin:auto;">
+            <h3 style="color:var(--brand-green,#2ecc71); margin-top:0;"><i class="fa-solid fa-triangle-exclamation"></i>
+                Área de gran extensión</h3>
+            <p id="aoi-large-msg" style="font-size:0.9rem; color:#ccc;"></p>
+            <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1rem;">
+                <button onclick="document.getElementById('aoi-large-modal').style.display='none'"
+                    style="padding:0.4rem 1rem; background:transparent; border:1px solid #555; color:#ccc; border-radius:4px; cursor:pointer;">Cancelar</button>
+                <button id="aoi-large-confirm"
+                    style="padding:0.4rem 1rem; background:var(--brand-green,#2ecc71); border:none; color:#121814; border-radius:4px; cursor:pointer; font-weight:600;">Continuar
+                    de todos modos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Párrafo Línea Base SEIA -->
+    <div id="seia-modal"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; padding:1rem;">
+        <div
+            style="background:var(--panel-bg,#1c2621); border:1px solid var(--border-color,#2b3a32); border-radius:8px; padding:1.5rem; max-width:720px; width:100%; margin:auto; display:flex; flex-direction:column; gap:1rem; max-height:90vh;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="color:var(--brand-green,#2ecc71); margin:0;"><i class="fa-solid fa-file-lines"></i> Párrafo
+                    Línea Base SEIA</h3>
+                <button onclick="document.getElementById('seia-modal').style.display='none'"
+                    style="background:transparent; border:none; color:#ccc; font-size:1.2rem; cursor:pointer;"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size:0.75rem; color:var(--text-secondary); margin:0;">Texto redactado automáticamente a
+                partir de los resultados del análisis. Revise y edite antes de usar en un informe formal.</p>
+            <textarea id="seia-text"
+                style="flex:1; min-height:280px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:var(--text-primary); padding:1rem; border-radius:4px; font-size:0.85rem; line-height:1.7; font-family:var(--font-main); resize:vertical;"></textarea>
+            <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                <button onclick="document.getElementById('seia-modal').style.display='none'"
+                    style="padding:0.4rem 1rem; background:transparent; border:1px solid #555; color:#ccc; border-radius:4px; cursor:pointer;">Cerrar</button>
+                <button onclick="copySEIAText()"
+                    style="padding:0.4rem 1.2rem; background:var(--brand-green,#2ecc71); border:none; color:#121814; border-radius:4px; cursor:pointer; font-weight:600;"><i
+                        class="fa-solid fa-copy"></i> Copiar texto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- toGeoJSON (KML → GeoJSON converter, pure JS, no dependencies) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5/dist/togeojson.umd.js"></script>
+
+    <!-- Scripts Core -->
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <!-- Turf.js para geoproceso cliente -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Lógica de Proyecto -->
+    <script type="module" src="app.js"></script>
+
+    <!-- SIMBIO Aviso de fallback -->
+    <div id="simbio-aviso"
+        style="display:none; position:fixed; bottom:1rem; right:1rem; background:#1c2621; border:1px solid #e91e63; color:#e91e63; padding:0.75rem 1rem; border-radius:6px; font-size:0.8rem; z-index:9999; max-width:320px;">
+    </div>
+
+    <!-- Modal: Distribución por Especie -->
+    <div id="distribucion-modal"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:9998; align-items:center; justify-content:center; padding:1rem;">
+        <div
+            style="background:var(--panel-bg,#1c2621); border:1px solid var(--border-color,#2b3a32); border-radius:10px; padding:1.5rem; max-width:680px; width:100%; margin:auto; display:flex; flex-direction:column; gap:1rem;">
+            <!-- Header -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                    <h3 style="color:var(--brand-green,#2ecc71); margin:0; font-size:1rem;">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        Distribución Conocida — GBIF
+                    </h3>
+                    <div style="margin-top:0.4rem; display:flex; align-items:center; gap:0.6rem;">
+                        <span id="dist-rce-cat" class="cat-badge" style="font-size:0.85rem;"></span>
+                        <em id="dist-species-name" style="font-size:1rem; color:var(--text-primary);"></em>
+                    </div>
+                </div>
+                <button onclick="closeDistribucionModal()"
+                    style="background:transparent; border:none; color:#ccc; font-size:1.3rem; cursor:pointer; padding:0;"
+                    title="Cerrar">&times;</button>
+            </div>
+
+            <!-- Info row -->
+            <div style="display:flex; gap:1.5rem; font-size:0.82rem; color:var(--text-secondary); flex-wrap:wrap;">
+                <span><i class="fa-solid fa-database"></i> Registros en AOI: <strong id="dist-records"
+                        style="color:var(--text-primary);">-</strong></span>
+                <a id="dist-gbif-link" href="#" target="_blank" rel="noopener"
+                    style="color:var(--brand-green); text-decoration:none;">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver ficha en GBIF
+                </a>
+            </div>
+
+            <!-- Map -->
+            <div id="dist-map"
+                style="height:320px; width:100%; border-radius:6px; border:1px solid var(--border-color,#2b3a32); background:#0d1a12;">
+            </div>
+
+            <p style="font-size:0.7rem; color:var(--text-secondary); margin:0;">
+                <i class="fa-solid fa-circle-info"></i> Puntos azules = registros GBIF para esta especie a nivel
+                mundial.
+                El polígono verde = AOI del proyecto. Permite evaluar si el proyecto está en área núcleo o margen de
+                distribución.
+            </p>
+
+            <!-- Actions -->
+            <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                <button onclick="closeDistribucionModal()"
+                    style="padding:0.4rem 1rem; background:transparent; border:1px solid #555; color:#ccc; border-radius:4px; cursor:pointer;">Cerrar</button>
+                <button id="dist-copy-btn" onclick="copyDistSpeciesName()"
+                    style="padding:0.4rem 1.2rem; background:var(--brand-green,#2ecc71); border:none; color:#121814; border-radius:4px; cursor:pointer; font-weight:600;">
+                    <i class="fa-solid fa-copy"></i> Copiar nombre
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,2133 @@
+{
+  "metrics": {
+    "total_inat_species": 1485,
+    "matched_rce_species": 161,
+    "match_percentage": 10.84,
+    "threatened_detected_count": 56
+  },
+  "threatened_species": [
+    {
+      "name": "araucaria araucana",
+      "common_name": "monkey-puzzle",
+      "count": 445,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "aextoxicon punctatum",
+      "common_name": "olivillo",
+      "count": 125,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "persea lingue",
+      "common_name": "lingue",
+      "count": 111,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "austrocedrus chilensis",
+      "common_name": "Cordilleran cypress",
+      "count": 97,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "drimys winteri",
+      "common_name": "Winter's Bark",
+      "count": 75,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "asplenium dareoides",
+      "common_name": "",
+      "count": 50,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "hymenophyllum pectinatum",
+      "common_name": "",
+      "count": 22,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "sticherus squamulosus",
+      "common_name": "",
+      "count": 10,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "austrolycopodium paniculatum",
+      "common_name": "",
+      "count": 10,
+      "taxa_group": "Plantae",
+      "rce_category": "CR"
+    },
+    {
+      "name": "prumnopitys andina",
+      "common_name": "Chilean plum-yew",
+      "count": 8,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "pteris semiadnata",
+      "common_name": "",
+      "count": 7,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "pleopeltis macrocarpa",
+      "common_name": "Bigfruit Scaly Polypody",
+      "count": 6,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "trichomanes exsectum",
+      "common_name": "",
+      "count": 5,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "asplenium trilobum",
+      "common_name": "",
+      "count": 4,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "hymenophyllum falklandicum",
+      "common_name": "Falkland filmy-fern",
+      "count": 3,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "hymenophyllum tortuosum",
+      "common_name": "Twisted filmy-fern",
+      "count": 3,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "cystopteris fragilis",
+      "common_name": "brittle bladderfern",
+      "count": 2,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "chloephaga picta",
+      "common_name": "Upland Goose",
+      "count": 102,
+      "taxa_group": "Aves",
+      "rce_category": "VU"
+    },
+    {
+      "name": "cyanoliseus patagonus",
+      "common_name": "Burrowing Parakeet",
+      "count": 80,
+      "taxa_group": "Aves",
+      "rce_category": "EN"
+    },
+    {
+      "name": "buteo ventralis",
+      "common_name": "Rufous-tailed Hawk",
+      "count": 16,
+      "taxa_group": "Aves",
+      "rce_category": "VU"
+    },
+    {
+      "name": "rhea pennata",
+      "common_name": "Lesser Rhea",
+      "count": 3,
+      "taxa_group": "Aves",
+      "rce_category": "EN"
+    },
+    {
+      "name": "rallus antarcticus",
+      "common_name": "Austral Rail",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "VU"
+    },
+    {
+      "name": "limosa haemastica",
+      "common_name": "Hudsonian Godwit",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "VU"
+    },
+    {
+      "name": "lycalopex culpaeus",
+      "common_name": "Culpeo",
+      "count": 71,
+      "taxa_group": "Mammalia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "lontra provocax",
+      "common_name": "Southern River Otter",
+      "count": 19,
+      "taxa_group": "Mammalia",
+      "rce_category": "EN"
+    },
+    {
+      "name": "leopardus guigna",
+      "common_name": "Guiña",
+      "count": 17,
+      "taxa_group": "Mammalia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "lama guanicoe",
+      "common_name": "Guanaco",
+      "count": 14,
+      "taxa_group": "Mammalia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "hippocamelus bisulcus",
+      "common_name": "Southern Huemul",
+      "count": 2,
+      "taxa_group": "Mammalia",
+      "rce_category": "CR"
+    },
+    {
+      "name": "liolaemus araucaniensis",
+      "common_name": "Caautín Smooth-throated Lizard",
+      "count": 35,
+      "taxa_group": "Reptilia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "liolaemus villaricensis",
+      "common_name": "Villarica tree iguana",
+      "count": 35,
+      "taxa_group": "Reptilia",
+      "rce_category": "EN"
+    },
+    {
+      "name": "pristidactylus torquatus",
+      "common_name": "Southern Grumbler",
+      "count": 12,
+      "taxa_group": "Reptilia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "liolaemus lineomaculatus",
+      "common_name": "Decorated Tree Iguana",
+      "count": 2,
+      "taxa_group": "Reptilia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "rhinoderma darwinii",
+      "common_name": "Darwin's Frog",
+      "count": 98,
+      "taxa_group": "Amphibia",
+      "rce_category": "EN"
+    },
+    {
+      "name": "eupsophus roseus",
+      "common_name": "Rosy Ground Frog",
+      "count": 55,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "calyptocephalella gayi",
+      "common_name": "Helmeted Water Toad",
+      "count": 18,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "alsodes igneus",
+      "common_name": "Tolhuaca spiny-chest frog",
+      "count": 11,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "alsodes gargola",
+      "common_name": "Tonchek Spiny-chest Frog",
+      "count": 3,
+      "taxa_group": "Amphibia",
+      "rce_category": "EN"
+    },
+    {
+      "name": "telmatobufo australis",
+      "common_name": "Pelado Mountains False Toad",
+      "count": 3,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "eupsophus vertebralis",
+      "common_name": "Valdivia Ground Frog",
+      "count": 2,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "bombus dahlbomii",
+      "common_name": "Giant Bumble Bee",
+      "count": 108,
+      "taxa_group": "Insecta",
+      "rce_category": "EN"
+    },
+    {
+      "name": "pycnosiphorus lessonii",
+      "common_name": "",
+      "count": 12,
+      "taxa_group": "Insecta",
+      "rce_category": "EN"
+    },
+    {
+      "name": "entoloma necopinatum",
+      "common_name": "",
+      "count": 24,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "marasmiellus alliiodorus",
+      "common_name": "",
+      "count": 12,
+      "taxa_group": "Fungi",
+      "rce_category": "CR"
+    },
+    {
+      "name": "cyttaria berteroi",
+      "common_name": "",
+      "count": 3,
+      "taxa_group": "Fungi",
+      "rce_category": "EN"
+    },
+    {
+      "name": "boletus loyita",
+      "common_name": "",
+      "count": 2,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "cortinarius lebre",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "cuphophyllus adonis",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "gymnopanella nothofagi",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "aplochiton taeniatus",
+      "common_name": "",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "EN"
+    },
+    {
+      "name": "basilichthys microlepidotus",
+      "common_name": "",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "percilia gillissi",
+      "common_name": "Carmelita",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "EN"
+    },
+    {
+      "name": "trichomycterus areolatus",
+      "common_name": "Chilean Pencil Catfish",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "galaxias maculatus",
+      "common_name": "Common Galaxias",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "brachygalaxias bullocki",
+      "common_name": "Puye",
+      "count": 1,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "odontesthes mauleanum",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "aplochiton zebra",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "EN"
+    }
+  ],
+  "unmatched_species": [
+    {
+      "name": "fuchsia magellanica",
+      "common_name": "Hardy Fuchsia",
+      "count": 327,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "alstroemeria aurea",
+      "common_name": "Peruvian Lily",
+      "count": 326,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "nothofagus dombeyi",
+      "common_name": "Dombey's Beech",
+      "count": 261,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "quinchamalium chilense",
+      "common_name": "Quinchamali",
+      "count": 225,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "luma apiculata",
+      "common_name": "arrayan",
+      "count": 224,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "lapageria rosea",
+      "common_name": "Chilean bellflower",
+      "count": 217,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "berberis microphylla",
+      "common_name": "Calafate",
+      "count": 209,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "berberis darwinii",
+      "common_name": "Darwin's Barberry",
+      "count": 208,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "embothrium coccineum",
+      "common_name": "Chilean fire bush",
+      "count": 205,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "desfontainia fulgens",
+      "common_name": "Chilean Holly",
+      "count": 197,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "gevuina avellana",
+      "common_name": "Chilean Hazel",
+      "count": 189,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "rhaphithamnus spinosus",
+      "common_name": "Prickly myrtle",
+      "count": 169,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "gunnera tinctoria",
+      "common_name": "Chilean rhubarb",
+      "count": 166,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "lomatia hirsuta",
+      "common_name": "Radal",
+      "count": 158,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "weinmannia trichosperma",
+      "common_name": "Tineo",
+      "count": 156,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "eucryphia cordifolia",
+      "common_name": "Ulmo",
+      "count": 152,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "nothofagus obliqua",
+      "common_name": "Patagonian oak",
+      "count": 147,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "aristotelia chilensis",
+      "common_name": "Chilean Wineberry",
+      "count": 141,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "blechnum chilense",
+      "common_name": "Chilean hard fern",
+      "count": 139,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "boquila trifoliolata",
+      "common_name": "pilpil",
+      "count": 135,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "nothofagus pumilio",
+      "common_name": "Lenga Beech",
+      "count": 130,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "codonorchis lessonii",
+      "common_name": "Dog orchid",
+      "count": 128,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "digitalis purpurea",
+      "common_name": "purple foxglove",
+      "count": 124,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "saxegothaea conspicua",
+      "common_name": "Prince Albert's yew",
+      "count": 124,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "maytenus boaria",
+      "common_name": "Maiten tree",
+      "count": 122,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "mitraria coccinea",
+      "common_name": "Chilean Mitre Flower",
+      "count": 121,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "nothofagus antarctica",
+      "common_name": "Antarctic Beech",
+      "count": 116,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "buddleja globosa",
+      "common_name": "Orange-ball tree",
+      "count": 109,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "mutisia spinosa",
+      "common_name": "black queen",
+      "count": 109,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "caldcluvia paniculata",
+      "common_name": "Tiaca",
+      "count": 106,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "drimys andina",
+      "common_name": "",
+      "count": 105,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "berberis trigona",
+      "common_name": "Narrow-leaved Barberry",
+      "count": 105,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "loasa acanthifolia",
+      "common_name": "",
+      "count": 104,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "nothofagus alpina",
+      "common_name": "Rauli",
+      "count": 101,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "lomatia ferruginea",
+      "common_name": "Fuinque",
+      "count": 101,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "sophora cassioides",
+      "common_name": "pelu",
+      "count": 97,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "asteranthera ovata",
+      "common_name": "Estrellita",
+      "count": 97,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "azara lanceolata",
+      "common_name": "",
+      "count": 96,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "echium vulgare",
+      "common_name": "viper's-bugloss",
+      "count": 95,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "rosa rubiginosa",
+      "common_name": "Sweet-brier",
+      "count": 94,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "peumus boldus",
+      "common_name": "boldo",
+      "count": 91,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "archidasyphyllum diacanthoides",
+      "common_name": "",
+      "count": 91,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "chusquea culeou",
+      "common_name": "",
+      "count": 89,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "laureliopsis philippiana",
+      "common_name": "",
+      "count": 88,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "cissus striata",
+      "common_name": "Miniature Grape Ivy",
+      "count": 87,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "lomatia dentata",
+      "common_name": "Piñol",
+      "count": 87,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "hydrangea serratifolia",
+      "common_name": "",
+      "count": 84,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "fragaria chiloensis",
+      "common_name": "beach strawberry",
+      "count": 82,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "nertera granadensis",
+      "common_name": "Mākole",
+      "count": 82,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "mutisia decurrens",
+      "common_name": "carnation of the field",
+      "count": 82,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "luzuriaga radicans",
+      "common_name": "",
+      "count": 82,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "calceolaria crenatiflora",
+      "common_name": "",
+      "count": 76,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "berberis serratodentata",
+      "common_name": "",
+      "count": 76,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "francoa appendiculata",
+      "common_name": "Bridal Wreath",
+      "count": 75,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "cytisus scoparius",
+      "common_name": "Scotch Broom",
+      "count": 74,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "sarmienta scandens",
+      "common_name": "climbing Chilean pitcher flower",
+      "count": 69,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "verbascum thapsus",
+      "common_name": "great mullein",
+      "count": 68,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "acaena ovalifolia",
+      "common_name": "Two-spined Acaena",
+      "count": 68,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "trifolium pratense",
+      "common_name": "Red Clover",
+      "count": 67,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "lupinus polyphyllus",
+      "common_name": "Large-leaved lupine",
+      "count": 67,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "azorella prolifera",
+      "common_name": "Mother-in-law Cushion",
+      "count": 66,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "azara integrifolia",
+      "common_name": "goldspire",
+      "count": 65,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "prunella vulgaris",
+      "common_name": "common selfheal",
+      "count": 62,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "eryngium paniculatum",
+      "common_name": "Chupalla",
+      "count": 62,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "ugni molinae",
+      "common_name": "Chilean Guava",
+      "count": 61,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "synammia feuillei",
+      "common_name": "",
+      "count": 61,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "eschscholzia californica",
+      "common_name": "California poppy",
+      "count": 59,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "achillea millefolium",
+      "common_name": "common yarrow",
+      "count": 59,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "myrceugenia exsucca",
+      "common_name": "",
+      "count": 59,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "azara microphylla",
+      "common_name": "Vanilla tree",
+      "count": 58,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "taraxacum officinale",
+      "common_name": "common dandelion",
+      "count": 57,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "blechnum mochaenum",
+      "common_name": "",
+      "count": 55,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "raukaua laetevirens",
+      "common_name": "",
+      "count": 55,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "escallonia rubra",
+      "common_name": "redclaws",
+      "count": 54,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "fascicularia bicolor",
+      "common_name": "Rhodostachys",
+      "count": 53,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "tristerix corymbosus",
+      "common_name": "Quintral",
+      "count": 53,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "ourisia coccinea",
+      "common_name": "",
+      "count": 53,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "chloraea piquichen",
+      "common_name": "",
+      "count": 53,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "gaultheria phillyreifolia",
+      "common_name": "",
+      "count": 52,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "viola reichei",
+      "common_name": "Patagonian yellow violet",
+      "count": 51,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "ribes magellanicum",
+      "common_name": "Patagonian wild currant",
+      "count": 51,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "anemone multifida",
+      "common_name": "Cutleaf Anemone",
+      "count": 50,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "gavilea odoratissima",
+      "common_name": "Fragrant Gavilea",
+      "count": 50,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "discaria chacaye",
+      "common_name": "",
+      "count": 49,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "laurelia sempervirens",
+      "common_name": "Chilean laurel",
+      "count": 48,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "chloraea magellanica",
+      "common_name": "Porcelain orchid",
+      "count": 48,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "schinus patagonica",
+      "common_name": "",
+      "count": 48,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "arachnitis uniflora",
+      "common_name": "Spider-flower",
+      "count": 47,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "ovidia andina",
+      "common_name": "",
+      "count": 47,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "tristagma patagonicum",
+      "common_name": "",
+      "count": 47,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "maytenus disticha",
+      "common_name": "",
+      "count": 46,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "coriaria ruscifolia",
+      "common_name": "",
+      "count": 44,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "adenocaulon chilense",
+      "common_name": "Straightflowered trailplant",
+      "count": 41,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "dendroligotrichum dendroides",
+      "common_name": "giant moss",
+      "count": 41,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "rhodolirium andicola",
+      "common_name": "",
+      "count": 41,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "misodendrum punctulatum",
+      "common_name": "false mistletoe",
+      "count": 40,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "gavilea araucana",
+      "common_name": "Araucana orchid",
+      "count": 40,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "cichorium intybus",
+      "common_name": "chicory",
+      "count": 39,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "conium maculatum",
+      "common_name": "poison hemlock",
+      "count": 39,
+      "taxa_group": "Plantae"
+    },
+    {
+      "name": "trifolium repens",
+      "common_name": "white clover",
+      "count": 39,
+      "taxa_group": "Plantae"
+    }
+  ],
+  "matches": [
+    {
+      "name": "araucaria araucana",
+      "common_name": "monkey-puzzle",
+      "count": 445,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "aextoxicon punctatum",
+      "common_name": "olivillo",
+      "count": 125,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "persea lingue",
+      "common_name": "lingue",
+      "count": 111,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "lophosoria quadripinnata",
+      "common_name": "diamondleaf fern",
+      "count": 104,
+      "taxa_group": "Plantae",
+      "rce_category": "NT"
+    },
+    {
+      "name": "blechnum hastatum",
+      "common_name": "",
+      "count": 98,
+      "taxa_group": "Plantae",
+      "rce_category": "NT"
+    },
+    {
+      "name": "austrocedrus chilensis",
+      "common_name": "Cordilleran cypress",
+      "count": 97,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "adiantum chilense",
+      "common_name": "Chilean Maidenhair Fern",
+      "count": 88,
+      "taxa_group": "Plantae",
+      "rce_category": "NT"
+    },
+    {
+      "name": "drimys winteri",
+      "common_name": "Winter's Bark",
+      "count": 75,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "hymenophyllum dentatum",
+      "common_name": "",
+      "count": 53,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "asplenium dareoides",
+      "common_name": "",
+      "count": 50,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "adesmia boronioides",
+      "common_name": "",
+      "count": 49,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "rumohra adiantiformis",
+      "common_name": "leatherleaf fern",
+      "count": 22,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "hymenophyllum pectinatum",
+      "common_name": "",
+      "count": 22,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "megalastrum spectabile",
+      "common_name": "",
+      "count": 16,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "sticherus squamulosus",
+      "common_name": "",
+      "count": 10,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "austrolycopodium paniculatum",
+      "common_name": "",
+      "count": 10,
+      "taxa_group": "Plantae",
+      "rce_category": "CR"
+    },
+    {
+      "name": "blechnum arcuatum",
+      "common_name": "",
+      "count": 9,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "prumnopitys andina",
+      "common_name": "Chilean plum-yew",
+      "count": 8,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "peperomia fernandeziana",
+      "common_name": "",
+      "count": 8,
+      "taxa_group": "Plantae",
+      "rce_category": "NT"
+    },
+    {
+      "name": "cheilanthes glauca",
+      "common_name": "",
+      "count": 7,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "pteris semiadnata",
+      "common_name": "",
+      "count": 7,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "pleopeltis macrocarpa",
+      "common_name": "Bigfruit Scaly Polypody",
+      "count": 6,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "hymenophyllum plicatum",
+      "common_name": "",
+      "count": 6,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "elaphoglossum gayanum",
+      "common_name": "",
+      "count": 5,
+      "taxa_group": "Plantae",
+      "rce_category": "NT"
+    },
+    {
+      "name": "trichomanes exsectum",
+      "common_name": "",
+      "count": 5,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "asplenium trilobum",
+      "common_name": "",
+      "count": 4,
+      "taxa_group": "Plantae",
+      "rce_category": "VU"
+    },
+    {
+      "name": "maytenus chubutensis",
+      "common_name": "",
+      "count": 4,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "hymenophyllum falklandicum",
+      "common_name": "Falkland filmy-fern",
+      "count": 3,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "luma chequen",
+      "common_name": "white Chilean myrtle",
+      "count": 3,
+      "taxa_group": "Plantae",
+      "rce_category": "LC"
+    },
+    {
+      "name": "hymenophyllum tortuosum",
+      "common_name": "Twisted filmy-fern",
+      "count": 3,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "polystichum subintegerrimum",
+      "common_name": "",
+      "count": 3,
+      "taxa_group": "Plantae",
+      "rce_category": "NT"
+    },
+    {
+      "name": "cystopteris fragilis",
+      "common_name": "brittle bladderfern",
+      "count": 2,
+      "taxa_group": "Plantae",
+      "rce_category": "EN"
+    },
+    {
+      "name": "theristicus melanopis",
+      "common_name": "Black-faced Ibis",
+      "count": 454,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "chloephaga poliocephala",
+      "common_name": "Ashy-headed Goose",
+      "count": 331,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "campephilus magellanicus",
+      "common_name": "Magellanic Woodpecker",
+      "count": 183,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "chloephaga picta",
+      "common_name": "Upland Goose",
+      "count": 102,
+      "taxa_group": "Aves",
+      "rce_category": "VU"
+    },
+    {
+      "name": "pteroptochos tarnii",
+      "common_name": "Black-throated Huet-huet",
+      "count": 86,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "cyanoliseus patagonus",
+      "common_name": "Burrowing Parakeet",
+      "count": 80,
+      "taxa_group": "Aves",
+      "rce_category": "EN"
+    },
+    {
+      "name": "scelorchilus rubecula",
+      "common_name": "Chucao Tapaculo",
+      "count": 75,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "vultur gryphus",
+      "common_name": "Andean Condor",
+      "count": 71,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "patagioenas araucana",
+      "common_name": "Chilean Pigeon",
+      "count": 45,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "ardea cocoi",
+      "common_name": "Cocoi Heron",
+      "count": 39,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "tachyeres patachonicus",
+      "common_name": "Flying Steamer Duck",
+      "count": 36,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "cygnus melancoryphus",
+      "common_name": "Black-necked Swan",
+      "count": 31,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "gallinago magellanica",
+      "common_name": "Magellanic Snipe",
+      "count": 30,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "tringa flavipes",
+      "common_name": "Lesser Yellowlegs",
+      "count": 26,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "buteo albigula",
+      "common_name": "White-throated Hawk",
+      "count": 23,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "enicognathus leptorhynchus",
+      "common_name": "Slender-billed Parakeet",
+      "count": 23,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "speculanas specularis",
+      "common_name": "Spectacled Duck",
+      "count": 22,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "spatula platalea",
+      "common_name": "Red Shoveler",
+      "count": 21,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "falco peregrinus",
+      "common_name": "Peregrine Falcon",
+      "count": 19,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "asio flammeus",
+      "common_name": "Short-eared Owl",
+      "count": 19,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "buteo ventralis",
+      "common_name": "Rufous-tailed Hawk",
+      "count": 16,
+      "taxa_group": "Aves",
+      "rce_category": "VU"
+    },
+    {
+      "name": "strix rufipes",
+      "common_name": "Rufous-legged Owl",
+      "count": 15,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "phoenicopterus chilensis",
+      "common_name": "Chilean Flamingo",
+      "count": 12,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "merganetta armata",
+      "common_name": "Torrent Duck",
+      "count": 12,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "chroicocephalus serranus",
+      "common_name": "Andean Gull",
+      "count": 11,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "coscoroba coscoroba",
+      "common_name": "Coscoroba Swan",
+      "count": 9,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "plegadis chihi",
+      "common_name": "White-faced Ibis",
+      "count": 6,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "nothoprocta perdicaria",
+      "common_name": "Chilean Tinamou",
+      "count": 5,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "phalaropus tricolor",
+      "common_name": "Wilson's Phalarope",
+      "count": 5,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "pseudocolopteryx citreola",
+      "common_name": "Ticking Doradito",
+      "count": 4,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "rhea pennata",
+      "common_name": "Lesser Rhea",
+      "count": 3,
+      "taxa_group": "Aves",
+      "rce_category": "EN"
+    },
+    {
+      "name": "rallus antarcticus",
+      "common_name": "Austral Rail",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "VU"
+    },
+    {
+      "name": "limosa haemastica",
+      "common_name": "Hudsonian Godwit",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "VU"
+    },
+    {
+      "name": "pelecanus thagus",
+      "common_name": "Peruvian Pelican",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "haematopus palliatus",
+      "common_name": "American Oystercatcher",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "NT"
+    },
+    {
+      "name": "anas bahamensis",
+      "common_name": "White-cheeked Pintail",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "heteronetta atricapilla",
+      "common_name": "Black-headed Duck",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "leucophaeus pipixcan",
+      "common_name": "Franklin's Gull",
+      "count": 1,
+      "taxa_group": "Aves",
+      "rce_category": "LC"
+    },
+    {
+      "name": "lycalopex culpaeus",
+      "common_name": "Culpeo",
+      "count": 71,
+      "taxa_group": "Mammalia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "myocastor coypus",
+      "common_name": "Coypu",
+      "count": 28,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "lontra provocax",
+      "common_name": "Southern River Otter",
+      "count": 19,
+      "taxa_group": "Mammalia",
+      "rce_category": "EN"
+    },
+    {
+      "name": "lasiurus varius",
+      "common_name": "Cinnamon Red Bat",
+      "count": 18,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "leopardus guigna",
+      "common_name": "Guiña",
+      "count": 17,
+      "taxa_group": "Mammalia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "conepatus chinga",
+      "common_name": "Molina's Hog-nosed Skunk",
+      "count": 17,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "lama guanicoe",
+      "common_name": "Guanaco",
+      "count": 14,
+      "taxa_group": "Mammalia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "myotis chiloensis",
+      "common_name": "Chilean myotis",
+      "count": 11,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "puma concolor",
+      "common_name": "Mountain Lion",
+      "count": 9,
+      "taxa_group": "Mammalia",
+      "rce_category": "NT"
+    },
+    {
+      "name": "dromiciops gliroides",
+      "common_name": "Southern Monito del Monte",
+      "count": 9,
+      "taxa_group": "Mammalia",
+      "rce_category": "NT"
+    },
+    {
+      "name": "galictis cuja",
+      "common_name": "Lesser Grison",
+      "count": 6,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "geoxus valdivianus",
+      "common_name": "Valdivian Long-clawed Molemouse",
+      "count": 6,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "tadarida brasiliensis",
+      "common_name": "Mexican Free-tailed Bat",
+      "count": 4,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "zaedyus pichiy",
+      "common_name": "Pichi",
+      "count": 4,
+      "taxa_group": "Mammalia",
+      "rce_category": "NT"
+    },
+    {
+      "name": "chaetophractus villosus",
+      "common_name": "Large Hairy Armadillo",
+      "count": 3,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "hippocamelus bisulcus",
+      "common_name": "Southern Huemul",
+      "count": 2,
+      "taxa_group": "Mammalia",
+      "rce_category": "CR"
+    },
+    {
+      "name": "lagidium viscacia",
+      "common_name": "Mountain Viscacha",
+      "count": 2,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "lyncodon patagonicus",
+      "common_name": "Patagonian Weasel",
+      "count": 1,
+      "taxa_group": "Mammalia",
+      "rce_category": "DD"
+    },
+    {
+      "name": "histiotus magellanicus",
+      "common_name": "Southern Big-eared Brown Bat",
+      "count": 1,
+      "taxa_group": "Mammalia",
+      "rce_category": "DD"
+    },
+    {
+      "name": "leopardus geoffroyi",
+      "common_name": "Geoffroy's Cat",
+      "count": 1,
+      "taxa_group": "Mammalia",
+      "rce_category": "NT"
+    },
+    {
+      "name": "abrothrix longipilis",
+      "common_name": "Long-haired Soft-haired Mouse",
+      "count": 1,
+      "taxa_group": "Mammalia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "lasiurus villosissimus",
+      "common_name": "Southern Hoary Bat",
+      "count": 1,
+      "taxa_group": "Mammalia",
+      "rce_category": "DD"
+    },
+    {
+      "name": "liolaemus pictus",
+      "common_name": "Common Painted Smooth-throated Lizard",
+      "count": 665,
+      "taxa_group": "Reptilia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "liolaemus tenuis",
+      "common_name": "Blue-Green Smooth-throated Lizard",
+      "count": 391,
+      "taxa_group": "Reptilia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "liolaemus chiliensis",
+      "common_name": "Chilean Tree Iguana",
+      "count": 154,
+      "taxa_group": "Reptilia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "liolaemus cyanogaster",
+      "common_name": "Concepción Blue-bellied Smooth-throated Lizard",
+      "count": 72,
+      "taxa_group": "Reptilia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "liolaemus araucaniensis",
+      "common_name": "Caautín Smooth-throated Lizard",
+      "count": 35,
+      "taxa_group": "Reptilia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "liolaemus villaricensis",
+      "common_name": "Villarica tree iguana",
+      "count": 35,
+      "taxa_group": "Reptilia",
+      "rce_category": "EN"
+    },
+    {
+      "name": "diplolaemus sexcinctus",
+      "common_name": "Six-banded Patagonian Lizard",
+      "count": 20,
+      "taxa_group": "Reptilia",
+      "rce_category": "NT"
+    },
+    {
+      "name": "pristidactylus torquatus",
+      "common_name": "Southern Grumbler",
+      "count": 12,
+      "taxa_group": "Reptilia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "liolaemus elongatus",
+      "common_name": "Elongate Smooth-throated Lizard",
+      "count": 11,
+      "taxa_group": "Reptilia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "liolaemus lemniscatus",
+      "common_name": "Valparaiso Smooth-throated Lizard",
+      "count": 4,
+      "taxa_group": "Reptilia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "liolaemus lineomaculatus",
+      "common_name": "Decorated Tree Iguana",
+      "count": 2,
+      "taxa_group": "Reptilia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "philodryas chamissonis",
+      "common_name": "Chilean Green Racer",
+      "count": 1,
+      "taxa_group": "Reptilia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "pleurodema thaul",
+      "common_name": "Chilean Four-eyed Frog",
+      "count": 106,
+      "taxa_group": "Amphibia",
+      "rce_category": "NT"
+    },
+    {
+      "name": "rhinoderma darwinii",
+      "common_name": "Darwin's Frog",
+      "count": 98,
+      "taxa_group": "Amphibia",
+      "rce_category": "EN"
+    },
+    {
+      "name": "batrachyla taeniata",
+      "common_name": "Banded Wood Frog",
+      "count": 87,
+      "taxa_group": "Amphibia",
+      "rce_category": "NT"
+    },
+    {
+      "name": "eupsophus roseus",
+      "common_name": "Rosy Ground Frog",
+      "count": 55,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "batrachyla leptopus",
+      "common_name": "Gray Wood Frog",
+      "count": 40,
+      "taxa_group": "Amphibia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "calyptocephalella gayi",
+      "common_name": "Helmeted Water Toad",
+      "count": 18,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "alsodes igneus",
+      "common_name": "Tolhuaca spiny-chest frog",
+      "count": 11,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "eupsophus calcaratus",
+      "common_name": "Chiloe Island Ground Frog",
+      "count": 7,
+      "taxa_group": "Amphibia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "hylorina sylvatica",
+      "common_name": "Emerald Forest Frog",
+      "count": 6,
+      "taxa_group": "Amphibia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "alsodes gargola",
+      "common_name": "Tonchek Spiny-chest Frog",
+      "count": 3,
+      "taxa_group": "Amphibia",
+      "rce_category": "EN"
+    },
+    {
+      "name": "batrachyla antartandica",
+      "common_name": "Marbled Wood Frog",
+      "count": 3,
+      "taxa_group": "Amphibia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "telmatobufo australis",
+      "common_name": "Pelado Mountains False Toad",
+      "count": 3,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "rhinella spinulosa",
+      "common_name": "Warty Toad",
+      "count": 3,
+      "taxa_group": "Amphibia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "eupsophus vertebralis",
+      "common_name": "Valdivia Ground Frog",
+      "count": 2,
+      "taxa_group": "Amphibia",
+      "rce_category": "VU"
+    },
+    {
+      "name": "eupsophus emiliopugini",
+      "common_name": "Emilio's Ground Frog",
+      "count": 1,
+      "taxa_group": "Amphibia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "nannophryne variegata",
+      "common_name": "Eden Harbour Toad",
+      "count": 1,
+      "taxa_group": "Amphibia",
+      "rce_category": "LC"
+    },
+    {
+      "name": "bombus dahlbomii",
+      "common_name": "Giant Bumble Bee",
+      "count": 108,
+      "taxa_group": "Insecta",
+      "rce_category": "EN"
+    },
+    {
+      "name": "ceroglossus chilensis",
+      "common_name": "Chilean Magnificent Beetle",
+      "count": 62,
+      "taxa_group": "Insecta",
+      "rce_category": "LC"
+    },
+    {
+      "name": "phenes raptor",
+      "common_name": "Chilean Petaltail",
+      "count": 31,
+      "taxa_group": "Insecta",
+      "rce_category": "LC"
+    },
+    {
+      "name": "pycnosiphorus lessonii",
+      "common_name": "",
+      "count": 12,
+      "taxa_group": "Insecta",
+      "rce_category": "EN"
+    },
+    {
+      "name": "lautarus concinnus",
+      "common_name": "",
+      "count": 10,
+      "taxa_group": "Insecta",
+      "rce_category": "LC"
+    },
+    {
+      "name": "ceroglossus magellanicus",
+      "common_name": "",
+      "count": 6,
+      "taxa_group": "Insecta",
+      "rce_category": "LC"
+    },
+    {
+      "name": "hypopetalia pestilens",
+      "common_name": "White-dotted Redspot",
+      "count": 1,
+      "taxa_group": "Insecta",
+      "rce_category": "LC"
+    },
+    {
+      "name": "phyllopetalia apollo",
+      "common_name": "Apollo Redspot",
+      "count": 1,
+      "taxa_group": "Insecta",
+      "rce_category": "LC"
+    },
+    {
+      "name": "mycena cyanocephala",
+      "common_name": "",
+      "count": 41,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "bondarzewia guaitecasensis",
+      "common_name": "",
+      "count": 30,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "entoloma necopinatum",
+      "common_name": "",
+      "count": 24,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "austrobasidium pehueldeni",
+      "common_name": "",
+      "count": 19,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "anthracophyllum discolor",
+      "common_name": "",
+      "count": 15,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "amanita merxmuelleri",
+      "common_name": "Merxmueller Amanita",
+      "count": 15,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "marasmiellus alliiodorus",
+      "common_name": "",
+      "count": 12,
+      "taxa_group": "Fungi",
+      "rce_category": "CR"
+    },
+    {
+      "name": "clitocybula dusenii",
+      "common_name": "",
+      "count": 6,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "grifola gargal",
+      "common_name": "",
+      "count": 4,
+      "taxa_group": "Fungi",
+      "rce_category": "NT"
+    },
+    {
+      "name": "pseudocyphellaria crocata",
+      "common_name": "Yellow Specklebelly",
+      "count": 3,
+      "taxa_group": "Fungi",
+      "rce_category": "DD"
+    },
+    {
+      "name": "cyttaria berteroi",
+      "common_name": "",
+      "count": 3,
+      "taxa_group": "Fungi",
+      "rce_category": "EN"
+    },
+    {
+      "name": "russula fuegiana",
+      "common_name": "",
+      "count": 2,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "cyttaria exigua",
+      "common_name": "",
+      "count": 2,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "boletus loyita",
+      "common_name": "",
+      "count": 2,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "teloschistes chrysophthalmus",
+      "common_name": "Golden-eye Lichen",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "montagnea arenaria",
+      "common_name": "Desert Inkcap",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "pluteus flammipes",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "cortinarius lebre",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "mycena subulifera",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "NT"
+    },
+    {
+      "name": "cuphophyllus adonis",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "pluteus jaffuelii",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "LC"
+    },
+    {
+      "name": "gymnopanella nothofagi",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "VU"
+    },
+    {
+      "name": "simocybe olivaceiceps",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Fungi",
+      "rce_category": "NT"
+    },
+    {
+      "name": "percichthys trucha",
+      "common_name": "Creole Perch",
+      "count": 3,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "NT"
+    },
+    {
+      "name": "aplochiton taeniatus",
+      "common_name": "",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "EN"
+    },
+    {
+      "name": "basilichthys microlepidotus",
+      "common_name": "",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "percilia gillissi",
+      "common_name": "Carmelita",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "EN"
+    },
+    {
+      "name": "trichomycterus areolatus",
+      "common_name": "Chilean Pencil Catfish",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "galaxias maculatus",
+      "common_name": "Common Galaxias",
+      "count": 2,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "brachygalaxias bullocki",
+      "common_name": "Puye",
+      "count": 1,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "odontesthes mauleanum",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "VU"
+    },
+    {
+      "name": "aplochiton zebra",
+      "common_name": "",
+      "count": 1,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "EN"
+    },
+    {
+      "name": "galaxias platei",
+      "common_name": "Plate's Galaxias",
+      "count": 1,
+      "taxa_group": "Actinopterygii",
+      "rce_category": "LC"
+    }
+  ]
+}
