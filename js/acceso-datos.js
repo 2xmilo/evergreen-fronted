@@ -23,8 +23,9 @@ const MENSAJES_PROCESAMIENTO = [
 
 // Estado de la aplicación
 let map;
-let controlCapas;
 let drawnItems;
+let drawControl;
+let mapaCalles, satelite, topografico;
 let cuencasLayer = null;
 let cuencaSeleccionada = null;
 let puntos = [];
@@ -36,47 +37,31 @@ let poligonoIdCounter = 1;
 // 1. INICIALIZACIÓN DEL MAPA
 // ================================
 function initMap() {
-    const mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     });
 
-    const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri'
     });
 
-    const topografico = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    topografico = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri'
     });
 
     map = L.map('map', {
-        center: [-39.8142, -73.2459], // Valdivia
+        center: [-39.8142, -73.2459],
         zoom: 8,
-        layers: [mapaCalles]
+        layers: [satelite]
     });
-
-    const baseMaps = {
-        "🗺️ Mapa de Calles": mapaCalles,
-        "🛰️ Satélite Híbrido": satelite,
-        "⛰️ Topográfico": topografico
-    };
 
     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
-
-    const overlayMaps = {
-        "✏️ Mis Dibujos": drawnItems
-    };
-
-    controlCapas = L.control.layers(baseMaps, overlayMaps, {
-        collapsed: false,
-        position: 'topright'
-    }).addTo(map);
 
     // Cargar cuencas DGA
     cargarCuencasDGA();
 
     drawControl = new L.Control.Draw({
-        position: 'topright',
         draw: {
             polygon: {
                 allowIntersection: false,
@@ -92,10 +77,72 @@ function initMap() {
             remove: true
         }
     });
-    map.addControl(drawControl);
+    // No se agrega al mapa — los botones están en el panel lateral
 
     setupMapEvents();
     console.log('✅ Sistema Evergreen inicializado');
+}
+
+// ================================
+// HERRAMIENTAS DE DIBUJO (panel)
+// ================================
+let activeDrawHandler = null;
+
+function activarDibujo(tipo) {
+    if (activeDrawHandler) {
+        activeDrawHandler.disable();
+        activeDrawHandler = null;
+        document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+        return;
+    }
+
+    if (poligonos.length >= LIMITES.max_poligonos) {
+        alert(`⚠️ Máximo ${LIMITES.max_poligonos} polígonos permitidos`);
+        return;
+    }
+
+    const opts = tipo === 'polygon'
+        ? drawControl.options.draw.polygon
+        : drawControl.options.draw.rectangle;
+    const Handler = tipo === 'polygon' ? L.Draw.Polygon : L.Draw.Rectangle;
+
+    activeDrawHandler = new Handler(map, opts);
+    activeDrawHandler.enable();
+
+    document.getElementById('btn-draw-polygon').classList.add('active');
+}
+
+// ================================
+// CONTROL DE CAPAS (panel propio)
+// ================================
+function cambiarCapaBase(tipo) {
+    map.removeLayer(mapaCalles);
+    map.removeLayer(satelite);
+    map.removeLayer(topografico);
+    if (tipo === 'calles') map.addLayer(mapaCalles);
+    else if (tipo === 'satelite') map.addLayer(satelite);
+    else if (tipo === 'topo') map.addLayer(topografico);
+}
+
+function toggleOverlay(nombre, visible) {
+    if (nombre === 'cuencas' && cuencasLayer) {
+        if (visible) cuencasLayer.addTo(map);
+        else map.removeLayer(cuencasLayer);
+    }
+}
+
+function activarModo(tipo) {
+    // Cancela cualquier draw activo
+    if (activeDrawHandler) {
+        activeDrawHandler.disable();
+        activeDrawHandler = null;
+    }
+    document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+    // El modo punto es el default: los clicks del mapa agregan puntos
+    if (tipo === 'punto') {
+        document.getElementById('btn-draw-point').classList.add('active');
+        // Se desactiva solo al activar polígono
+    }
 }
 
 // ========================================
@@ -200,9 +247,6 @@ async function cargarCuencasDGA() {
                 });
             }
         });
-
-        // Agregar al control de capas
-        controlCapas.addOverlay(cuencasLayer, "🌊 Cuencas DGA");
 
         // Agregar al mapa por defecto
         cuencasLayer.addTo(map);
@@ -313,11 +357,15 @@ function mostrarNotificacion(mensaje) {
 // ================================
 function setupMapEvents() {
     map.on('click', function (e) {
+        if (activeDrawHandler) return; // ignorar clicks durante dibujo de polígono
         if (puntos.length >= LIMITES.max_puntos) { alert(`⚠️ Máximo ${LIMITES.max_puntos} puntos`); return; }
         agregarPunto(e.latlng.lat, e.latlng.lng);
     });
 
     map.on(L.Draw.Event.CREATED, function (e) {
+        activeDrawHandler = null;
+        document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+
         const layer = e.layer;
         if (poligonos.length >= LIMITES.max_poligonos) { alert(`⚠️ Máximo ${LIMITES.max_poligonos} polígonos`); return; }
         drawnItems.addLayer(layer);
@@ -700,8 +748,26 @@ function switchTool(tool) {
         }
     }
 
+    // Lazy-load del iframe de Biodiversidad en primer acceso
+    if (tool === 'biodiversidad') {
+        const iframe = document.getElementById('bio-iframe');
+        if (!iframe.src || iframe.src === window.location.href) {
+            iframe.src = iframe.dataset.src;
+            iframe.addEventListener('load', () => {
+                const overlay = document.getElementById('bio-loading');
+                if (overlay) overlay.classList.add('hidden');
+            }, { once: true });
+        }
+    }
+
     // Fix Leaflet map size if switching back to datos tab
     if (tool === 'datos' && typeof map !== 'undefined') {
         setTimeout(() => map.invalidateSize(), 100);
     }
 }
+
+// Abrir tab por parámetro URL (?tab=dem, ?tab=biodiversidad)
+document.addEventListener('DOMContentLoaded', () => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab) switchTool(tab);
+});

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evergreen Lab — Herramientas de Análisis Ambiental</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* ── LAB PAGE STYLES ── */
+        body {
+            background: var(--green-900);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* NAV overrides for static page */
+        nav {
+            position: relative;
+            background: rgba(14, 26, 14, 0.95);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid var(--glass-brd);
+        }
+
+        /* ── LAB HERO ── */
+        .lab-hero {
+            padding: 80px 64px 56px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lab-hero::before {
+            content: '';
+            position: absolute;
+            top: -120px;
+            right: -80px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(200, 168, 130, 0.06) 0%, transparent 65%);
+            pointer-events: none;
+        }
+
+        .lab-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: rgba(200, 168, 130, 0.08);
+            border: 1px solid rgba(200, 168, 130, 0.20);
+            border-radius: 50px;
+            padding: 6px 14px;
+            margin-bottom: 24px;
+        }
+
+        .lab-tag i {
+            font-size: 10px;
+        }
+
+        .lab-title {
+            font-family: var(--serif);
+            font-size: clamp(36px, 4.5vw, 62px);
+            font-weight: 500;
+            color: var(--white);
+            line-height: 1.15;
+            margin: 0 0 16px;
+        }
+
+        .lab-title em {
+            color: var(--accent);
+            font-style: italic;
+        }
+
+        .lab-sub {
+            font-family: var(--sans);
+            font-size: 16px;
+            color: rgba(244, 247, 241, 0.65);
+            max-width: 520px;
+            line-height: 1.65;
+            margin: 0;
+        }
+
+        /* ── APPS GRID ── */
+        .lab-section {
+            padding: 0 64px 96px;
+            flex: 1;
+        }
+
+        .lab-section-label {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(244, 247, 241, 0.35);
+            margin-bottom: 24px;
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        /* ── APP CARD ── */
+        .app-card {
+            background: rgba(14, 26, 14, 0.55);
+            border: 1px solid var(--glass-brd);
+            border-radius: 20px;
+            padding: 36px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            transition: border-color 0.35s, background 0.35s, transform 0.3s;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+        }
+
+        .app-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 80% 20%, rgba(200, 168, 130, 0.04) 0%, transparent 55%);
+            opacity: 0;
+            transition: opacity 0.35s;
+            pointer-events: none;
+        }
+
+        .app-card:hover {
+            border-color: rgba(200, 168, 130, 0.22);
+            background: rgba(14, 26, 14, 0.72);
+            transform: translateY(-3px);
+        }
+
+        .app-card:hover::before {
+            opacity: 1;
+        }
+
+        .app-card.coming-soon {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* Card header */
+        .app-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .app-icon {
+            width: 52px;
+            height: 52px;
+            background: rgba(200, 168, 130, 0.08);
+            border: 1px solid rgba(200, 168, 130, 0.18);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .app-status {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 50px;
+        }
+
+        .app-status.activo {
+            color: #7bed9f;
+            background: rgba(123, 237, 159, 0.08);
+            border: 1px solid rgba(123, 237, 159, 0.20);
+        }
+
+        .app-status.beta {
+            color: var(--accent);
+            background: rgba(200, 168, 130, 0.08);
+            border: 1px solid rgba(200, 168, 130, 0.20);
+        }
+
+        .app-status.pronto {
+            color: rgba(244, 247, 241, 0.35);
+            background: rgba(244, 247, 241, 0.04);
+            border: 1px solid rgba(244, 247, 241, 0.08);
+        }
+
+        /* Card body */
+        .app-name {
+            font-family: var(--serif);
+            font-size: 21px;
+            font-weight: 500;
+            color: var(--white);
+            margin: 0 0 10px;
+            line-height: 1.25;
+        }
+
+        .app-desc {
+            font-family: var(--sans);
+            font-size: 13.5px;
+            color: rgba(244, 247, 241, 0.60);
+            line-height: 1.65;
+            margin: 0 0 24px;
+            flex: 1;
+        }
+
+        /* Tags */
+        .app-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 28px;
+        }
+
+        .app-tag {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            color: rgba(244, 247, 241, 0.40);
+            background: rgba(244, 247, 241, 0.04);
+            border: 1px solid rgba(244, 247, 241, 0.08);
+            border-radius: 4px;
+            padding: 3px 8px;
+        }
+
+        /* CTA */
+        .app-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--sans);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent);
+            margin-top: auto;
+            transition: gap 0.2s;
+        }
+
+        .app-card:hover .app-cta {
+            gap: 12px;
+        }
+
+        .app-cta i {
+            font-size: 11px;
+            transition: transform 0.2s;
+        }
+
+        .app-card:hover .app-cta i {
+            transform: translateX(2px);
+        }
+
+        /* ── FOOTER ── */
+        .lab-footer {
+            padding: 24px 64px;
+            border-top: 1px solid var(--glass-brd);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .lab-footer p {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: rgba(244, 247, 241, 0.25);
+            margin: 0;
+        }
+
+        .lab-footer a {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: rgba(244, 247, 241, 0.35);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .lab-footer a:hover {
+            color: var(--accent);
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1024px) {
+            .apps-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .lab-hero,
+            .lab-section {
+                padding-left: 24px;
+                padding-right: 24px;
+            }
+
+            .apps-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .lab-footer {
+                padding: 20px 24px;
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ── NAV ── -->
+    <nav id="nav" class="scrolled">
+        <a href="index.html" class="nav-brand">
+            <div class="nav-icon">
+                <svg viewBox="0 0 16 16" fill="none" stroke="#C8A882" stroke-width="1.3">
+                    <path d="M8 2 C5 5 3 7 3 10 C3 13 5.2 15 8 15 C10.8 15 13 13 13 10 C13 7 11 5 8 2Z" />
+                    <line x1="8" y1="15" x2="8" y2="17" />
+                    <line x1="5" y1="17" x2="11" y2="17" />
+                </svg>
+            </div>
+            <span class="nav-wordmark">Evergreen <sub>Asesoría Ambiental</sub></span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html#servicios">Servicios</a></li>
+            <li><a href="index.html#proyectos">Proyectos</a></li>
+            <li><a href="index.html#enfoque">Enfoque</a></li>
+            <li><a href="index.html#contacto">Contacto</a></li>
+            <li>
+                <a href="lab.html" class="nav-btn"
+                    style="border-color: rgba(200, 168, 130, 0.4); background: rgba(200, 168, 130, 0.1);">
+                    API LAB
+                    <svg viewBox="0 0 16 16" fill="none" class="nav-btn-icon">
+                        <path d="M8 1L10 6L15 8L10 10L8 15L6 10L1 8L6 6z" fill="currentColor" />
+                    </svg>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- ── HERO ── -->
+    <div class="lab-hero">
+        <div class="lab-tag">
+            <i class="fas fa-flask"></i>
+            Evergreen Lab
+        </div>
+        <h1 class="lab-title">Herramientas de<br><em>Análisis Ambiental</em></h1>
+        <p class="lab-sub">Aplicaciones de acceso libre para análisis de datos satelitales, biodiversidad y modelos de
+            terreno. Construidas sobre datos abiertos y APIs científicas.</p>
+    </div>
+
+    <!-- ── APPS ── -->
+    <div class="lab-section">
+        <p class="lab-section-label">— Aplicaciones disponibles</p>
+        <div class="apps-grid">
+
+            <!-- App 1: Descarga de Datos -->
+            <a href="acceso-datos.html" class="app-card">
+                <div class="app-card-head">
+                    <div class="app-icon">
+                        <i class="fas fa-satellite-dish"></i>
+                    </div>
+                    <span class="app-status activo">Activo</span>
+                </div>
+                <h2 class="app-name">Descarga de Datos Satelitales</h2>
+                <p class="app-desc">Extrae series temporales de precipitación y temperatura para puntos o polígonos en
+                    Chile. Múltiples productos satelitales disponibles.</p>
+                <div class="app-tags">
+                    <span class="app-tag">CHIRPS</span>
+                    <span class="app-tag">GPM-IMERG</span>
+                    <span class="app-tag">ERA5</span>
+                    <span class="app-tag">PERSIANN</span>
+                    <span class="app-tag">Google Earth Engine</span>
+                </div>
+                <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
+            </a>
+
+            <!-- App 2: Explorador de Biodiversidad -->
+            <a href="../inaturalist/index.html" class="app-card">
+                <div class="app-card-head">
+                    <div class="app-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <span class="app-status activo">Activo</span>
+                </div>
+                <h2 class="app-name">Explorador de Biodiversidad</h2>
+                <p class="app-desc">Consulta registros de flora, fauna y hongos para cualquier área de Chile. Cruza con
+                    el catálogo RCE oficial e índices de conservación.</p>
+                <div class="app-tags">
+                    <span class="app-tag">GBIF</span>
+                    <span class="app-tag">RCE Chile</span>
+                    <span class="app-tag">SNASPE</span>
+                    <span class="app-tag">IUCN</span>
+                    <span class="app-tag">Turf.js</span>
+                </div>
+                <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
+            </a>
+
+            <!-- App 3: DEM -->
+            <a href="acceso-datos.html?tab=dem" class="app-card">
+                <div class="app-card-head">
+                    <div class="app-icon">
+                        <i class="fas fa-mountain"></i>
+                    </div>
+                    <span class="app-status activo">Activo</span>
+                </div>
+                <h2 class="app-name">Modelo de Elevación DEM</h2>
+                <p class="app-desc">Visualiza y analiza modelos digitales de elevación de alta resolución para cualquier
+                    zona de Chile usando Google Earth Engine.</p>
+                <div class="app-tags">
+                    <span class="app-tag">Copernicus GLO-30</span>
+                    <span class="app-tag">ALOS AW3D30</span>
+                    <span class="app-tag">Google Earth Engine</span>
+                </div>
+                <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
+            </a>
+
+            <!-- Próximamente 1 -->
+            <div class="app-card coming-soon">
+                <div class="app-card-head">
+                    <div class="app-icon">
+                        <i class="fas fa-water"></i>
+                    </div>
+                    <span class="app-status pronto">Próximamente</span>
+                </div>
+                <h2 class="app-name">Análisis de Cuerpos de Agua</h2>
+                <p class="app-desc">Monitoreo de lagos, ríos y humedales mediante índices espectrales NDWI y MNDWI
+                    desde imágenes Sentinel-2.</p>
+                <div class="app-tags">
+                    <span class="app-tag">Sentinel-2</span>
+                    <span class="app-tag">NDWI</span>
+                    <span class="app-tag">Google Earth Engine</span>
+                </div>
+                <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
+            </div>
+
+            <!-- Próximamente 2 -->
+            <div class="app-card coming-soon">
+                <div class="app-card-head">
+                    <div class="app-icon">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <span class="app-status pronto">Próximamente</span>
+                </div>
+                <h2 class="app-name">Monitor de Incendios</h2>
+                <p class="app-desc">Detección y análisis de áreas quemadas históricas usando productos MODIS y Landsat.
+                    Cálculo de severidad y recuperación vegetal.</p>
+                <div class="app-tags">
+                    <span class="app-tag">MODIS</span>
+                    <span class="app-tag">Landsat</span>
+                    <span class="app-tag">NBR</span>
+                </div>
+                <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
+            </div>
+
+            <!-- Próximamente 3 -->
+            <div class="app-card coming-soon">
+                <div class="app-card-head">
+                    <div class="app-icon">
+                        <i class="fas fa-seedling"></i>
+                    </div>
+                    <span class="app-status pronto">Próximamente</span>
+                </div>
+                <h2 class="app-name">Índices de Vegetación</h2>
+                <p class="app-desc">Series temporales NDVI, EVI y LAI para evaluar cobertura vegetal, estrés hídrico y
+                    fenología de ecosistemas terrestres.</p>
+                <div class="app-tags">
+                    <span class="app-tag">NDVI</span>
+                    <span class="app-tag">EVI</span>
+                    <span class="app-tag">Sentinel-2</span>
+                    <span class="app-tag">MODIS</span>
+                </div>
+                <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <footer class="lab-footer">
+        <p>&copy; 2025 Evergreen Consultores · Todos los derechos reservados</p>
+        <a href="index.html">← Volver al sitio principal</a>
+    </footer>
+
+    <script>
+        // Leer parámetro ?tab= para redirigir automáticamente dentro de acceso-datos
+        // (usado por la card del DEM)
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('tab') === 'dem') {
+            // Si alguien llega aquí con ?tab=dem, redirigir a acceso-datos con parámetro
+            // (lógica manejada en acceso-datos.html)
+        }
+    </script>
+
+</body>
+
+</html>

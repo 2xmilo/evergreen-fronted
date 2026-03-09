@@ -8,16 +8,15 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/dashboard-pro.css">
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard-pro.css">
+    <link rel="stylesheet" href="css/acceso-datos.css">
 </head>
 
 <body
@@ -64,6 +63,10 @@
             <span class="tool-tab-icon">🏔️</span>
             <span class="tool-tab-label">Modelo de Elevación DEM</span>
         </button>
+        <button class="tool-tab" id="tab-biodiversidad" onclick="switchTool('biodiversidad')">
+            <span class="tool-tab-icon">🦎</span>
+            <span class="tool-tab-label">Explorador de Biodiversidad</span>
+        </button>
     </div>
 
     <!-- PANEL 1: Descarga de Datos Satelitales -->
@@ -78,8 +81,22 @@
                     </span>
                 </div>
 
+                <!-- HERRAMIENTAS DE DIBUJO — siempre visibles -->
+                <div class="draw-tools-bar">
+                    <button class="draw-btn" id="btn-draw-polygon" onclick="activarDibujo('polygon')"
+                        title="Dibujar polígono libre">
+                        <i class="fas fa-draw-polygon"></i>
+                        <span>Polígono</span>
+                    </button>
+                    <button class="draw-btn" id="btn-draw-point" onclick="activarModo('punto')"
+                        title="Agregar puntos en el mapa">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Punto</span>
+                    </button>
+                </div>
+
                 <!-- SECCIÓN 1: Ubicaciones -->
-                <div class="accordion-section" id="accordion-ubicaciones">
+                <div class="accordion-section open" id="accordion-ubicaciones">
                     <div class="accordion-header" onclick="toggleAccordion('ubicaciones')">
                         <span class="accordion-icon">📍</span>
                         <span class="accordion-title">UBICACIONES</span>
@@ -184,6 +201,37 @@
             <main class="map-container">
                 <div id="map"></div>
 
+                <!-- Panel de capas propio -->
+                <div class="map-layers-panel">
+                    <div class="mlp-group">
+                        <label class="mlp-row">
+                            <input type="radio" name="baseMap" value="calles" onchange="cambiarCapaBase('calles')">
+                            <i class="mlp-icon fas fa-map"></i>
+                            <span>Mapa de Calles</span>
+                        </label>
+                        <label class="mlp-row">
+                            <input type="radio" name="baseMap" value="satelite" checked
+                                onchange="cambiarCapaBase('satelite')">
+                            <i class="mlp-icon fas fa-satellite"></i>
+                            <span>Satélite</span>
+                        </label>
+                        <label class="mlp-row">
+                            <input type="radio" name="baseMap" value="topo" onchange="cambiarCapaBase('topo')">
+                            <i class="mlp-icon fas fa-mountain"></i>
+                            <span>Topográfico</span>
+                        </label>
+                    </div>
+                    <div class="mlp-sep"></div>
+                    <div class="mlp-group">
+                        <label class="mlp-row">
+                            <input type="checkbox" id="overlay-cuencas" checked
+                                onchange="toggleOverlay('cuencas', this.checked)">
+                            <i class="mlp-icon fas fa-water" style="color:#4A9EDB;"></i>
+                            <span>Cuencas DGA</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div id="loading" class="loading-overlay" style="display: none;">
                     <div class="loading-content">
                         <div class="spinner"></div>
@@ -220,7 +268,30 @@
             </div>
         </div>
     </div>
-    </main>
+    <!-- PANEL 3: Explorador de Biodiversidad -->
+    <div id="biodiversidad-app" class="tool-panel">
+        <div class="dem-container">
+            <div class="dem-info-bar">
+                <div class="dem-info-left">
+                    <span class="dem-badge">🌿 GBIF · RCE Chile</span>
+                    <span class="dem-title">Explorador de Biodiversidad · Flora, Fauna &amp; Hongos</span>
+                </div>
+                <div class="dem-info-right">
+                    <span class="dem-hint">Dibuja un polígono para consultar registros de biodiversidad</span>
+                    <a href="../inaturalist/index.html" target="_blank" class="dem-ext-link"
+                        title="Abrir en nueva pestaña">↗ Abrir en pantalla completa</a>
+                </div>
+            </div>
+            <div class="dem-iframe-wrapper">
+                <iframe id="bio-iframe" src="" data-src="../inaturalist/index.html" allow="fullscreen" loading="lazy"
+                    title="Explorador de Biodiversidad - Evergreen"></iframe>
+                <div class="dem-loading-overlay" id="bio-loading">
+                    <div class="dem-spinner"></div>
+                    <p>Cargando explorador de biodiversidad...</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <footer>
         <p>&copy; 2025 Evergreen Consultores. Todos los derechos reservados.</p>
