@@ -926,18 +926,71 @@
 }
 
 /* ── POPUP DE CUENCAS ── */
+.leaflet-popup-content-wrapper {
+    background: #142014 !important;
+    border: 1px solid rgba(244, 247, 241, 0.10) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45) !important;
+    color: #F4F7F1 !important;
+    padding: 0 !important;
+}
+
+.leaflet-popup-content {
+    margin: 16px !important;
+    color: #F4F7F1 !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+.leaflet-popup-tip {
+    background: #142014 !important;
+}
+
+.leaflet-popup-close-button {
+    color: rgba(244, 247, 241, 0.5) !important;
+    font-size: 18px !important;
+    top: 6px !important;
+    right: 8px !important;
+}
+
+.leaflet-popup-close-button:hover {
+    color: #F4F7F1 !important;
+}
+
 .cuenca-popup h4 {
     margin: 0 0 8px 0;
     color: var(--accent);
     font-family: var(--sans);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .cuenca-popup p {
     margin: 4px 0;
-    color: var(--white-60);
+    color: rgba(244, 247, 241, 0.6);
     font-size: 12px;
+}
+
+.cuenca-popup strong {
+    color: rgba(244, 247, 241, 0.85);
+}
+
+.cuenca-popup-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: var(--accent);
+    color: #0E1A0E;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--sans);
+    transition: background 0.2s;
+}
+
+.cuenca-popup-btn:hover {
+    background: #b8956e;
 }
 
 /* ── MODAL POST-DESCARGA ── */

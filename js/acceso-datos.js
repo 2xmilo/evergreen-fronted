@@ -2,7 +2,7 @@
 // EVERGREEN - ACCESO A DATOS JS (CON CUENCAS DGA)
 // ========================================
 
-const API_URL = 'http://127.0.0.1:10000'; // Puerto que configuraste recién
+const API_URL = 'https://evergreen-backend-awv1.onrender.com';
 
 
 // Constantes y Límites
@@ -176,33 +176,11 @@ async function cargarCuencasDGA() {
 
                 // Popup con información
                 const popupContent = `
-                    <div class="cuenca-popup" style="min-width: 200px;">
-                        <h4 style="margin: 0 0 10px 0; color: #0080FF; font-size: 1rem;">
-                            ${props.nombre || 'Subcuenca'}
-                        </h4>
-                        <p style="margin: 5px 0; font-size: 0.85rem;">
-                            <strong>Código Subcuenca:</strong> ${props.cod_subcuenca || 'N/A'}
-                        </p>
-                        <p style="margin: 5px 0; font-size: 0.85rem;">
-                            <strong>Región:</strong> ${props.region || 'N/A'}
-                        </p>
-                        <button 
-                            onclick="usarCuencaComoPoligono()" 
-                            style="
-                                width: 100%;
-                                margin-top: 10px;
-                                padding: 8px 12px;
-                                background: #28a745;
-                                color: white;
-                                border: none;
-                                border-radius: 5px;
-                                cursor: pointer;
-                                font-size: 0.85rem;
-                                font-weight: bold;
-                            "
-                            onmouseover="this.style.background='#218838'"
-                            onmouseout="this.style.background='#28a745'"
-                        >
+                    <div class="cuenca-popup">
+                        <h4>${props.nombre || 'Subcuenca'}</h4>
+                        <p><strong>Código Subcuenca:</strong> ${props.cod_subcuenca || 'N/A'}</p>
+                        <p><strong>Región:</strong> ${props.region || 'N/A'}</p>
+                        <button class="cuenca-popup-btn" onclick="usarCuencaComoPoligono()">
                             📍 Usar esta cuenca
                         </button>
                     </div>
