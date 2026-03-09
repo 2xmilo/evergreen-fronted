@@ -1,0 +1,6 @@
+Shapefiles/
+backup_geojson/
+*.py
+*.bat
+*.xlsx
+test_report.json
