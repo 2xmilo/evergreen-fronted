@@ -9,6 +9,11 @@
     --mono: 'DM Mono', 'Courier New', monospace;
 }
 
+/* Forzar que el NAV use la fuente original de Evergreen (DM Sans) en lugar de Inter */
+.nav-links a, .nav-brand {
+    font-family: 'DM Sans', sans-serif !important;
+}
+
 /* ── LAYOUT PRINCIPAL ── */
 .app-container {
     display: flex;

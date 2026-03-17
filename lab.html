@@ -323,16 +323,11 @@
 <body>
 
     <!-- ── NAV ── -->
-    <nav id="nav" class="scrolled">
+    <nav id="nav">
         <a href="index.html" class="nav-brand">
-            <div class="nav-icon">
-                <svg viewBox="0 0 16 16" fill="none" stroke="#C8A882" stroke-width="1.3">
-                    <path d="M8 2 C5 5 3 7 3 10 C3 13 5.2 15 8 15 C10.8 15 13 13 13 10 C13 7 11 5 8 2Z" />
-                    <line x1="8" y1="15" x2="8" y2="17" />
-                    <line x1="5" y1="17" x2="11" y2="17" />
-                </svg>
-            </div>
-            <span class="nav-wordmark">Evergreen <sub>Asesoría Ambiental</sub></span>
+            <img src="img/logo3.png" alt="Logo Evergreen"
+                style="height: 46px; width: auto; margin-right: 16px;">
+            <span class="nav-wordmark"></span>
         </a>
         <ul class="nav-links">
             <li><a href="index.html#servicios">Servicios</a></li>
@@ -340,8 +335,7 @@
             <li><a href="index.html#enfoque">Enfoque</a></li>
             <li><a href="index.html#contacto">Contacto</a></li>
             <li>
-                <a href="lab.html" class="nav-btn"
-                    style="border-color: rgba(200, 168, 130, 0.4); background: rgba(200, 168, 130, 0.1);">
+                <a href="lab.html" class="nav-btn">
                     API LAB
                     <svg viewBox="0 0 16 16" fill="none" class="nav-btn-icon">
                         <path d="M8 1L10 6L15 8L10 10L8 15L6 10L1 8L6 6z" fill="currentColor" />
@@ -353,146 +347,151 @@
 
     <!-- ── HERO ── -->
     <div class="lab-hero">
-        <div class="lab-tag">
-            <i class="fas fa-flask"></i>
-            Evergreen Lab
+        <div class="container">
+            <div class="lab-tag">
+                <i class="fas fa-flask"></i>
+                Evergreen Lab
+            </div>
+            <h1 class="lab-title">Herramientas de<br><em>Análisis Ambiental</em></h1>
+            <p class="lab-sub">En esta seccion diseñamos aplicaciones de libre acceso para la descarga de imágenes y datos satelitales, procesamiento de información ambiental a gran escala y visualización de resultados mediante dashboards interactivos, orientados al monitoreo de recursos naturales.</p>
         </div>
-        <h1 class="lab-title">Herramientas de<br><em>Análisis Ambiental</em></h1>
-        <p class="lab-sub">Aplicaciones de acceso libre para análisis de datos satelitales, biodiversidad y modelos de
-            terreno. Construidas sobre datos abiertos y APIs científicas.</p>
     </div>
 
     <!-- ── APPS ── -->
     <div class="lab-section">
-        <p class="lab-section-label">— Aplicaciones disponibles</p>
-        <div class="apps-grid">
+        <div class="container">
+            <p class="lab-section-label">— Aplicaciones disponibles</p>
+            <div class="apps-grid">
 
-            <!-- App 1: Descarga de Datos -->
-            <a href="acceso-datos.html" class="app-card">
-                <div class="app-card-head">
-                    <div class="app-icon">
-                        <i class="fas fa-satellite-dish"></i>
+                <!-- App 1: Descarga de Datos -->
+                <a href="acceso-datos.html" class="app-card">
+                    <div class="app-card-head">
+                        <div class="app-icon">
+                            <i class="fas fa-satellite-dish"></i>
+                        </div>
+                        <span class="app-status activo">Activo</span>
                     </div>
-                    <span class="app-status activo">Activo</span>
-                </div>
-                <h2 class="app-name">Descarga de Datos Satelitales</h2>
-                <p class="app-desc">Extrae series temporales de precipitación y temperatura para puntos o polígonos en
-                    Chile. Múltiples productos satelitales disponibles.</p>
-                <div class="app-tags">
-                    <span class="app-tag">CHIRPS</span>
-                    <span class="app-tag">GPM-IMERG</span>
-                    <span class="app-tag">ERA5</span>
-                    <span class="app-tag">PERSIANN</span>
-                    <span class="app-tag">Google Earth Engine</span>
-                </div>
-                <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
-            </a>
+                    <h2 class="app-name">Descarga de Datos Satelitales</h2>
+                    <p class="app-desc">Extrae series temporales de precipitación y temperatura para puntos o polígonos en
+                        Chile. Múltiples productos satelitales disponibles.</p>
+                    <div class="app-tags">
+                        <span class="app-tag">CHIRPS</span>
+                        <span class="app-tag">GPM-IMERG</span>
+                        <span class="app-tag">ERA5</span>
+                        <span class="app-tag">PERSIANN</span>
+                        <span class="app-tag">Google Earth Engine</span>
+                    </div>
+                    <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
+                </a>
 
-            <!-- App 2: Explorador de Biodiversidad -->
-            <a href="inaturalist/index.html" class="app-card">
-                <div class="app-card-head">
-                    <div class="app-icon">
-                        <i class="fas fa-leaf"></i>
+                <!-- App 2: Explorador de Biodiversidad -->
+                <a href="inaturalist/index.html" class="app-card">
+                    <div class="app-card-head">
+                        <div class="app-icon">
+                            <i class="fas fa-leaf"></i>
+                        </div>
+                        <span class="app-status activo">Activo</span>
                     </div>
-                    <span class="app-status activo">Activo</span>
-                </div>
-                <h2 class="app-name">Explorador de Biodiversidad</h2>
-                <p class="app-desc">Consulta registros de flora, fauna y hongos para cualquier área de Chile. Cruza con
-                    el catálogo RCE oficial e índices de conservación.</p>
-                <div class="app-tags">
-                    <span class="app-tag">GBIF</span>
-                    <span class="app-tag">RCE Chile</span>
-                    <span class="app-tag">SNASPE</span>
-                    <span class="app-tag">IUCN</span>
-                    <span class="app-tag">Turf.js</span>
-                </div>
-                <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
-            </a>
+                    <h2 class="app-name">Explorador de Biodiversidad</h2>
+                    <p class="app-desc">Consulta registros de flora, fauna y hongos para cualquier área de Chile. Cruza con
+                        el catálogo RCE oficial e índices de conservación.</p>
+                    <div class="app-tags">
+                        <span class="app-tag">GBIF</span>
+                        <span class="app-tag">RCE Chile</span>
+                        <span class="app-tag">SNASPE</span>
+                        <span class="app-tag">IUCN</span>
+                        <span class="app-tag">Turf.js</span>
+                    </div>
+                    <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
+                </a>
 
-            <!-- App 3: DEM -->
-            <a href="acceso-datos.html?tab=dem" class="app-card">
-                <div class="app-card-head">
-                    <div class="app-icon">
-                        <i class="fas fa-mountain"></i>
+                <!-- App 3: DEM -->
+                <a href="acceso-datos.html?tab=dem" class="app-card">
+                    <div class="app-card-head">
+                        <div class="app-icon">
+                            <i class="fas fa-mountain"></i>
+                        </div>
+                        <span class="app-status activo">Activo</span>
                     </div>
-                    <span class="app-status activo">Activo</span>
-                </div>
-                <h2 class="app-name">Modelo de Elevación DEM</h2>
-                <p class="app-desc">Visualiza y analiza modelos digitales de elevación de alta resolución para cualquier
-                    zona de Chile usando Google Earth Engine.</p>
-                <div class="app-tags">
-                    <span class="app-tag">Copernicus GLO-30</span>
-                    <span class="app-tag">ALOS AW3D30</span>
-                    <span class="app-tag">Google Earth Engine</span>
-                </div>
-                <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
-            </a>
+                    <h2 class="app-name">Modelo de Elevación DEM</h2>
+                    <p class="app-desc">Visualiza y analiza modelos digitales de elevación de alta resolución para cualquier
+                        zona de Chile usando Google Earth Engine.</p>
+                    <div class="app-tags">
+                        <span class="app-tag">Copernicus GLO-30</span>
+                        <span class="app-tag">ALOS AW3D30</span>
+                        <span class="app-tag">Google Earth Engine</span>
+                    </div>
+                    <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
+                </a>
 
-            <!-- Próximamente 1 -->
-            <div class="app-card coming-soon">
-                <div class="app-card-head">
-                    <div class="app-icon">
-                        <i class="fas fa-water"></i>
+                <!-- Próximamente 1 -->
+                <div class="app-card coming-soon">
+                    <div class="app-card-head">
+                        <div class="app-icon">
+                            <i class="fas fa-water"></i>
+                        </div>
+                        <span class="app-status pronto">Próximamente</span>
                     </div>
-                    <span class="app-status pronto">Próximamente</span>
+                    <h2 class="app-name">Análisis de Cuerpos de Agua</h2>
+                    <p class="app-desc">Monitoreo de lagos, ríos y humedales mediante índices espectrales NDWI y MNDWI
+                        desde imágenes Sentinel-2.</p>
+                    <div class="app-tags">
+                        <span class="app-tag">Sentinel-2</span>
+                        <span class="app-tag">NDWI</span>
+                        <span class="app-tag">Google Earth Engine</span>
+                    </div>
+                    <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
                 </div>
-                <h2 class="app-name">Análisis de Cuerpos de Agua</h2>
-                <p class="app-desc">Monitoreo de lagos, ríos y humedales mediante índices espectrales NDWI y MNDWI
-                    desde imágenes Sentinel-2.</p>
-                <div class="app-tags">
-                    <span class="app-tag">Sentinel-2</span>
-                    <span class="app-tag">NDWI</span>
-                    <span class="app-tag">Google Earth Engine</span>
+
+                <!-- Próximamente 2 -->
+                <div class="app-card coming-soon">
+                    <div class="app-card-head">
+                        <div class="app-icon">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <span class="app-status pronto">Próximamente</span>
+                    </div>
+                    <h2 class="app-name">Monitor de Incendios</h2>
+                    <p class="app-desc">Detección y análisis de áreas quemadas históricas usando productos MODIS y Landsat.
+                        Cálculo de severidad y recuperación vegetal.</p>
+                    <div class="app-tags">
+                        <span class="app-tag">MODIS</span>
+                        <span class="app-tag">Landsat</span>
+                        <span class="app-tag">NBR</span>
+                    </div>
+                    <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
                 </div>
-                <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
+
+                <!-- Próximamente 3 -->
+                <div class="app-card coming-soon">
+                    <div class="app-card-head">
+                        <div class="app-icon">
+                            <i class="fas fa-seedling"></i>
+                        </div>
+                        <span class="app-status pronto">Próximamente</span>
+                    </div>
+                    <h2 class="app-name">Índices de Vegetación</h2>
+                    <p class="app-desc">Series temporales NDVI, EVI y LAI para evaluar cobertura vegetal, estrés hídrico y
+                        fenología de ecosistemas terrestres.</p>
+                    <div class="app-tags">
+                        <span class="app-tag">NDVI</span>
+                        <span class="app-tag">EVI</span>
+                        <span class="app-tag">Sentinel-2</span>
+                        <span class="app-tag">MODIS</span>
+                    </div>
+                    <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
+                </div>
+
             </div>
-
-            <!-- Próximamente 2 -->
-            <div class="app-card coming-soon">
-                <div class="app-card-head">
-                    <div class="app-icon">
-                        <i class="fas fa-fire"></i>
-                    </div>
-                    <span class="app-status pronto">Próximamente</span>
-                </div>
-                <h2 class="app-name">Monitor de Incendios</h2>
-                <p class="app-desc">Detección y análisis de áreas quemadas históricas usando productos MODIS y Landsat.
-                    Cálculo de severidad y recuperación vegetal.</p>
-                <div class="app-tags">
-                    <span class="app-tag">MODIS</span>
-                    <span class="app-tag">Landsat</span>
-                    <span class="app-tag">NBR</span>
-                </div>
-                <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
-            </div>
-
-            <!-- Próximamente 3 -->
-            <div class="app-card coming-soon">
-                <div class="app-card-head">
-                    <div class="app-icon">
-                        <i class="fas fa-seedling"></i>
-                    </div>
-                    <span class="app-status pronto">Próximamente</span>
-                </div>
-                <h2 class="app-name">Índices de Vegetación</h2>
-                <p class="app-desc">Series temporales NDVI, EVI y LAI para evaluar cobertura vegetal, estrés hídrico y
-                    fenología de ecosistemas terrestres.</p>
-                <div class="app-tags">
-                    <span class="app-tag">NDVI</span>
-                    <span class="app-tag">EVI</span>
-                    <span class="app-tag">Sentinel-2</span>
-                    <span class="app-tag">MODIS</span>
-                </div>
-                <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
-            </div>
-
         </div>
     </div>
 
     <!-- ── FOOTER ── -->
     <footer class="lab-footer">
-        <p>&copy; 2025 Evergreen Consultores · Todos los derechos reservados</p>
-        <a href="index.html">← Volver al sitio principal</a>
+        <div class="container" style="display: flex; align-items: center; justify-content: space-between; padding: 0;">
+            <p>&copy; 2025 Evergreen Consultores · Todos los derechos reservados</p>
+            <a href="index.html">← Volver al sitio principal</a>
+        </div>
     </footer>
 
     <script>

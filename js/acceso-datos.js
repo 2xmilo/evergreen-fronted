@@ -672,12 +672,29 @@ async function descargar() {
             throw new Error(error.error || 'Error en el procesamiento de datos.');
         }
 
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
+        // ── Streaming: leer en chunks para no esperar toda la respuesta ──
+        const reader = response.body.getReader();
+        const chunks = [];
+        let totalBytes = 0;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            totalBytes += value.length;
+        }
+
+        if (totalBytes === 0) {
+            throw new Error('El servidor devolvió un archivo vacío. Revisa los parámetros.');
+        }
+
+        const blob = new Blob(chunks, { type: 'text/csv;charset=utf-8;' });
+        const url  = window.URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
         a.download = `evergreen_data_${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
+        window.URL.revokeObjectURL(url);
 
         mostrarNotificacion('✅ ¡Descarga exitosa!');
         setTimeout(mostrarModalDescarga, 800);
@@ -687,7 +704,7 @@ async function descargar() {
     } finally {
         clearInterval(rotacionMensajesInterval);
         btn.disabled = false;
-        btn.style.background = ''; // reset to default
+        btn.style.background = '';
         btn.innerHTML = '⬇️ Descargar Datos';
     }
 }

@@ -42,8 +42,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1000);
     }
 
-    // Auto-advance after 10 seconds
-    autoAdvanceTimer = setTimeout(transitionToMainSite, 10000);
+    // Auto-advance after 5 seconds
+    autoAdvanceTimer = setTimeout(transitionToMainSite, 5000);
 
     // Start progress bar
     startProgressBar();

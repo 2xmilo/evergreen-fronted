@@ -7,7 +7,7 @@
 
 const CACHE_KEY = 'evergreen_news_cache';
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
-const TOTAL_CARDS = 4;
+const TOTAL_CARDS = 3;
 const FEED_URL = 'https://es.mongabay.com/feed/';
 const PROXY_URL = `https://api.allorigins.win/get?url=${encodeURIComponent(FEED_URL)}`;
 const FALLBACK_IMG = 'img/fondo_musgo.jpg';
@@ -94,7 +94,7 @@ function renderCards(container, articles) {
             <div class="proj-card-body">
                 <div class="proj-tag">
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="5" cy="5" r="4"/><path d="M5 2v3l2 1.5"/></svg>
-                    Mongabay Latam
+                    Actualidad
                 </div>
                 <h3 class="proj-name-news">${a.title}</h3>
                 <div class="news-meta">
