@@ -1,4 +1,4 @@
-﻿import { SYNONYMS, SPECIAL_CASES, CITES_GENERA, getOfficialName, checkSpecialProtection } from './taxonomia_equivalencias.js';
+import { SYNONYMS, SPECIAL_CASES, CITES_GENERA, getOfficialName, checkSpecialProtection } from './taxonomia_equivalencias.js';
 
 let rceData = {};
 let map;
@@ -11,8 +11,7 @@ let shapeLayers = {
     sp19300: null,
     sperb: null,
     pisos: null,
-    simbioHumedales: null,
-    simbioPlanesRecoge: null
+    simbioHumedales: null
 };
 
 // Charts
@@ -180,12 +179,6 @@ function initMap() {
         'https://arcgis.mma.gob.cl/server/rest/services/SIMBIO/SIMBIO_HUMEDALES/FeatureServer/0/query',
         '#00bcd4',
         'Humedales'
-    );
-    loadSIMBIOLayer(
-        'simbioPlanesRecoge',
-        'https://arcgis.mma.gob.cl/server/rest/services/SIMBIO/SIMBIO_PLANES_RECOGE/FeatureServer/2/query',
-        '#e91e63',
-        'Plan RECOGE'
     );
 }
 
@@ -813,8 +806,7 @@ function processMatches() {
     // ── 1. Compute AOI geo-intersections ONCE (not per species) ───────────────
     // These are properties of the polygon, not the species.
     // appState.polygon is ALWAYS the original, never the simplified one.
-    let geoSnaspe = false, dist19300 = 'N/A', geo19300 = false, geoErb = false;
-    let geoHumedales = false, geoRecoge = false;
+    let geoSnaspe = false, geo19300 = false, geoErb = false, geoHumedales = false;
     let pisoPredominante = 'No Determinado';
     let minDistSnaspe = 99999;
 
@@ -856,11 +848,6 @@ function processMatches() {
                 try { if (turf.booleanIntersects(appState.polygon, feat)) geoHumedales = true; } catch (_) { }
             });
         }
-        if (shapeLayers.simbioPlanesRecoge && shapeLayers.simbioPlanesRecoge.data) {
-            turf.featureEach(shapeLayers.simbioPlanesRecoge.data, (feat) => {
-                try { if (turf.booleanIntersects(appState.polygon, feat)) geoRecoge = true; } catch (_) { }
-            });
-        }
     }
 
     // Store geo globals for SEIA paragraph + panel alerts
@@ -870,7 +857,6 @@ function processMatches() {
     appState.global_erb_int = geoErb;
     appState.global_piso_vegetacional = pisoPredominante;
     appState.global_humedales_int = geoHumedales;
-    appState.global_recoge_int = geoRecoge;
 
     // ── 2. Map GBIF records → unified species entries ──────────────────────────
     const finalSpecies = especiesAcumuladas.map(rec => {
@@ -962,10 +948,6 @@ function updatePanels() {
     const elHumedal = document.getElementById('alert-humedales');
     if (elHumedal) {
         elHumedal.innerHTML = `<i class="fa-solid fa-water"></i> Humedal SIMBIO: <span style="color:${appState.global_humedales_int ? 'var(--en-color)' : 'var(--text-secondary)'}">${appState.global_humedales_int ? 'Intersección' : 'No intersecta'}</span>`;
-    }
-    const elRecoge = document.getElementById('alert-recoge');
-    if (elRecoge) {
-        elRecoge.innerHTML = `<i class="fa-solid fa-seedling"></i> Plan RECOGE: <span style="color:${appState.global_recoge_int ? 'var(--cr-color)' : 'var(--text-secondary)'}"> ${appState.global_recoge_int ? '⚠ ACTIVO en zona' : 'Sin plan activo'}</span>`;
     }
 
     // Panel 5: Threatened
@@ -1077,13 +1059,7 @@ function updatePanels() {
     const marginal = list.filter(s => s.count <= 1).length;
     document.getElementById('idxMarginales').innerText = marginal;
 
-    // Shannon H' / Pielou J' (count = individualCount || 1)
-    const N = list.reduce((sum, s) => sum + s.count, 0);
-    let H = 0;
-    list.forEach(s => { const pi = s.count / N; if (pi > 0) H -= pi * Math.log(pi); });
-    const J = S > 1 ? H / Math.log(S) : 0;
-    document.getElementById('idxShannon').innerText = H.toFixed(2);
-    document.getElementById('idxPielou').innerText = J.toFixed(2);
+    // GAP Regional RCE (unchanged logic, uses getRegionMma)
 
     // GAP Regional RCE (unchanged logic, uses getRegionMma)
     const centroid = turf.centroid(appState.polygon);
@@ -1495,9 +1471,6 @@ function generateSEIAParagraph() {
     let simbioFrase = '';
     if (appState.global_humedales_int) {
         simbioFrase += ' El área intersecta con el Inventario Nacional de Humedales (SIMBIO-MMA), lo que exige una evaluación específica de los ecosistemas acuáticos presentes según la Ley 21.202.';
-    }
-    if (appState.global_recoge_int) {
-        simbioFrase += ' Se detecta la presencia de un Plan de Recuperación, Conservación y Gestión de Especies (RECOGE) activo en la zona de influencia del proyecto, lo que implica obligaciones adicionales en el SEIA respecto a las especies objetivo del plan.';
     }
 
     let parrafo = `COMPONENTE FLORA Y FAUNA – LÍNEA BASE BIODIVERSIDAD\n`;

@@ -105,8 +105,6 @@
                         <label><input type="checkbox" class="layer-cb" value="sperb"> SP ERB</label>
                         <label><input type="checkbox" class="layer-cb" value="pisos"> Pisos Veg</label>
                         <label><input type="checkbox" class="layer-cb" value="simbioHumedales"> Humedales</label>
-                        <label><input type="checkbox" class="layer-cb" value="simbioPlanesRecoge"> Plan
-                            RECOGE</label>
                     </div>
                 </div>
                 <p class="help-text"
@@ -129,8 +127,6 @@
                         Veg</div>
                     <div><span class="color-box"
                             style="background:rgba(0,188,212,0.25); border:1px solid #00bcd4;"></span> Humedales</div>
-                    <div><span class="color-box"
-                            style="background:rgba(233,30,99,0.25); border:1px solid #e91e63;"></span> Plan RECOGE</div>
                 </div>
             </div>
 
@@ -170,10 +166,6 @@
                                 </div>
                                 <div class="alert-item" id="alert-humedales"><i class="fa-solid fa-water"></i> Humedal
                                     SIMBIO:
-                                    <span>Cargando...</span>
-                                </div>
-                                <div class="alert-item" id="alert-recoge"><i class="fa-solid fa-seedling"></i> Plan
-                                    RECOGE:
                                     <span>Cargando...</span>
                                 </div>
                             </div>
@@ -222,11 +214,11 @@
                     </div>
 
                     <!-- Bioestáßstica colapsable -->
-                    <details class="bio-drawer">
-                        <summary>
-                            <i class="fa-solid fa-calculator"></i>&nbsp; Bioestadística Complementaria (Gráfico
-                            Regional, H', J', Cobertura Temporal)
-                        </summary>
+                    <!-- Bioestadística Directa -->
+                    <div class="bio-section" style="border-top:1px solid var(--border-color); padding: 1rem 0;">
+                        <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--brand-green);">
+                            <i class="fa-solid fa-calculator"></i>&nbsp; Bioestadística Complementaria
+                        </h3>
                         <div class="bio-drawer-body">
                             <h4 style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
                                 <i class="fa-solid fa-chart-gantt"></i> Cobertura RCE Regional (<span
@@ -237,7 +229,6 @@
                             </div>
                             <div id="ausentesContainer" style="margin-top:0.75rem; font-size:0.75rem;"></div>
 
-                            <!-- NUEVO: Histograma de registros por década -->
                             <h4 style="font-size:0.85rem; color:var(--text-secondary); margin:1rem 0 0.5rem;">
                                 <i class="fa-solid fa-timeline"></i> Cobertura Temporal (registros GBIF por década)
                             </h4>
@@ -249,28 +240,14 @@
                                 colecciones históricas. Relevante metodológicamente para el SEIA.</p>
 
                             <div style="margin-top:1rem;">
-                                <div class="indices-grid" style="margin-bottom:0.5rem">
-                                    <div class="index-box">
-                                        <span class="index-symbol">H'</span>
-                                        <span class="index-name">Shannon</span>
-                                        <span class="index-value" id="idxShannon">-</span>
-                                    </div>
-                                    <div class="index-box">
-                                        <span class="index-symbol">J'</span>
-                                        <span class="index-name">Pielou</span>
-                                        <span class="index-value" id="idxPielou">-</span>
-                                    </div>
-                                </div>
                                 <div class="disclaimer-text">
-                                    <i class="fa-solid fa-circle-info"></i> <strong>Nota metodológica:</strong> H' y J'
-                                    calculados usando
-                                    <code>individualCount</code> de GBIF (proxy de abundancia relativa; null=1).
+                                    <i class="fa-solid fa-circle-info"></i> <strong>Nota metodológica:</strong> 
                                     Chao1 se calcula solo sobre registros HUMAN_OBSERVATION.
                                     Complementar con muestreos dirigidos.
                                 </div>
                             </div>
                         </div>
-                    </details>
+                    </div>
 
                 </div>
 
