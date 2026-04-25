@@ -88,18 +88,21 @@ function initMap() {
 // ================================
 let activeDrawHandler = null;
 
+function clearDrawButtonState() {
+    document.querySelectorAll('.draw-btn').forEach(btn => btn.classList.remove('active'));
+}
+
 function activarDibujo(tipo) {
     if (activeDrawHandler) {
         activeDrawHandler.disable();
         activeDrawHandler = null;
-        document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+        clearDrawButtonState();
         return;
     }
 
-    if (poligonos.length >= LIMITES.max_poligonos) {
-        alert(`⚠️ Máximo ${LIMITES.max_poligonos} polígonos permitidos`);
-        return;
-    }
+    // Reemplazar polígono anterior en lugar de bloquear (un solo AOI o polígono a la vez)
+    poligonos = [];
+    drawnItems.clearLayers();
 
     const opts = tipo === 'polygon'
         ? drawControl.options.draw.polygon
@@ -109,7 +112,10 @@ function activarDibujo(tipo) {
     activeDrawHandler = new Handler(map, opts);
     activeDrawHandler.enable();
 
-    document.getElementById('btn-draw-polygon').classList.add('active');
+    clearDrawButtonState();
+    if (tipo === 'polygon') {
+        document.getElementById('btn-draw-polygon')?.classList.add('active');
+    }
 }
 
 // ================================
@@ -137,12 +143,48 @@ function activarModo(tipo) {
         activeDrawHandler.disable();
         activeDrawHandler = null;
     }
-    document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+    clearDrawButtonState();
+
     // El modo punto es el default: los clicks del mapa agregan puntos
     if (tipo === 'punto') {
-        document.getElementById('btn-draw-point').classList.add('active');
-        // Se desactiva solo al activar polígono
+        document.getElementById('btn-draw-point')?.classList.add('active');
     }
+}
+
+function activarEdicion() {
+    if (activeDrawHandler) {
+        activeDrawHandler.disable();
+        activeDrawHandler = null;
+    }
+    clearDrawButtonState();
+    document.getElementById('btn-edit')?.classList.add('active');
+    
+    // Activar modo de edición: permite mover y eliminar vértices de polígonos
+    if (drawControl && drawControl._toolbars && drawControl._toolbars.edit) {
+        drawControl._toolbars.edit._modes.edit.handler.enable();
+    }
+}
+
+function limpiarTodo() {
+    if (!confirm('¿Limpiar todo?')) return;
+
+    // Limpiar puntos
+    puntos.forEach(p => map.removeLayer(p.marker));
+    puntos = [];
+    actualizarListaPuntos();
+    
+    // Limpiar polígonos
+    drawnItems.clearLayers();
+    poligonos = [];
+    actualizarListaPoligonos();
+    actualizarEstimacion();
+    
+    // Desactivar cualquier handler activo
+    if (activeDrawHandler) {
+        activeDrawHandler.disable();
+        activeDrawHandler = null;
+    }
+    clearDrawButtonState();
 }
 
 // ========================================
@@ -180,7 +222,7 @@ async function cargarCuencasDGA() {
                         <h4>${props.nombre || 'Subcuenca'}</h4>
                         <p><strong>Código Subcuenca:</strong> ${props.cod_subcuenca || 'N/A'}</p>
                         <p><strong>Región:</strong> ${props.region || 'N/A'}</p>
-                        <button class="cuenca-popup-btn" onclick="usarCuencaComoPoligono()">
+                        <button class="cuenca-popup-btn" onclick="if(typeof usarCuencaEnWorkspace==='function'){usarCuencaEnWorkspace();map.closePopup();}else{usarCuencaComoPoligono();}">
                             📍 Usar esta cuenca
                         </button>
                     </div>
@@ -246,10 +288,8 @@ function usarCuencaComoPoligono() {
         return;
     }
 
-    if (poligonos.length >= LIMITES.max_poligonos) {
-        alert(`⚠️ Máximo ${LIMITES.max_poligonos} polígonos permitidos`);
-        return;
-    }
+    // Reemplazar en lugar de bloquear (workspace maneja un polígono a la vez)
+    poligonos = [];
 
     // Obtener geometría de la cuenca
     const feature = cuencaSeleccionada.feature;
@@ -335,7 +375,9 @@ function mostrarNotificacion(mensaje) {
 // ================================
 function setupMapEvents() {
     map.on('click', function (e) {
-        if (activeDrawHandler) return; // ignorar clicks durante dibujo de polígono
+        if (activeDrawHandler) return; // ignorar clicks durante dibujo de polígono (modo clima)
+        // Ignorar también cuando el workspace está dibujando su propio polígono
+        if (typeof globalDrawControl !== 'undefined' && globalDrawControl && globalDrawControl._enabled) return;
         if (puntos.length >= LIMITES.max_puntos) { alert(`⚠️ Máximo ${LIMITES.max_puntos} puntos`); return; }
         agregarPunto(e.latlng.lat, e.latlng.lng);
     });
@@ -413,11 +455,25 @@ function agregarPunto(lat, lon) {
         })
     }).addTo(map);
 
-    marker.bindPopup(`<strong>${nombre}</strong>`).openPopup();
+    marker.bindPopup(
+        `<div style="text-align:center; min-width:90px; font-family:inherit;">` +
+        `<strong style="font-size:12px;">${nombre}</strong>` +
+        `<br><span style="font-size:10px; color:#888;">${lat.toFixed(4)}, ${lon.toFixed(4)}</span>` +
+        `<br><button onclick="quitarPunto(${id})" ` +
+        `style="margin-top:6px; padding:3px 10px; background:#e57373; color:#fff; ` +
+        `border:none; border-radius:4px; cursor:pointer; font-size:11px; width:100%;">` +
+        `✕ Eliminar</button></div>`
+    ).openPopup();
 
     puntos.push({ id, nombre, lat, lon, marker });
     actualizarListaPuntos();
     actualizarEstimacion();
+}
+
+/** Elimina un punto por su id único (seguro aunque cambien los índices del array). */
+function quitarPunto(uid) {
+    const idx = puntos.findIndex(p => p.id === uid);
+    if (idx !== -1) eliminarPunto(idx);
 }
 
 function agregarPoligono(coordinates, areaKm2, layer) {
@@ -473,38 +529,89 @@ function eliminarPoligono(id) {
 // ================================
 function actualizarListaPuntos() {
     const container = document.getElementById('puntos-lista');
-    document.getElementById('puntos-count').textContent = puntos.length;
+    if (!container) return;
 
     if (puntos.length === 0) {
-        container.innerHTML = '<p class="hint">No hay puntos agregados</p>';
+        container.innerHTML = '<p class="hint" style="font-size:12px; color:rgba(244,247,241,0.6); margin:8px 0;">No hay puntos marcados</p>';
         return;
     }
 
-    container.innerHTML = puntos.map(p => `
+    container.innerHTML = puntos.map((p, index) => `
         <div class="location-item">
-            <div><strong>${p.nombre}</strong><br><small>${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}</small></div>
-            <button onclick="eliminarPunto(${p.id})">Eliminar</button>
+            <div class="location-info">
+                <div class="location-name">Punto ${index + 1}</div>
+                <div class="location-coords">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</div>
+            </div>
+            <div class="location-actions">
+                <button class="btn-small danger" onclick="eliminarPunto(${index})" title="Eliminar punto">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
         </div>`).join('');
+}
+
+function eliminarPunto(index) {
+    if (puntos[index]) {
+        map.removeLayer(puntos[index].marker);
+        puntos.splice(index, 1);
+        actualizarListaPuntos();
+        actualizarEstimacion();
+    }
 }
 
 function actualizarListaPoligonos() {
     const container = document.getElementById('poligonos-lista');
-    document.getElementById('poligonos-count').textContent = poligonos.length;
+    if (!container) return; // Si no existe en este tab
 
     if (poligonos.length === 0) {
-        container.innerHTML = '<p class="hint">No hay polígonos dibujados</p>';
+        container.innerHTML = '<p class="hint" style="font-size:12px; color:rgba(244,247,241,0.6); margin:8px 0;">No hay zonas dibujadas</p>';
         return;
     }
 
     container.innerHTML = poligonos.map(p => `
-        <div class="location-item poligono">
-            <div>
-                <strong>${p.nombre}</strong><br>
-                <small>Área: ${p.area_km2} km²</small>
-                ${p.codigo ? `<br><small>Código: ${p.codigo}</small>` : ''}
+        <div class="location-item">
+            <div class="location-info">
+                <div class="location-name">${p.nombre}</div>
+                <div class="location-coords">Área: ${p.ha} ha</div>
             </div>
-            <button onclick="eliminarPoligono(${p.id})">Eliminar</button>
+            <div class="location-actions">
+                <button class="btn-small danger" onclick="eliminarPoligono(${p.id})" title="Eliminar zona">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
         </div>`).join('');
+}
+
+function actualizarListaPuntos() {
+    const container = document.getElementById('puntos-lista');
+    if (!container) return;
+
+    if (puntos.length === 0) {
+        container.innerHTML = '<p class="hint" style="font-size:12px; color:rgba(244,247,241,0.6); margin:8px 0;">No hay puntos marcados</p>';
+        return;
+    }
+
+    container.innerHTML = puntos.map((p, index) => `
+        <div class="location-item">
+            <div class="location-info">
+                <div class="location-name">Punto ${index + 1}</div>
+                <div class="location-coords">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</div>
+            </div>
+            <div class="location-actions">
+                <button class="btn-small danger" onclick="eliminarPunto(${index})" title="Eliminar punto">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>`).join('');
+}
+
+function eliminarPunto(index) {
+    if (puntos[index]) {
+        map.removeLayer(puntos[index].marker);
+        puntos.splice(index, 1);
+        actualizarListaPuntos();
+        actualizarEstimacion();
+    }
 }
 
 function limpiarTodo() {
@@ -532,6 +639,10 @@ function limpiarTodo() {
     actualizarListaPuntos();
     actualizarListaPoligonos();
     actualizarEstimacion();
+
+    if (typeof clearZoneState === 'function') {
+        clearZoneState();
+    }
 }
 
 // ========================================
@@ -579,10 +690,65 @@ function actualizarEstimacion() {
             <small>Excede el límite de sistema (${LIMITES.max_registros.toLocaleString()}).</small>
         `;
     } else {
-        let tiempoEstimado = totalRegistros > 5000 ? '2-4 min' : '1 min';
+        // --- Cálculo de tiempo basado en Chunks (Lógica Backend) ---
+        // Definición de grupos (IDs de colección en app.py)
+        const PRODUCT_MAP = {
+            'CHIRPS': 'CHIRPS',
+            'GPM': 'GPM',
+            'CMORPH': 'CMORPH',
+            'ERA5': 'ERA5_LAND',
+            'PERSIANN': 'PERSIANN',
+            'T_MAX': 'ERA5_LAND',
+            'T_MIN': 'ERA5_LAND',
+            'T_MEAN': 'ERA5_LAND'
+        };
+
+        // Identificar grupos únicos seleccionados
+        const gruposUnicos = new Set();
+        let tieneGPM = false;
+        productosSeleccionados.forEach(p => {
+            if (PRODUCT_MAP[p]) gruposUnicos.add(PRODUCT_MAP[p]);
+            if (p === 'GPM') tieneGPM = true;
+        });
+
+        const numGrupos = gruposUnicos.size;
+        let segundosTotales = 45; // Base / Cold Start
+
+        // Procesamiento de Puntos
+        if (puntos.length > 0) {
+            const numPuntos = puntos.length;
+            // Backend: dias_por_chunk = max(1, 2000 // num_puntos)
+            const diasPorChunk = Math.max(1, Math.floor(2000 / numPuntos));
+            const numChunksPuntos = Math.ceil(dias / diasPorChunk);
+            // Cada chunk de puntos (2000 registros) ~0.5s por grupo
+            segundosTotales += numChunksPuntos * numGrupos * 0.5;
+        }
+
+        // Procesamiento de Polígonos
+        if (poligonos.length > 0) {
+            // Backend: _CHUNK_POLIGONOS = 90 días
+            const numChunksPol = Math.ceil(dias / 90);
+            // Cada chunk de polígono (90 días) ~1.1s por grupo (según performance real)
+            segundosTotales += numChunksPol * numGrupos * 1.1;
+        }
+
+        // Factor Extra para GPM (Agregaciones diarias son lentas en GEE)
+        if (tieneGPM) segundosTotales *= 1.2;
+
+        // Formatear tiempo
+        let tiempoTexto = "";
+        if (segundosTotales < 60) {
+            tiempoTexto = "45-60 s";
+        } else {
+            const mins = Math.floor(segundosTotales / 60);
+            const secs = Math.round(segundosTotales % 60);
+            // No mostrar segundos si son muchos minutos
+            tiempoTexto = mins > 5 ? `${mins} min` : (secs > 0 ? `${mins} min ${secs} s` : `${mins} min`);
+        }
+
         textEl.innerHTML = `
             <strong>${totalRegistros.toLocaleString()}</strong> registros detectados.<br>
-            <small>Tiempo estimado: ${tiempoEstimado}</small>
+            <small>Tiempo estimado: ~${tiempoTexto}</small>
         `;
     }
 }
@@ -649,7 +815,7 @@ async function descargar() {
             setTimeout(() => {
                 textoEl.textContent = msg.texto;
                 if (msg.tipo === 'premium') {
-                    btn.style.background = 'var(--color-primary)';
+                    btn.style.background = 'var(--accent, #6aaa35)';
                 } else if (msg.tipo === 'warning') {
                     btn.style.background = '#eab308';
                 } else {
@@ -689,9 +855,9 @@ async function descargar() {
         }
 
         const blob = new Blob(chunks, { type: 'text/csv;charset=utf-8;' });
-        const url  = window.URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
         a.download = `evergreen_data_${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);

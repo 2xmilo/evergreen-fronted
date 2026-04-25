@@ -1,353 +1,1195 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso a Datos Meteorológicos - Evergreen</title>
-
+    <title>Workspace — Evergreen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
+    <link rel="stylesheet" href="css/workspace.css?v=12">
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+<body class="workspace-mode" style="visibility:hidden;">
 
-<body
-    style="background: var(--green-900); height: 100vh; display: flex; flex-direction: column; overflow: hidden; margin: 0;">
-    <!-- ── NAV ── -->
-    <nav id="nav" class="scrolled" style="position: relative; z-index: 100; flex-shrink: 0;">
-        <a href="index.html" class="nav-brand">
-            <img src="img/logo3.png" alt="Logo Evergreen"
-                style="height: 46px; width: auto; margin-right: 16px;">
-            <span class="nav-wordmark"></span>
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+    <div class="topbar-left">
+        <a href="lab.html" class="back-btn" title="Volver a Inicio">
+            <i class="fas fa-chevron-left"></i>
         </a>
-        <ul class="nav-links">
-            <li><a href="index.html#servicios">Servicios</a></li>
-            <li><a href="index.html#proyectos">Proyectos</a></li>
-            <li><a href="index.html#enfoque">Enfoque</a></li>
-            <li><a href="index.html#contacto">Contacto</a></li>
-            <li>
-                <a href="lab.html" class="nav-btn">
-                    API LAB
-                    <svg viewBox="0 0 16 16" fill="none" class="nav-btn-icon">
-                        <path d="M8 1L10 6L15 8L10 10L8 15L6 10L1 8L6 6z" fill="currentColor" />
-                    </svg>
-                </a>
-            </li>
-        </ul>
-    </nav>
-    <!-- Removed fixed spacer, nav is relative now -->
-
-
-
-    <!-- TAB SWITCHER -->
-    <div class="tool-tabs-bar">
-        <button class="tool-tab active" id="tab-datos" onclick="switchTool('datos')">
-            <span class="tool-tab-icon">🌧️</span>
-            <span class="tool-tab-label">Descarga de Datos</span>
-        </button>
-        <button class="tool-tab" id="tab-dem" onclick="switchTool('dem')">
-            <span class="tool-tab-icon">🏔️</span>
-            <span class="tool-tab-label">Modelo de Elevación DEM</span>
-        </button>
-        <button class="tool-tab" id="tab-biodiversidad" onclick="switchTool('biodiversidad')">
-            <span class="tool-tab-icon">🦎</span>
-            <span class="tool-tab-label">Explorador de Biodiversidad</span>
-        </button>
+        <a href="lab.html" class="zone-name" title="Volver a Inicio" style="text-decoration:none; opacity:.75;">Inicio</a>
+        <span id="ws-header-zone-name" style="display:none;"></span>
     </div>
 
-    <!-- PANEL 1: Descarga de Datos Satelitales -->
-    <div id="datos-app" class="tool-panel active">
-        <div class="app-container">
-            <aside class="control-panel">
-                <div class="panel-header-compact">
-                    <span class="app-title">EVERGREEN DATA-APP</span>
-                    <span class="status-badge-active">
-                        <span class="status-dot"></span>
-                        Activo
-                    </span>
-                </div>
+    <div class="tabs" id="tabs">
+        <button class="tab-btn active" id="tab-btn-resumen"       onclick="switchWorkspaceTab('resumen')">Resumen</button>
+        <button class="tab-btn"        id="tab-btn-vegetacion"    onclick="switchWorkspaceTab('vegetacion')">Vegetación</button>
+        <button class="tab-btn"        id="tab-btn-agua"          onclick="switchWorkspaceTab('agua')">Agua</button>
+        <button class="tab-btn"        id="tab-btn-elevacion"     onclick="switchWorkspaceTab('elevacion')">Elevación</button>
+        <button class="tab-btn"        id="tab-btn-bosque"        onclick="switchWorkspaceTab('bosque')">Bosque</button>
+        <button class="tab-btn"        id="tab-btn-biodiversidad" onclick="switchWorkspaceTab('biodiversidad')">Biodiversidad</button>
+        <button class="tab-btn"        id="tab-btn-clima"         onclick="switchWorkspaceTab('clima')">Clima</button>
+    </div>
 
-                <!-- HERRAMIENTAS DE DIBUJO — siempre visibles -->
-                <div class="draw-tools-bar">
-                    <button class="draw-btn" id="btn-draw-polygon" onclick="activarDibujo('polygon')"
-                        title="Dibujar polígono libre">
-                        <i class="fas fa-draw-polygon"></i>
-                        <span>Polígono</span>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:8px;">
+        <span id="user-email-display" style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(244,247,241,0.45);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <button onclick="logoutUser()" title="Cerrar sesión" style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:rgba(244,247,241,0.55);font-size:10px;font-family:'DM Mono',monospace;cursor:pointer;letter-spacing:.06em;transition:background .2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+            <i class="fas fa-sign-out-alt" style="font-size:9px;"></i> Salir
+        </button>
+    </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+    <!-- MAP -->
+    <div class="ws-map-container" id="map"></div>
+
+    <!-- MAP LAYERS OVERLAY -->
+    <div class="map-overlay" id="map-overlay">
+        <button class="map-layers-toggle" onclick="toggleLayersPanel()">
+            <i class="fas fa-layer-group icon-layers"></i>
+            Capas
+            <i class="fas fa-chevron-down icon-chev" id="layers-chevron"></i>
+        </button>
+        <div class="map-layers-body collapsed" id="map-layers-body">
+
+            <!-- Cuencas DGA -->
+            <div class="map-layer-row on" id="layer-cuencas"
+                 onclick="toggleCapasCuencas(); this.classList.toggle('on'); this.classList.toggle('off');">
+                <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                <span class="map-layer-label">Cuencas DGA</span>
+            </div>
+            <div class="map-layer-opacity">
+                <span class="opacity-label">Opacidad</span>
+                <input type="range" min="0" max="100" value="100" class="opacity-slider"
+                    oninput="setCuencasOpacity(this.value/100); document.getElementById('oval-cuencas').textContent=this.value+'%'">
+                <span class="opacity-val" id="oval-cuencas">100%</span>
+            </div>
+
+            <!-- AOI -->
+            <div class="map-layer-row on" id="layer-aoi"
+                 onclick="toggleAoiVisibility(); this.classList.toggle('on'); this.classList.toggle('off');">
+                <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                <span class="map-layer-label">AOI</span>
+            </div>
+            <div class="map-layer-opacity">
+                <span class="opacity-label">Opacidad</span>
+                <input type="range" min="0" max="100" value="25" class="opacity-slider"
+                    oninput="changeAoiOpacityDirect(this.value/100); document.getElementById('oval-aoi').textContent=this.value+'%'">
+                <span class="opacity-val" id="oval-aoi">25%</span>
+            </div>
+
+            <!-- Capas GEE dinámicas (se agregan al calcular análisis) -->
+            <div id="gee-layers-dynamic" style="display:none;"></div>
+
+        </div>
+    </div>
+
+    <!-- BIODIVERSIDAD IFRAME -->
+    <iframe id="iframe-biodiversidad" class="ws-iframe-wrapper" src=""></iframe>
+
+    <!-- ── LEFT PANEL ── -->
+    <aside class="left-panel" id="ws-left-panel">
+
+        <!-- Panel Header -->
+        <div class="panel-header">
+            <div class="panel-icon" id="panel-icon"><i class="fas fa-th-large" id="panel-icon-i"></i></div>
+            <span class="panel-title" id="panel-title">Resumen</span>
+            <div class="panel-header-btns">
+                <button class="panel-hbtn" title="Actualizar" onclick="">
+                    <i class="fas fa-sync-alt" style="font-size:10px;"></i>
+                </button>
+                <button class="panel-hbtn" title="Información">
+                    <i class="fas fa-info-circle" style="font-size:11px;"></i>
+                </button>
+                <button class="panel-hbtn" title="Colapsar panel" onclick="toggleLeftPanel()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             TAB 0: RESUMEN
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content active" id="tab-resumen-content">
+
+            <!-- Zona compacta -->
+            <div class="zone-compact" style="position:relative;">
+                <div class="zone-compact-name">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input type="text" id="ws-zone-name" class="zone-name-input"
+                           value="Mi zona de estudio" placeholder="Nombre de la zona...">
+                    <!-- Chevron selector de zonas (visible solo para pro/admin) -->
+                    <button id="zone-selector-btn" class="zone-selector-btn"
+                            onclick="toggleZoneSelector()" title="Cambiar zona de estudio"
+                            style="display:none;">
+                        <i class="fas fa-chevron-down" id="zone-selector-chev"></i>
                     </button>
-                    <button class="draw-btn" id="btn-draw-point" onclick="activarModo('punto')"
-                        title="Agregar puntos en el mapa">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>Punto</span>
+                    <span id="rs-status-badge" class="rs-badge rs-badge--empty">Sin zona</span>
+                </div>
+                <div class="zone-compact-meta">
+                    <span class="zone-ha-display"><span id="ws-zone-ha-card">—</span> Ha</span>
+                    <span id="rs-subtitle" style="font-size:10px;color:var(--muted2);">Define tu área de análisis</span>
+                </div>
+                <!-- Dropdown de zonas guardadas -->
+                <div id="zone-selector-dropdown" class="zone-selector-dropdown" style="display:none;"></div>
+                <span id="ws-zone-name-display" style="display:none;"></span>
+                <span id="ws-zone-ha"           style="display:none;"></span>
+                <span id="rs-meta-vertices"     style="display:none;"></span>
+                <span id="rs-meta-gee"          style="display:none;"></span>
+            </div>
+
+            <!-- Botones zona -->
+            <div class="rs-btn-grid" style="margin-bottom:6px;">
+                <button class="rs-btn rs-btn--primary" id="btn-dibujar-zona">
+                    <i class="fas fa-pen-alt"></i> Dibujar zona
+                </button>
+                <button class="rs-btn" onclick="usarCuencaEnWorkspace()">
+                    <i class="fas fa-water"></i> Usar cuenca
+                </button>
+            </div>
+            <div class="rs-btn-grid" style="margin-bottom:8px;">
+                <button class="rs-btn" onclick="clearZone()" style="color:#e57373;">
+                    <i class="fas fa-trash-alt"></i> Eliminar zona
+                </button>
+                <button class="rs-btn" onclick="resetAnalisis()" style="color:var(--muted2);">
+                    <i class="fas fa-undo"></i> Reiniciar análisis
+                </button>
+            </div>
+
+            <!-- Herramientas leaflet-draw (colapsables) -->
+            <button class="draw-tools-toggle" id="draw-toggle-btn" onclick="toggleDrawTools()">
+                <span><i class="fas fa-draw-polygon" style="margin-right:5px;font-size:9px;"></i>Herramientas de dibujo</span>
+                <i class="fas fa-chevron-down toggle-chev"></i>
+            </button>
+            <div class="draw-tools-collapsible" id="draw-tools-wrap">
+                <div class="draw-tools" style="margin-bottom:0;padding-bottom:4px;">
+                    <button class="draw-btn" id="btn-draw-polygon" onclick="activarDibujo('polygon')">
+                        <i class="fas fa-draw-polygon"></i> Dibujar polígono
+                    </button>
+                    <button class="draw-btn" id="btn-edit" onclick="activarEdicion()">
+                        <i class="fas fa-edit"></i> Editar / Eliminar
+                    </button>
+                    <button class="draw-btn" id="btn-clear-all" onclick="limpiarTodo()">
+                        <i class="fas fa-trash"></i> Limpiar todo
                     </button>
                 </div>
+            </div>
 
-                <!-- SECCIÓN 1: Ubicaciones -->
-                <div class="accordion-section open" id="accordion-ubicaciones">
-                    <div class="accordion-header" onclick="toggleAccordion('ubicaciones')">
-                        <span class="accordion-icon">📍</span>
-                        <span class="accordion-title">UBICACIONES</span>
-                        <span class="accordion-badge empty" id="ubicaciones-badge">0</span>
-                        <span class="accordion-chevron">▼</span>
+            <div class="rs-exports" style="margin:8px 0 10px;">
+                <button class="rs-export-link" id="btn-export-geojson">
+                    <i class="fas fa-download"></i> GeoJSON
+                </button>
+                <button class="rs-export-link rs-export-danger" id="btn-limpiar-zona">
+                    <i class="fas fa-times-circle"></i> Limpiar zona
+                </button>
+            </div>
+
+            <div id="poligonos-lista" style="display:none;"></div>
+
+            <!-- ── CLIMA WIDGET (Open-Meteo) ── -->
+            <div class="clima-widget" id="clima-widget" style="display:none;">
+                <div class="clima-widget-header">
+                    <div>
+                        <span><i class="fas fa-cloud-sun"></i> Clima de la zona</span>
+                        <span class="clima-widget-source">Open-Meteo · ERA5</span>
                     </div>
-                    <div class="accordion-content" id="content-ubicaciones">
-                        <div class="accordion-body">
-                            <p class="hint">Click en mapa o dibuja polígonos</p>
+                    <span class="clima-widget-period" id="clima-period">—</span>
+                </div>
+                <div class="clima-widget-stats">
+                    <div class="clima-stat">
+                        <span class="clima-val" id="clima-temp-mean">—</span>
+                        <span class="clima-lbl">°C media</span>
+                    </div>
+                    <div class="clima-stat">
+                        <span class="clima-val" id="clima-temp-max">—</span>
+                        <span class="clima-lbl">°C máx</span>
+                    </div>
+                    <div class="clima-stat">
+                        <span class="clima-val" id="clima-pp">—</span>
+                        <span class="clima-lbl">mm/año</span>
+                    </div>
+                </div>
+                <div id="clima-loading" style="display:none; font-size:10px; color:var(--muted2); text-align:center; padding:6px 0 2px;">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando clima...
+                </div>
+            </div>
 
-                            <!-- MANUAL INPUT -->
-                            <div class="manual-coord-input">
-                                <input type="number" id="manual-lat" placeholder="Lat (-39.81)" step="0.0001">
-                                <input type="number" id="manual-lon" placeholder="Lon (-73.24)" step="0.0001">
-                                <button onclick="agregarPuntoManual()" title="Agregar Punto">+</button>
-                            </div>
+            <!-- ── INDICATOR LIST (generado dinámicamente) ── -->
+            <div class="ind-section-header">Indicadores</div>
+            <div id="ind-list">
+                <div class="ind-empty-state" id="ind-empty-state">
+                    <i class="fas fa-chart-bar"></i>
+                    <p>Corre un análisis en los tabs<br>para ver los indicadores aquí.</p>
+                </div>
+            </div><!-- /ind-list -->
 
-                            <div class="location-stats">
-                                <span class="stat"><strong id="puntos-count">0</strong> Puntos <small>(máx
-                                        3)</small></span>
-                                <span class="stat"><strong id="poligonos-count">0</strong> Polígonos <small>(máx
-                                        1)</small></span>
-                            </div>
+            <!-- Panel de detalle (se muestra debajo de la fila activa) -->
+            <div class="ind-detail-panel" id="ind-detail-panel" style="display:none;">
 
-                            <div id="puntos-lista" class="location-list"></div>
-                            <div id="poligonos-lista" class="location-list"></div>
+                <!-- Vegetación: cualquier índice (NDVI, EVI, NDWI, etc.) -->
+                <div id="ind-detail-veg-content" style="display:none;">
+                    <div class="detail-title-row">
+                        <div class="detail-title-info">
+                            <span class="detail-title" id="d1-title">Análisis de Vegetación</span>
+                            <span class="detail-update-date" id="d1-date">—</span>
+                        </div>
+                        <a href="#" class="detail-link">Más información →</a>
+                    </div>
+                    <div class="detail-meta-grid">
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Colección</span><span class="detail-meta-val">Sentinel-2 SR</span></div>
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Resolución</span><span class="detail-meta-val">10 m</span></div>
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Autor</span><span class="detail-meta-val">ESA · GEE</span></div>
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Frecuencia</span><span class="detail-meta-val">5 días</span></div>
+                    </div>
+                    <div class="detail-stats-row">
+                        <div class="detail-stat"><span class="detail-stat-val" id="d1-mean">—</span><span class="detail-stat-label" id="d1-mean-lbl">MEDIA ZONA</span></div>
+                        <div class="detail-stat"><span class="detail-stat-val" id="d1-min">—</span><span class="detail-stat-label" id="d1-min-lbl">MÍNIMO ZONA</span></div>
+                        <div class="detail-stat"><span class="detail-stat-val" id="d1-max">—</span><span class="detail-stat-label" id="d1-max-lbl">MÁXIMO ZONA</span></div>
+                    </div>
+                    <div class="detail-export-row">
+                        <button class="detail-export-btn"><i class="fas fa-download"></i> CSV</button>
+                        <button class="detail-export-btn"><i class="fas fa-image"></i> PNG</button>
+                    </div>
+                </div>
 
-                            <button class="btn-clear-all" onclick="limpiarTodo()">Limpiar todo</button>
+                <!-- Bosque: Hansen GFC con chart anual -->
+                <div id="ind-detail-bosque-content" style="display:none;">
+                    <div class="detail-title-row">
+                        <div class="detail-title-info">
+                            <span class="detail-title">Pérdida de Bosque</span>
+                            <span class="detail-update-date">Hansen GFC 2023 · NASA/UMD</span>
+                        </div>
+                        <a href="#" class="detail-link">Más información →</a>
+                    </div>
+                    <div class="detail-meta-grid">
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Unidad</span><span class="detail-meta-val">Ha / año</span></div>
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Versión</span><span class="detail-meta-val">11.0</span></div>
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Autor</span><span class="detail-meta-val">Hansen · UMD</span></div>
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Rango</span><span class="detail-meta-val">2001 – 2023</span></div>
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Resolución</span><span class="detail-meta-val">27 m</span></div>
+                        <div class="detail-meta-cell"><span class="detail-meta-label">Frecuencia</span><span class="detail-meta-val">Anual</span></div>
+                    </div>
+                    <p class="detail-desc">Pérdida de cobertura forestal detectada anualmente. Incluye zona de estudio y buffer de 5 km.</p>
+                    <div class="detail-stats-row">
+                        <div class="detail-stat">
+                            <span class="detail-stat-val" id="bosque-stat-zona">—</span>
+                            <span class="detail-stat-label" id="bosque-stat-zona-lbl">HA · ZONA</span>
+                        </div>
+                        <div class="detail-stat">
+                            <span class="detail-stat-val" id="bosque-stat-buf">—</span>
+                            <span class="detail-stat-label" id="bosque-stat-buf-lbl">HA · BUFFER</span>
+                        </div>
+                        <div class="detail-stat">
+                            <span class="detail-stat-val" id="bosque-stat-total">—</span>
+                            <span class="detail-stat-label" id="bosque-stat-total-lbl">HA · TOTAL</span>
                         </div>
                     </div>
+                    <div class="detail-chart-section">
+                        <div class="detail-chart-controls">
+                            <span class="detail-chart-title">
+                                Pérdida por año
+                                <span class="detail-chart-title-unit">Ha</span>
+                            </span>
+                        </div>
+                        <div class="detail-chart-canvas-wrap">
+                            <canvas id="chart-detail-bosque"></canvas>
+                        </div>
+                        <div class="detail-chart-legend">
+                            <div class="detail-chart-legend-item"><span class="detail-legend-dot" style="background:#3d8a3a;"></span>Zona</div>
+                            <div class="detail-chart-legend-item"><span class="detail-legend-dot" style="background:#6aaa35;"></span>Último año</div>
+                            <div class="detail-chart-legend-item"><span class="detail-legend-dot" style="background:#c8e8c5;"></span>Buffer</div>
+                        </div>
+                    </div>
+                    <div class="detail-export-row">
+                        <button class="detail-export-btn"><i class="fas fa-download"></i> CSV</button>
+                        <button class="detail-export-btn"><i class="fas fa-image"></i> PNG</button>
+                    </div>
                 </div>
 
-                <!-- SECCIÓN 2: Productos -->
-                <div class="accordion-section" id="accordion-productos">
-                    <div class="accordion-header" onclick="toggleAccordion('productos')">
-                        <span class="accordion-icon">📦</span>
-                        <span class="accordion-title">PRODUCTOS SATELITALES</span>
-                        <span class="accordion-badge" id="productos-badge">1</span>
-                        <span class="accordion-chevron">▼</span>
+                <!-- Genérico: agua, elevación, otros -->
+                <div id="ind-detail-generic-content" style="display:none;">
+                    <div class="detail-title-row">
+                        <div class="detail-title-info">
+                            <span class="detail-title" id="dg-title">Análisis</span>
+                            <span class="detail-update-date" id="dg-date">—</span>
+                        </div>
+                        <a href="#" class="detail-link">Más información →</a>
                     </div>
-                    <div class="accordion-content" id="content-productos">
+                    <div class="detail-stats-row">
+                        <div class="detail-stat"><span class="detail-stat-val" id="dg-mean">—</span><span class="detail-stat-label" id="dg-mean-lbl">MEDIA ZONA</span></div>
+                        <div class="detail-stat"><span class="detail-stat-val" id="dg-min">—</span><span class="detail-stat-label" id="dg-min-lbl">MÍNIMO ZONA</span></div>
+                        <div class="detail-stat"><span class="detail-stat-val" id="dg-max">—</span><span class="detail-stat-label" id="dg-max-lbl">MÁXIMO ZONA</span></div>
+                    </div>
+                    <div class="detail-export-row">
+                        <button class="detail-export-btn"><i class="fas fa-download"></i> CSV</button>
+                    </div>
+                </div>
+
+                <!-- BIODIVERSIDAD detail -->
+                <div id="ind-detail-bio-content" style="display:none;">
+                    <div class="detail-title-row">
+                        <div class="detail-title-info">
+                            <span class="detail-title">Análisis Biodiversidad</span>
+                            <span class="detail-update-date">GBIF · iNaturalist</span>
+                        </div>
+                        <a href="#" class="detail-link" onclick="event.preventDefault();switchWorkspaceTab('biodiversidad')">Ver completo →</a>
+                    </div>
+                    <!-- Stats: spp / rce / CR EN VU -->
+                    <div class="detail-stats-row" style="grid-template-columns:repeat(5,1fr);gap:4px;">
+                        <div class="detail-stat">
+                            <span class="detail-stat-val" id="db-spp">—</span>
+                            <span class="detail-stat-label">SPP.</span>
+                        </div>
+                        <div class="detail-stat">
+                            <span class="detail-stat-val" style="color:#e67e22" id="db-rce">—</span>
+                            <span class="detail-stat-label">RCE</span>
+                        </div>
+                        <div class="detail-stat">
+                            <span class="detail-stat-val" style="color:#e74c3c" id="db-cr">—</span>
+                            <span class="detail-stat-label">CR</span>
+                        </div>
+                        <div class="detail-stat">
+                            <span class="detail-stat-val" style="color:#e67e22" id="db-en">—</span>
+                            <span class="detail-stat-label">EN</span>
+                        </div>
+                        <div class="detail-stat">
+                            <span class="detail-stat-val" style="color:#d4a800" id="db-vu">—</span>
+                            <span class="detail-stat-label">VU</span>
+                        </div>
+                    </div>
+                    <div style="padding:6px 14px 4px;display:flex;gap:16px;align-items:center;">
+                        <div style="font-size:11px;color:#6b7280;">IVC: <strong id="db-ivc" style="color:#6aaa35;">—</strong></div>
+                        <div style="font-size:10.5px;color:#9ca3af;" id="db-ivc-interp"></div>
+                    </div>
+                    <div style="padding:2px 14px 10px;font-size:10.5px;color:#9ca3af;">
+                        <i class="fas fa-tree" style="margin-right:4px;"></i><span id="db-piso">—</span>
+                    </div>
+                </div>
+
+            </div><!-- /ind-detail-panel -->
+
+            <!-- IDs de compatibilidad con renderMonitorPanel() -->
+            <div id="rs-indicators-list" style="display:none;"></div>
+            <span id="rs-ind-count" style="display:none;">0</span>
+
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             TAB 1: VEGETACIÓN
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content" id="tab-vegetacion-content">
+
+            <div class="ap-source-row">
+                <span class="ap-source-badge">Sentinel-2 SR</span>
+                <span class="ap-source-text">Google Earth Engine · 10 m resolución</span>
+            </div>
+
+            <div class="ap-field">
+                <label class="ap-label">Índice a calcular</label>
+                <select class="ap-select" id="veg-indice">
+                    <option value="NDVI">NDVI — Vigor Vegetacional</option>
+                    <option value="EVI">EVI — Vegetación Mejorado</option>
+                    <option value="SAVI">SAVI — Ajustado por Suelo</option>
+                    <option value="NDMI">NDMI — Humedad Foliar</option>
+                    <option value="NBR">NBR — Área Quemada</option>
+                </select>
+            </div>
+
+            <div class="ap-date-row">
+                <div class="ap-field" style="margin:0;">
+                    <label class="ap-label">Desde</label>
+                    <input type="date" class="ap-input" id="veg-inicio" value="2024-01-01">
+                </div>
+                <div class="ap-field" style="margin:0;">
+                    <label class="ap-label">Hasta <span>(Nubes &lt;40%)</span></label>
+                    <input type="date" class="ap-input" id="veg-fin" value="2024-03-31">
+                </div>
+            </div>
+
+            <button class="ap-btn-generate" id="btn-veg-gen" onclick="requestVegetacion()">
+                <i class="fas fa-satellite-dish"></i> Generar Análisis
+            </button>
+
+            <!-- Resultados -->
+            <div id="veg-resultados" style="display:none; margin-top:14px;">
+                <div class="ap-meta-strip" id="veg-meta-strip">
+                    <div class="meta-item"><span class="meta-label">Fuente</span><span class="meta-val">Sentinel-2 SR</span></div>
+                    <div class="meta-item"><span class="meta-label">Resolución</span><span class="meta-val">10 m</span></div>
+                    <div class="meta-item"><span class="meta-label">Índice</span><span class="meta-val" style="color:var(--accent-dark);" id="veg-indice-label">NDVI</span></div>
+                </div>
+                <div class="ap-stat-row-wrap">
+                    <div class="ap-stat"><span class="ap-stat-label">Media</span><span class="ap-stat-val" id="veg-mean">—</span></div>
+                    <div class="ap-stat"><span class="ap-stat-label">Mínimo</span><span class="ap-stat-val" style="color:var(--muted);" id="veg-min">—</span></div>
+                    <div class="ap-stat"><span class="ap-stat-label">Máximo</span><span class="ap-stat-val" style="color:var(--accent-dark);" id="veg-max">—</span></div>
+                </div>
+                <div class="ap-gradient-bar" id="veg-gradient-bar"></div>
+                <div class="ap-gradient-labels">
+                    <span id="veg-legend-min">Bajo</span>
+                    <span id="veg-legend-max">Alto</span>
+                </div>
+                <p class="ap-note" id="veg-nimages">Mediana de imágenes · p2–p98 adaptado al AOI.</p>
+
+                <!-- Evolución temporal (aparece desde el 2.º análisis) -->
+                <div id="veg-historial" style="display:none;">
+                    <div class="ap-history-section-header">
+                        <span>Evolución temporal</span>
+                        <span class="ap-history-hint">Corre más análisis para comparar</span>
+                    </div>
+                    <div class="ap-history-chart-wrap">
+                        <canvas id="veg-history-chart"></canvas>
+                    </div>
+                    <div class="ap-history-legend">
+                        <span class="ap-history-legend-dot" style="background:rgba(106,170,53,0.4);"></span>
+                        <span>Análisis previos</span>
+                        <span class="ap-history-legend-dot" style="background:#6aaa35; margin-left:8px;"></span>
+                        <span>Más reciente</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             TAB 2: AGUA
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content" id="tab-agua-content">
+
+            <div class="ap-source-row">
+                <span class="ap-source-badge" style="background:rgba(67,147,195,0.10);color:#1e6ea0;border-color:rgba(67,147,195,0.2);">Sentinel-2 SR</span>
+                <span class="ap-source-text">Google Earth Engine · 10 m resolución</span>
+            </div>
+
+            <div class="ap-field">
+                <label class="ap-label">Índice a calcular</label>
+                <select class="ap-select" id="agua-indice" onchange="actualizarInfoAgua()">
+                    <option value="NDWI">NDWI — Agua Superficial</option>
+                    <option value="MNDWI">MNDWI — Agua Modificada</option>
+                    <option value="NDMI">NDMI — Humedad del Suelo</option>
+                </select>
+            </div>
+
+            <div class="ap-info-box" id="agua-info-box">
+                <i class="fas fa-info-circle"></i>
+                <span id="agua-info-text">Detecta agua superficial usando bandas Verde (B3) e Infrarrojo Cercano (B8). Valores &gt;0 indican presencia de agua.</span>
+            </div>
+
+            <div class="ap-date-row">
+                <div class="ap-field" style="margin:0;">
+                    <label class="ap-label">Desde</label>
+                    <input type="date" class="ap-input" id="agua-inicio" value="2024-01-01">
+                </div>
+                <div class="ap-field" style="margin:0;">
+                    <label class="ap-label">Hasta <span>(Nubes &lt;40%)</span></label>
+                    <input type="date" class="ap-input" id="agua-fin" value="2024-03-31">
+                </div>
+            </div>
+
+            <button class="ap-btn-generate" id="btn-agua-gen" onclick="requestAgua()"
+                    style="background:#1e4e6e;">
+                <i class="fas fa-tint"></i> Generar Análisis de Agua
+            </button>
+
+            <!-- Resultados -->
+            <div id="agua-resultados" style="display:none; margin-top:14px;">
+                <div class="ap-meta-strip">
+                    <div class="meta-item"><span class="meta-label">Fuente</span><span class="meta-val">Sentinel-2 SR</span></div>
+                    <div class="meta-item"><span class="meta-label">Resolución</span><span class="meta-val">10 m</span></div>
+                    <div class="meta-item"><span class="meta-label">Índice</span><span class="meta-val" style="color:#1e6ea0;" id="agua-indice-label">NDWI</span></div>
+                </div>
+                <div class="ap-stats-3">
+                    <div class="ap-stat-col">
+                        <span class="ap-stat-col-val" id="agua-mean">—</span>
+                        <span class="ap-stat-col-label">Media</span>
+                    </div>
+                    <div class="ap-stat-col">
+                        <span class="ap-stat-col-val" style="color:var(--muted);" id="agua-min">—</span>
+                        <span class="ap-stat-col-label">Mínimo</span>
+                    </div>
+                    <div class="ap-stat-col">
+                        <span class="ap-stat-col-val" style="color:#1e6ea0;" id="agua-max">—</span>
+                        <span class="ap-stat-col-label">Máximo</span>
+                    </div>
+                </div>
+                <div class="ap-gradient-bar" id="agua-gradient-bar"
+                     style="background:linear-gradient(90deg,#d4a96a,#f5f5dc,#9ecae1,#2166ac,#084081);"></div>
+                <div class="ap-gradient-labels"><span>Sin agua</span><span>Agua</span></div>
+                <p class="ap-note">Visualización adaptada al rango del AOI (p2–p98). Umbral de agua ≈ 0.</p>
+
+                <!-- Evolución temporal -->
+                <div id="agua-historial" style="display:none;">
+                    <div class="ap-history-section-header">
+                        <span>Evolución temporal</span>
+                        <span class="ap-history-hint">Corre más análisis para comparar</span>
+                    </div>
+                    <div class="ap-history-chart-wrap">
+                        <canvas id="agua-history-chart"></canvas>
+                    </div>
+                    <div class="ap-history-legend">
+                        <span class="ap-history-legend-dot" style="background:rgba(30,110,160,0.4);"></span>
+                        <span>Análisis previos</span>
+                        <span class="ap-history-legend-dot" style="background:#1e6ea0; margin-left:8px;"></span>
+                        <span>Más reciente</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             TAB 3: ELEVACIÓN
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content" id="tab-elevacion-content">
+
+            <div class="ap-source-row">
+                <span class="ap-source-badge" style="background:rgba(140,123,110,0.12);color:#6b5344;border-color:rgba(140,123,110,0.25);">DEM · 30 m</span>
+                <span class="ap-source-text">Google Earth Engine · Copernicus / ALOS</span>
+            </div>
+
+            <div class="ap-field">
+                <label class="ap-label">Fuente DEM</label>
+                <select class="ap-select" id="dem-fuente">
+                    <option value="copernicus">Copernicus GLO-30 (30 m)</option>
+                    <option value="alos">ALOS AW3D30 (30 m)</option>
+                </select>
+            </div>
+
+            <button class="ap-btn-generate" id="btn-dem-gen" onclick="requestElevacion()"
+                    style="background:#4a3828;">
+                <i class="fas fa-layer-group"></i> Procesar Capas
+            </button>
+
+            <div id="dem-resultados" style="display:none; margin-top:14px;">
+
+                <div class="dem-layer-pills">
+                    <button class="dem-pill active" id="dem-pill-dem" onclick="switchDemLayer('dem')">
+                        <i class="fas fa-mountain"></i> Elevación
+                    </button>
+                    <button class="dem-pill" id="dem-pill-slope" onclick="switchDemLayer('slope')">
+                        <i class="fas fa-sort-amount-up-alt"></i> Pendiente
+                    </button>
+                    <button class="dem-pill" id="dem-pill-aspect" onclick="switchDemLayer('aspect')">
+                        <i class="fas fa-compass"></i> Aspecto
+                    </button>
+                </div>
+
+                <!-- ELEVACIÓN -->
+                <div id="dem-panel-dem">
+                    <div class="ap-meta-strip">
+                        <div class="meta-item"><span class="meta-label">Fuente</span><span class="meta-val" id="dem-source-label">Copernicus</span></div>
+                        <div class="meta-item"><span class="meta-label">Resolución</span><span class="meta-val">30 m</span></div>
+                        <div class="meta-item"><span class="meta-label">Unidad</span><span class="meta-val">m s.n.m.</span></div>
+                    </div>
+                    <div class="ap-stats-3">
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" id="dem-mean">—</span>
+                            <span class="ap-stat-col-label">Media</span>
+                        </div>
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" style="color:var(--muted);" id="dem-min">—</span>
+                            <span class="ap-stat-col-label">Mínimo</span>
+                        </div>
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" style="color:#8c7b6e;" id="dem-max">—</span>
+                            <span class="ap-stat-col-label">Máximo</span>
+                        </div>
+                    </div>
+                    <div class="ap-gradient-bar" style="background:linear-gradient(90deg,#006837,#1a9850,#66bd63,#ffffbf,#fdae61,#f46d43,#d73027,#ffffff);"></div>
+                    <div class="ap-gradient-labels"><span>Bajo</span><span>Alto</span></div>
+                </div>
+
+                <!-- PENDIENTE -->
+                <div id="dem-panel-slope" style="display:none;">
+                    <div class="ap-meta-strip">
+                        <div class="meta-item"><span class="meta-label">Derivada de</span><span class="meta-val">DEM</span></div>
+                        <div class="meta-item"><span class="meta-label">Unidad</span><span class="meta-val">Grados (°)</span></div>
+                        <div class="meta-item"><span class="meta-label">Rango mapa</span><span class="meta-val">0°–60°</span></div>
+                    </div>
+                    <div class="ap-stat-row-wrap">
+                        <div class="ap-stat">
+                            <span class="ap-stat-label">Pendiente media</span>
+                            <span class="ap-stat-val" id="dem-slope-mean">—</span>
+                        </div>
+                    </div>
+                    <div class="ap-gradient-bar" style="background:linear-gradient(90deg,#ffffcc,#c7e9b4,#7fcdbb,#1d91c0,#225ea8,#253494);"></div>
+                    <div class="ap-gradient-labels"><span>Plano (0°)</span><span>Escarpado (60°)</span></div>
+                    <p class="ap-note">Zonas planas concentran flujo superficial y acumulan agua.</p>
+                </div>
+
+                <!-- ASPECTO -->
+                <div id="dem-panel-aspect" style="display:none;">
+                    <div class="ap-meta-strip">
+                        <div class="meta-item"><span class="meta-label">Derivada de</span><span class="meta-val">DEM</span></div>
+                        <div class="meta-item"><span class="meta-label">Unidad</span><span class="meta-val">Grados (°)</span></div>
+                        <div class="meta-item"><span class="meta-label">Rango mapa</span><span class="meta-val">0°–360°</span></div>
+                    </div>
+                    <div class="ap-gradient-bar" style="background:linear-gradient(90deg,#8c510a,#bf812d,#dfc27d,#f6e8c3,#c7eae5,#5ab4ac,#01665e);"></div>
+                    <div class="ap-gradient-labels"><span>Norte (0°)</span><span>Norte (360°)</span></div>
+                    <p class="ap-note">Orientación de laderas. Determina dirección del escurrimiento superficial.</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             TAB 4: BOSQUE
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content" id="tab-bosque-content">
+
+            <div class="ap-source-row">
+                <span class="ap-source-badge" style="background:rgba(30,100,50,0.10);color:#1a5a2a;border-color:rgba(30,100,50,0.2);">Hansen GFC 2023</span>
+                <span class="ap-source-text">NASA ORNL Biomass · 27 m resolución</span>
+            </div>
+
+            <div class="ap-field">
+                <label class="ap-label">Buffer zona <span>(km)</span></label>
+                <input type="number" class="ap-input" id="bosque-buffer" value="5" min="1" max="20" step="1">
+            </div>
+
+            <button class="ap-btn-generate" id="btn-bosque-gen" onclick="requestBosque()"
+                    style="background:#1a3d0a;">
+                <i class="fas fa-satellite-dish"></i> Calcular Pérdida de Bosque
+            </button>
+
+            <!-- Carbon Stock card -->
+            <div class="bosque-chart-card" id="bosque-card-carbon" style="display:none; margin-top:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                    <div>
+                        <p class="bosque-chart-title">CarbonStock <span style="font-weight:300;opacity:.6;">tonC</span></p>
+                        <p class="bosque-chart-value" id="bosque-carbon-total">—</p>
+                    </div>
+                    <span class="bosque-chart-period" id="bosque-carbon-period">2000 – 2023</span>
+                </div>
+                <div style="height:110px;position:relative;">
+                    <canvas id="chart-carbon"></canvas>
+                </div>
+            </div>
+
+            <!-- Forest Loss card -->
+            <div class="bosque-chart-card" id="bosque-card-perdida" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                    <div>
+                        <p class="bosque-chart-title">Pérdida de Bosque <span style="font-weight:300;opacity:.6;">Ha</span></p>
+                        <p class="bosque-chart-value" id="bosque-perdida-total">—</p>
+                    </div>
+                    <span class="bosque-chart-period">2000 – 2023</span>
+                </div>
+                <div style="display:flex;gap:14px;margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(200,230,200,0.7);">
+                        <span style="width:10px;height:10px;border-radius:2px;background:#4caf50;display:inline-block;"></span> Zona
+                    </div>
+                    <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(200,230,200,0.7);">
+                        <span style="width:10px;height:10px;border-radius:2px;background:#a5d6a7;display:inline-block;"></span>
+                        Buffer <span id="bosque-buffer-label" style="opacity:.6;"></span>
+                    </div>
+                </div>
+                <div style="height:130px;position:relative;">
+                    <canvas id="chart-bosque"></canvas>
+                </div>
+            </div>
+
+            <!-- Empty state -->
+            <div id="bosque-empty" style="text-align:center;padding:40px 16px;color:var(--muted);">
+                <i class="fas fa-tree" style="font-size:28px;opacity:.15;display:block;margin-bottom:10px;"></i>
+                <p style="font-size:12px;line-height:1.6;margin:0;">
+                    Calcula pérdida de bosque y stock de carbono usando datos Hansen GFC y NASA ORNL (2000–2023).
+                </p>
+            </div>
+
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             TAB 5: BIODIVERSIDAD
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content" id="tab-biodiversidad-content">
+
+          <!-- CONTROLES -->
+          <div class="bio-controls">
+            <div class="bio-aoi-badge">
+              <div class="bio-aoi-dot"></div>
+              <div><strong id="bio-zona-nombre">Sin zona definida</strong> &nbsp;·&nbsp; <span id="bio-zona-status">AOI no definido</span></div>
+            </div>
+            <button class="bio-run-btn" onclick="runBioAnalysis()">
+              <i class="fas fa-magnifying-glass"></i> Ejecutar Análisis GBIF
+            </button>
+            <button class="bio-run-btn secondary" onclick="addBioExtended()">
+              <i class="fas fa-plus"></i> Agregar Chromista + Protozoa
+            </button>
+            <div class="bio-progress" id="bio-progress">
+              <div class="bio-progress-text" id="bio-progress-text">Consultando GBIF...</div>
+              <div class="bio-progress-bar"><div class="bio-progress-fill" id="bio-progress-fill" style="width:0%;"></div></div>
+            </div>
+          </div>
+
+          <!-- RESULTADOS (ocultos hasta que llegue postMessage) -->
+          <div id="bio-resultados-panel" style="display:none;">
+
+            <div class="bio-stats-strip">
+              <div class="bio-stat-cell">
+                <span class="bio-stat-val" id="bio-stat-spp">—</span>
+                <span class="bio-stat-label">Spp. registradas</span>
+              </div>
+              <div class="bio-stat-cell">
+                <span class="bio-stat-val en" id="bio-stat-rce">—</span>
+                <span class="bio-stat-label">Con RCE</span>
+              </div>
+              <div class="bio-stat-cell">
+                <div style="display:flex;gap:8px;align-items:baseline;">
+                  <span class="bio-stat-val cr" id="bio-stat-cr">0</span><span class="bio-stat-label">CR</span>
+                  <span class="bio-stat-val en" id="bio-stat-en">0</span><span class="bio-stat-label">EN</span>
+                  <span class="bio-stat-val vu" id="bio-stat-vu">0</span><span class="bio-stat-label">VU</span>
+                </div>
+                <span class="bio-stat-label" style="margin-top:2px;">Amenazadas</span>
+              </div>
+            </div>
+
+            <div class="bio-ivc-box">
+              <div class="bio-ivc-row">
+                <div>
+                  <div class="bio-ivc-label">Índice de Valor de Conservación (IVC)</div>
+                  <div class="bio-ivc-interp" id="bio-ivc-interp">—</div>
+                  <div class="bio-ivc-detail" id="bio-ivc-detail"></div>
+                </div>
+                <span class="bio-ivc-score" id="bio-ivc-score">—</span>
+              </div>
+            </div>
+
+            <div class="bio-charts-row">
+              <div class="bio-donut-wrap">
+                <div class="bio-donut-title">Por Reino</div>
+                <canvas id="bio-donut-chart"></canvas>
+              </div>
+              <div class="bio-alerts">
+                <div style="font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;margin-bottom:4px;">Áreas Protegidas</div>
+                <div class="bio-alert-row">
+                  <i class="fas fa-shield bio-alert-icon"></i>
+                  <span class="bio-alert-label">SNASPE</span>
+                  <span class="bio-alert-val" id="bio-alert-snaspe">—</span>
+                </div>
+                <div class="bio-alert-row">
+                  <i class="fas fa-landmark bio-alert-icon"></i>
+                  <span class="bio-alert-label">SP 19.300</span>
+                  <span class="bio-alert-val" id="bio-alert-19300">—</span>
+                </div>
+                <div class="bio-alert-row">
+                  <i class="fas fa-map bio-alert-icon"></i>
+                  <span class="bio-alert-label">SP ERB</span>
+                  <span class="bio-alert-val" id="bio-alert-erb">—</span>
+                </div>
+                <div class="bio-alert-row">
+                  <i class="fas fa-water bio-alert-icon"></i>
+                  <span class="bio-alert-label">Humedal SIMBIO</span>
+                  <span class="bio-alert-val" id="bio-alert-humedal">—</span>
+                </div>
+                <div class="bio-alert-row" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(0,0,0,0.06);">
+                  <i class="fas fa-tree bio-alert-icon"></i>
+                  <span class="bio-alert-label">Piso veg.</span>
+                  <span class="bio-alert-val" id="bio-piso" style="font-size:9.5px;text-align:right;max-width:100px;line-height:1.2;">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bio-metrics">
+              <div class="bio-section-title">Métricas de Biodiversidad</div>
+              <div class="bio-metric-row"><span class="bio-metric-label">Riqueza observada (S)</span><span class="bio-metric-val" id="bio-m-s">—</span></div>
+              <div class="bio-metric-row"><span class="bio-metric-label">Riqueza estimada (Chao1)</span><span class="bio-metric-val" id="bio-m-chao">—</span></div>
+              <div class="bio-metric-row"><span class="bio-metric-label">Completitud del muestreo</span><span class="bio-metric-val" id="bio-m-comp">—</span></div>
+              <div class="bio-metric-row"><span class="bio-metric-label">Proporción con RCE</span><span class="bio-metric-val" id="bio-m-rce-pct">—</span></div>
+              <div class="bio-metric-row"><span class="bio-metric-label">Proporción amenazadas (CR+EN+VU)</span><span class="bio-metric-val warn" id="bio-m-amen">—</span></div>
+              <div class="bio-metric-row"><span class="bio-metric-label">Especies detección marginal</span><span class="bio-metric-val warn" id="bio-m-marg">—</span></div>
+            </div>
+
+            <div class="bio-section">
+              <div class="bio-section-title"><i class="fas fa-triangle-exclamation" style="color:#e74c3c;margin-right:4px;"></i>Top amenazadas</div>
+              <div id="bio-threatened-list"><p style="font-size:11px;color:#9ca3af;">Ejecuta el análisis para ver especies amenazadas.</p></div>
+            </div>
+
+            <div class="bio-chart-block">
+              <div class="bio-chart-title"><i class="fas fa-chart-gantt" style="margin-right:5px;font-size:10px;"></i>Cobertura RCE Regional — <span id="bio-region-name">—</span></div>
+              <div class="bio-chart-sub">Gap entre especies RCE esperadas y observadas en el AOI</div>
+              <div style="height:120px;position:relative;"><canvas id="bio-regional-chart"></canvas></div>
+              <div class="bio-gap-alert" id="bio-gap-alert" style="display:none;"></div>
+            </div>
+
+            <div class="bio-chart-block">
+              <div class="bio-chart-title"><i class="fas fa-timeline" style="margin-right:5px;font-size:10px;"></i>Cobertura temporal GBIF por década</div>
+              <div class="bio-chart-sub">Indica si el conocimiento es reciente o histórico</div>
+              <div style="height:90px;position:relative;"><canvas id="bio-decada-chart"></canvas></div>
+              <div class="bio-disclaimer"><i class="fas fa-circle-info" style="margin-right:4px;"></i><strong>Nota metodológica:</strong> Chao1 solo sobre HUMAN_OBSERVATION. Complementar con muestreos dirigidos.</div>
+            </div>
+
+            <div class="bio-chart-block">
+              <div class="bio-chart-title"><i class="fas fa-scale-balanced" style="margin-right:5px;font-size:10px;"></i>Proporción RCE vs IUCN</div>
+              <div style="height:90px;position:relative;"><canvas id="bio-rce-iucn-chart"></canvas></div>
+            </div>
+
+            <div class="bio-action-row">
+              <button class="bio-action-btn primary" onclick="openBioTable()"><i class="fas fa-table"></i> Ver tabla de especies</button>
+              <button class="bio-action-btn" id="bio-export-csv-btn" onclick="exportBioCSV()" disabled><i class="fas fa-download"></i> Exportar CSV</button>
+            </div>
+
+          </div><!-- /bio-resultados-panel -->
+
+        </div><!-- /tab-biodiversidad-content -->
+
+        <!-- ═══════════════════════════════════════
+             TAB 6: CLIMA
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content" id="tab-clima-content">
+            <div class="control-panel">
+                <div class="accordion-section open" id="accordion-productos">
+                    <div class="accordion-header" onclick="toggleAccordion('productos')">
+                        <span class="accordion-title">Variables Climáticas</span>
+                        <i class="fas fa-chevron-down accordion-chevron"></i>
+                    </div>
+                    <div class="accordion-content" id="content-productos" style="display:block;">
                         <div class="accordion-body">
                             <div class="checkbox-group" id="productos-grupo">
-                                <p>🌧️ PRECIPITACIÓN</p>
-                                <label><input type="checkbox" value="CHIRPS" checked><span>CHIRPS</span><small>5.5
-                                        km</small></label>
-                                <label><input type="checkbox" value="GPM"><span>GPM-IMERG</span><small>11
-                                        km</small></label>
-                                <label><input type="checkbox" value="ERA5"><span>ERA5-Precip</span><small>11
-                                        km</small></label>
-                                <label><input type="checkbox" value="PERSIANN"><span>PERSIANN-CDR</span><small>28
-                                        km</small></label>
-                                <label><input type="checkbox" value="CMORPH"><span>CMORPH</span><small>25
-                                        km</small></label>
-
+                                <p>PRECIPITACIÓN</p>
+                                <label><input type="checkbox" value="CHIRPS" checked><span>CHIRPS <small>(5.5km)</small></span></label>
+                                <label><input type="checkbox" value="GPM"><span>GPM-IMERG <small>(11km)</small></span></label>
+                                <label><input type="checkbox" value="CMORPH"><span>CMORPH <small>(25km)</small></span></label>
+                                <label><input type="checkbox" value="PERSIANN"><span>PERSIANN-CDR <small>(27km)</small></span></label>
+                                <label><input type="checkbox" value="ERA5"><span>ERA5-Precip <small>(11km)</small></span></label>
                                 <hr>
-                                <p>🌡️ TEMPERATURA</p>
-                                <label><input type="checkbox" value="T_MAX"><span>Temp.
-                                        Máxima</span><small>9 km</small></label>
-                                <label><input type="checkbox" value="T_MIN"><span>Temp.
-                                        Mínima</span><small>9 km</small></label>
-                                <label><input type="checkbox" value="T_MEAN"><span>Temp.
-                                        Media</span><small>9 km</small></label>
+                                <p>TEMPERATURA (ERA5 LAND)</p>
+                                <label><input type="checkbox" value="T_MAX"><span>Temperatura Máxima <small>(9km)</small></span></label>
+                                <label><input type="checkbox" value="T_MIN"><span>Temperatura Mínima <small>(9km)</small></span></label>
+                                <label><input type="checkbox" value="T_MEAN"><span>Temperatura Media <small>(9km)</small></span></label>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 3: Tiempo -->
-                <div class="accordion-section" id="accordion-tiempo">
+                <div class="accordion-section open" id="accordion-tiempo">
                     <div class="accordion-header" onclick="toggleAccordion('tiempo')">
-                        <span class="accordion-icon">📅</span>
-                        <span class="accordion-title">RANGO TEMPORAL</span>
-                        <span class="accordion-chevron">▼</span>
+                        <span class="accordion-title">Rango Temporal</span>
+                        <i class="fas fa-chevron-down accordion-chevron"></i>
                     </div>
-                    <div class="accordion-content" id="content-tiempo">
+                    <div class="accordion-content" id="content-tiempo" style="display:block;">
                         <div class="accordion-body">
                             <div class="date-inputs">
-                                <label>Desde: <input type="date" id="fecha-inicio" value="2025-01-01"></label>
-                                <label>Hasta: <input type="date" id="fecha-fin" value="2025-12-31"></label>
+                                <div><label>Desde:</label><input type="date" id="fecha-inicio" value="2026-01-01"></div>
+                                <div><label>Hasta:</label><input type="date" id="fecha-fin" value="2026-12-31"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ESTIMACIÓN Y DESCARGA -->
-                <div class="accordion-body" style="border-top: 1px solid #e0e0e0;">
-                    <div class="estimation-panel" id="estimation">
-                        <strong>📊 Estimación:</strong>
-                        <p id="estimation-text">Agrega ubicaciones para calcular</p>
-                    </div>
+                <div class="estimation-panel" id="estimation">
+                    <strong>📊 Estimación de tiempo:</strong>
+                    <p id="estimation-text">Dibuja una zona para calcular</p>
                 </div>
 
-                <button class="btn-download" id="btn-descargar" onclick="descargar()">⬇️ DESCARGAR DATOS</button>
-
-                <div class="panel-disclaimer">
-                    <p>⚠️ Datos crudos sin corrección</p>
-                    <a href="index.html#contact" class="disclaimer-link">¿Necesitas servicios de validación?</a>
-                </div>
-            </aside>
-
-            <main class="map-container">
-                <div id="map"></div>
-
-                <!-- Panel de capas propio -->
-                <div class="map-layers-panel">
-                    <div class="mlp-group">
-                        <label class="mlp-row">
-                            <input type="radio" name="baseMap" value="calles" onchange="cambiarCapaBase('calles')">
-                            <i class="mlp-icon fas fa-map"></i>
-                            <span>Mapa de Calles</span>
-                        </label>
-                        <label class="mlp-row">
-                            <input type="radio" name="baseMap" value="satelite" checked
-                                onchange="cambiarCapaBase('satelite')">
-                            <i class="mlp-icon fas fa-satellite"></i>
-                            <span>Satélite</span>
-                        </label>
-                        <label class="mlp-row">
-                            <input type="radio" name="baseMap" value="topo" onchange="cambiarCapaBase('topo')">
-                            <i class="mlp-icon fas fa-mountain"></i>
-                            <span>Topográfico</span>
-                        </label>
-                    </div>
-                    <div class="mlp-sep"></div>
-                    <div class="mlp-group">
-                        <label class="mlp-row">
-                            <input type="checkbox" id="overlay-cuencas" checked
-                                onchange="toggleOverlay('cuencas', this.checked)">
-                            <i class="mlp-icon fas fa-water" style="color:#4A9EDB;"></i>
-                            <span>Cuencas DGA</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div id="loading" class="loading-overlay" style="display: none;">
-                    <div class="loading-content">
-                        <div class="spinner"></div>
-                        <h3>⏳ Procesando solicitud...</h3>
-                        <p id="loading-message">Esto puede tardar 1-3 minutos</p>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
-
-    <!-- PANEL 2: Modelo Digital de Elevación (GEE) -->
-    <div id="dem-app" class="tool-panel">
-        <div class="dem-container">
-            <div class="dem-info-bar">
-                <div class="dem-info-left">
-                    <span class="dem-badge">🛰️ Google Earth Engine</span>
-                    <span class="dem-title">Modelo Digital de Elevación · Copernicus GLO-30 &amp; ALOS AW3D30</span>
-                </div>
-                <div class="dem-info-right">
-                    <span class="dem-hint">Dibuja un polígono en el mapa para generar el análisis</span>
-                    <a href="https://camilo-miranda.users.earthengine.app/view/dem-copernicus" target="_blank"
-                        class="dem-ext-link" title="Abrir en nueva pestaña">↗ Abrir en pantalla completa</a>
-                </div>
-            </div>
-            <div class="dem-iframe-wrapper">
-                <iframe id="dem-iframe" src=""
-                    data-src="https://camilo-miranda.users.earthengine.app/view/dem-copernicus" allow="fullscreen"
-                    loading="lazy" title="Modelo Digital de Elevación - Evergreen"></iframe>
-                <div class="dem-loading-overlay" id="dem-loading">
-                    <div class="dem-spinner"></div>
-                    <p>Cargando app de elevación...</p>
-                </div>
+                <button id="btn-descargar" class="btn-download" onclick="descargar()">
+                    <span class="btn-text">⬇️ DESCARGAR CSV</span>
+                </button>
             </div>
         </div>
-    </div>
-    <!-- PANEL 3: Explorador de Biodiversidad -->
-    <div id="biodiversidad-app" class="tool-panel">
-        <div class="dem-container">
-            <div class="dem-info-bar">
-                <div class="dem-info-left">
-                    <span class="dem-badge">🌿 GBIF · RCE Chile</span>
-                    <span class="dem-title">Explorador de Biodiversidad · Flora, Fauna &amp; Hongos</span>
-                </div>
-                <div class="dem-info-right">
-                    <span class="dem-hint">Dibuja un polígono para consultar registros de biodiversidad</span>
-                    <a href="inaturalist/index.html" target="_blank" class="dem-ext-link"
-                        title="Abrir en nueva pestaña">↗ Abrir en pantalla completa</a>
-                </div>
+
+    </aside>
+
+    <!-- ── MINI PANEL (bottom-right · Pérdida de Bosque) ── -->
+    <div class="mini-panel hidden" id="mini-panel">
+        <div class="mini-header">
+            <span class="mini-header-dot"></span>
+            <span class="mini-title">Pérdida de Bosque · Ha/año</span>
+            <button class="mini-close" onclick="toggleMiniPanel()">✕</button>
+        </div>
+        <div class="mini-hero">
+            <span class="mini-year-big" id="mini-year-big">—</span>
+            <div class="mini-val-group">
+                <span class="mini-val-num" id="mini-val-num">—</span>
+                <span class="mini-val-unit">Ha pérdida</span>
             </div>
-            <div class="dem-iframe-wrapper">
-                <iframe id="bio-iframe" src="" data-src="inaturalist/index.html" allow="fullscreen" loading="lazy"
-                    title="Explorador de Biodiversidad - Evergreen"></iframe>
-                <div class="dem-loading-overlay" id="bio-loading">
-                    <div class="dem-spinner"></div>
-                    <p>Cargando explorador de biodiversidad...</p>
-                </div>
+        </div>
+        <div class="mini-years-strip" id="mini-years-strip">
+            <!-- pills insertadas por JS -->
+        </div>
+        <div class="mini-chart-wrap">
+            <canvas id="mini-chart"></canvas>
+        </div>
+        <div class="mini-legend">
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#6aaa35;"></span> Zona
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background:rgba(106,170,53,0.35);"></span> Buffer
             </div>
         </div>
     </div>
 
-    <footer>
-        <p>&copy; 2025 Evergreen Consultores. Todos los derechos reservados.</p>
-    </footer>
+    <!-- FAB cuando panel está oculto -->
+    <button class="panel-toggle-fab" onclick="toggleLeftPanel()" title="Abrir panel">
+        <i class="fas fa-leaf"></i>
+    </button>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading" class="loading-overlay" style="display:none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h3 style="margin:0 0 6px;font-size:15px;">Procesando solicitud…</h3>
+            <p id="loading-message" style="font-size:12px;color:var(--muted);margin:0;">Esto puede tardar unos segundos</p>
+        </div>
+    </div>
+
+    <!-- MODAL LÍMITE DE PLAN -->
+    <div id="modal-limite-overlay" class="modal-limit-overlay">
+        <div class="modal-limit-content">
+            <div class="modal-limit-icon">🔒</div>
+            <h3>Límite de zonas alcanzado</h3>
+            <p id="modal-limite-msg">Has alcanzado el límite de zonas de tu plan actual.</p>
+            <div class="modal-limit-btns">
+                <button class="btn-des-primary" onclick="cerrarModalLimite(); abrirContacto('Solicitud de acceso Pro — Monitor Evergreen');">
+                    <i class="fas fa-envelope" style="margin-right:6px;"></i> Contactar equipo
+                </button>
+                <button class="btn-des-secondary" onclick="cerrarModalLimite()">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL POST-DESCARGA -->
     <div id="modal-descarga" class="modal-des-overlay">
         <div class="modal-des-content">
             <div class="modal-des-header">
-                <h2>✅ Descarga Completada</h2>
-                <button class="close-modal-des" onclick="cerrarModalDescarga()" title="Cerrar modal">&times;</button>
+                <h2>✅ Descarga exitosa</h2>
+                <button class="close-modal-des" onclick="cerrarModalDescarga()">×</button>
             </div>
             <div class="modal-des-body">
                 <div class="warning-box">
-                    <strong>⚠️ IMPORTANTE:</strong>
+                    <strong>⚠️ Términos de uso — Evergreen</strong>
                     <ul>
-                        <li>Datos satelitales crudos sin validación local</li>
-                        <li>Margen de error típico: 20-30%</li>
-                        <li>Uso estrictamente educativo/exploratorio</li>
-                        <li>No utilizar en decisiones comerciales críticas ni declaraciones juradas</li>
+                        <li>Datos para uso personal, académico y de investigación.</li>
+                        <li>No redistribuir sin atribución a Evergreen.</li>
+                        <li>Citar fuentes originales (CHIRPS, GPM, ERA5, etc.).</li>
                     </ul>
                 </div>
-                <div class="usage-rules">
-                    <div class="rule-col">
-                        <strong>📚 USO PERMITIDO:</strong>
-                        <ul class="allowed">
-                            <li>✓ Investigación científica</li>
-                            <li>✓ Tesis universitarias</li>
-                            <li>✓ Exploración inicial de área</li>
-                            <li>✓ Diseño de metodologías</li>
-                        </ul>
-                    </div>
-                    <div class="rule-col">
-                        <strong>❌ NO PERMITIDO:</strong>
-                        <ul class="forbidden">
-                            <li>✗ Reportes corporativos finales</li>
-                            <li>✗ Estudios de Impacto Ambiental (sin corrección)</li>
-                            <li>✗ Reventa comercial del dataset</li>
-                        </ul>
-                    </div>
-                </div>
                 <div class="premium-pitch">
-                    <div class="premium-icon">💼</div>
+                    <span class="premium-icon">🌿</span>
                     <div>
-                        <strong>¿Necesitas datos validados y corregidos?</strong>
-                        <p>Evergreen ofrece servicios profesionales de interpolación, corrección de sesgo local y
-                            validación con estaciones en superficie.</p>
+                        <strong>¿Necesitas más datos o análisis avanzados?</strong>
+                        <p>Contacta a Evergreen para validación profesional, series de mayor resolución o apoyo en proyectos de restauración.</p>
                     </div>
                 </div>
             </div>
             <div class="modal-des-footer">
-                <button class="btn-des-secondary" onclick="cerrarModalDescarga()">Entendido</button>
-                <a href="index.html#contact" class="btn-des-primary">Ver Servicios Profesionales</a>
+                <button class="btn-des-secondary" onclick="cerrarModalDescarga()">Cerrar</button>
+                <button class="btn-des-primary" onclick="cerrarModalDescarga(); abrirContacto('Consulta sobre análisis avanzados — Monitor Evergreen');">
+                    <i class="fas fa-envelope" style="margin-right:6px;"></i> Contactar equipo
+                </button>
             </div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-    <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
-    <script src="js/acceso-datos.js"></script>
-    <script src="js/dashboard-pro.js"></script>
-</body>
+    <!-- MODAL CONTACTO -->
+    <div id="modal-contacto-overlay" class="modal-des-overlay" style="z-index:5000;">
+        <div class="modal-des-content" style="max-width:500px;">
+            <div class="modal-des-header">
+                <h2>✉️ Contactar a Evergreen</h2>
+                <button class="close-modal-des" onclick="cerrarContacto()">×</button>
+            </div>
+            <div class="modal-des-body">
+                <!-- Estado inicial: formulario -->
+                <div id="contacto-form-wrap">
+                    <div class="contacto-field">
+                        <label class="contacto-label">Nombre</label>
+                        <input type="text" id="contacto-nombre" class="contacto-input" placeholder="Tu nombre completo">
+                    </div>
+                    <div class="contacto-field">
+                        <label class="contacto-label">Email</label>
+                        <input type="email" id="contacto-email" class="contacto-input" placeholder="tu@email.com">
+                    </div>
+                    <div class="contacto-field">
+                        <label class="contacto-label">Mensaje</label>
+                        <textarea id="contacto-mensaje" class="contacto-input contacto-textarea" rows="4" placeholder="Cuéntanos en qué podemos ayudarte..."></textarea>
+                    </div>
+                    <p id="contacto-error" style="font-size:12px;color:#f87171;margin:8px 0 0;display:none;"></p>
+                </div>
+                <!-- Estado éxito -->
+                <div id="contacto-success-wrap" style="display:none;text-align:center;padding:16px 0;">
+                    <div style="font-size:40px;margin-bottom:12px;">✅</div>
+                    <p style="color:#f4f7f1;font-size:15px;margin:0 0 6px;font-weight:500;">¡Mensaje enviado!</p>
+                    <p style="color:rgba(244,247,241,0.6);font-size:13px;margin:0;">Te contactaremos a la brevedad.</p>
+                </div>
+            </div>
+            <div class="modal-des-footer" id="contacto-footer">
+                <button class="btn-des-secondary" onclick="cerrarContacto()">Cancelar</button>
+                <button class="btn-des-primary" id="btn-contacto-enviar" onclick="enviarContacto()">
+                    <i class="fas fa-paper-plane" style="margin-right:6px;"></i> Enviar
+                </button>
+            </div>
+        </div>
+    </div>
 
+</div><!-- /main -->
+
+<!-- JS EXTERNAL LIBS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+
+<!-- OVERRIDES requeridos por acceso-datos.js -->
+<script>
+    function toggleAccordion(id) {
+        var el = document.getElementById('content-' + id);
+        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+    function switchTool() {}
+    function agregarPoligonoDesdeWorkspace(geojson, nombre, ha) {
+        poligonos = [{ id: Date.now(), nombre: nombre, ha: ha, coordinates: geojson.geometry.coordinates }];
+        if (typeof estimarDescarga === 'function') estimarDescarga();
+    }
+</script>
+
+<!-- CLIMA SCRIPT (SAGRADO) -->
+<script src="js/acceso-datos.js"></script>
+
+<!-- WORKSPACE LOGIC -->
+<script src="js/workspace.js?v=8"></script>
+
+<!-- CONTACTO -->
+<script>
+    // Endpoint Formspree — reemplaza con tu ID tras crear el formulario en formspree.io
+    var FORMSPREE_URL = 'https://formspree.io/f/REEMPLAZAR_ID';
+
+    function abrirContacto(asunto) {
+        var overlay = document.getElementById('modal-contacto-overlay');
+        if (!overlay) return;
+        // Pre-rellenar email del usuario logueado
+        var emailInput = document.getElementById('contacto-email');
+        if (emailInput && window._sbUserEmail) emailInput.value = window._sbUserEmail;
+        // Pre-rellenar mensaje según contexto
+        var msgInput = document.getElementById('contacto-mensaje');
+        if (msgInput && asunto) msgInput.value = asunto + '\n\n';
+        // Resetear estado
+        document.getElementById('contacto-form-wrap').style.display = 'block';
+        document.getElementById('contacto-success-wrap').style.display = 'none';
+        document.getElementById('contacto-footer').style.display = 'flex';
+        var errEl = document.getElementById('contacto-error');
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        var btn = document.getElementById('btn-contacto-enviar');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i> Enviar'; }
+        overlay.classList.add('open');
+    }
+
+    function cerrarContacto() {
+        var overlay = document.getElementById('modal-contacto-overlay');
+        if (overlay) overlay.classList.remove('open');
+    }
+
+    async function enviarContacto() {
+        var nombre  = document.getElementById('contacto-nombre').value.trim();
+        var email   = document.getElementById('contacto-email').value.trim();
+        var mensaje = document.getElementById('contacto-mensaje').value.trim();
+        var errEl   = document.getElementById('contacto-error');
+        var btn     = document.getElementById('btn-contacto-enviar');
+
+        if (!nombre || !email || !mensaje) {
+            errEl.textContent = 'Por favor completa todos los campos.';
+            errEl.style.display = 'block';
+            return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errEl.textContent = 'Email inválido.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        errEl.style.display = 'none';
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i> Enviando...';
+
+        try {
+            var res = await fetch(FORMSPREE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ nombre: nombre, email: email, mensaje: mensaje })
+            });
+
+            if (res.ok) {
+                document.getElementById('contacto-form-wrap').style.display = 'none';
+                document.getElementById('contacto-success-wrap').style.display = 'block';
+                document.getElementById('contacto-footer').style.display = 'none';
+            } else {
+                throw new Error('Error al enviar');
+            }
+        } catch (e) {
+            errEl.textContent = 'Error al enviar. Escríbenos a evergreenconsultores@gmail.com';
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i> Enviar';
+        }
+    }
+</script>
+
+<!-- INIT -->
+<script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        // 1. Verificar sesión — redirige a login.html si no hay sesión
+        var authed = await initAuth();
+        if (!authed) return;
+
+        // 2. Inicializar mapa y workspace
+        setTimeout(function () {
+            initWorkspaceMap();
+            if (WorkspaceState && WorkspaceState.zona) {
+                agregarPoligonoDesdeWorkspace(WorkspaceState.zona, WorkspaceState.zonaNombre, WorkspaceState.zonaHa);
+                restoreZoneOnMap();
+            }
+            if (typeof map !== 'undefined' && map !== null) {
+                map.invalidateSize();
+            }
+        }, 500);
+    });
+</script>
+
+<!-- SPECIES TABLE OVERLAY -->
+<div class="bio-table-overlay" id="bio-table-overlay" onclick="if(event.target===this)closeBioTable()">
+  <div class="bio-table-modal">
+    <div class="bio-table-modal-header">
+      <div>
+        <div class="bio-table-modal-title"><i class="fas fa-leaf" style="color:#6aaa35;margin-right:6px;"></i>Detalle de Especies <span style="font-size:10.5px;color:#6b7280;font-weight:400;">(GBIF)</span></div>
+        <div class="bio-table-modal-sub" id="bio-table-subtitle">—</div>
+      </div>
+      <button class="bio-table-close" onclick="closeBioTable()">×</button>
+    </div>
+    <div class="bio-filter-bar">
+      <span class="bio-filter-label">Fauna:</span>
+      <button class="bio-filter-pill" onclick="filterBioTable('Aves',this)">Aves</button>
+      <button class="bio-filter-pill" onclick="filterBioTable('Mammalia',this)">Mamíferos</button>
+      <button class="bio-filter-pill" onclick="filterBioTable('Reptilia',this)">Reptiles</button>
+      <button class="bio-filter-pill" onclick="filterBioTable('Amphibia',this)">Anfibios</button>
+      <button class="bio-filter-pill" onclick="filterBioTable('Actinopterygii',this)">Peces</button>
+    </div>
+    <div class="bio-table-wrap">
+      <table class="bio-data-table">
+        <thead>
+          <tr>
+            <th>Nombre Científico</th><th>Nombre Común</th><th>Grupo</th><th>Obs</th>
+            <th>RCE</th><th>IUCN</th><th>Especial</th><th>Piso Veg.</th>
+            <th>Riesgo Geo</th><th>Distribución</th>
+          </tr>
+        </thead>
+        <tbody id="bio-table-body"></tbody>
+      </table>
+    </div>
+    <div class="bio-table-footer">
+      <span class="bio-table-count" id="bio-table-count">0 registros</span>
+      <button class="bio-export-btn" onclick="exportBioCSV()"><i class="fas fa-download"></i> Exportar CSV</button>
+    </div>
+  </div>
+</div>
+
+</body>
 </html>

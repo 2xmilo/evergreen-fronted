@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acceso — Monitor Pro · Evergreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #080f08;
+  --bg-card:  rgba(16, 26, 16, 0.80);
+  --border:   rgba(255,255,255,0.08);
+  --border-a: rgba(200,168,130,0.20);
+  --white:    #f4f7f1;
+  --muted:    rgba(244,247,241,0.52);
+  --muted2:   rgba(244,247,241,0.28);
+  --accent:   #c8a882;
+  --accent-d: #a8865e;
+  --green:    #3d7a2e;
+  --green-l:  #6aaa35;
+  --error:    rgba(231,76,60,0.14);
+  --error-b:  rgba(231,76,60,0.35);
+  --error-t:  #f0776a;
+  --ok:       rgba(106,170,53,0.12);
+  --ok-b:     rgba(106,170,53,0.28);
+  --ok-t:     #7ecb4f;
+  --serif:    'Playfair Display', Georgia, serif;
+  --sans:     'DM Sans', system-ui, sans-serif;
+  --mono:     'DM Mono', 'Courier New', monospace;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--sans);
+  overflow: hidden;
+}
+
+/* ── BACKGROUND ── */
+.bg-glow {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+}
+.bg-glow::before {
+  content: '';
+  position: absolute; top: -10%; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, rgba(61,122,46,0.11) 0%, transparent 60%);
+}
+.bg-glow::after {
+  content: '';
+  position: absolute; bottom: -10%; right: 5%;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(200,168,130,0.05) 0%, transparent 60%);
+}
+
+/* ── TOP NAV ── */
+.login-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  height: 56px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--border);
+}
+.login-nav-logo { display: flex; align-items: center; text-decoration: none; }
+.login-nav-logo img { height: 36px; width: auto; }
+.login-nav-back {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); text-decoration: none; transition: color .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.login-nav-back:hover { color: var(--white); }
+
+/* ── CENTERED LAYOUT ── */
+.login-wrap {
+  position: relative; z-index: 1;
+  height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 56px 24px 24px;
+}
+
+/* ── CARD ── */
+.login-card {
+  width: 100%; max-width: 420px;
+  background: var(--bg-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(106,170,53,0.08);
+  overflow: hidden;
+}
+
+/* Card header */
+.card-header {
+  padding: 32px 36px 24px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.card-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--green-l); background: rgba(106,170,53,0.08); border: 1px solid rgba(106,170,53,0.18);
+  border-radius: 50px; padding: 4px 12px; margin-bottom: 16px;
+}
+.card-badge::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--green-l); animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+.card-title {
+  font-family: var(--serif); font-size: 26px; font-weight: 500; color: var(--white);
+  line-height: 1.2; margin-bottom: 6px;
+}
+.card-sub { font-size: 13px; color: var(--muted); font-weight: 300; line-height: 1.5; }
+
+/* Tab toggle */
+.auth-tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+}
+.auth-tab {
+  flex: 1; padding: 12px; text-align: center;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted2); cursor: pointer; border: none; background: transparent;
+  transition: color .2s, background .2s; font-family: var(--mono);
+}
+.auth-tab.active {
+  color: var(--green-l); background: rgba(106,170,53,0.05);
+  border-bottom: 2px solid var(--green-l);
+}
+.auth-tab:hover:not(.active) { color: var(--muted); background: rgba(255,255,255,0.02); }
+
+/* Card body */
+.card-body { padding: 28px 36px 32px; }
+
+/* Messages */
+.auth-msg {
+  display: none; padding: 10px 14px; border-radius: 8px;
+  font-size: 12.5px; line-height: 1.5; margin-bottom: 18px;
+}
+.auth-msg.error {
+  background: var(--error); border: 1px solid var(--error-b); color: var(--error-t);
+}
+.auth-msg.success {
+  background: var(--ok); border: 1px solid var(--ok-b); color: var(--ok-t);
+}
+
+/* Field */
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted2); margin-bottom: 7px;
+}
+.field input {
+  width: 100%; padding: 11px 14px; border-radius: 10px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  color: var(--white); font-size: 14px; font-family: var(--sans);
+  outline: none; transition: border-color .2s;
+}
+.field input::placeholder { color: var(--muted2); }
+.field input:focus { border-color: rgba(106,170,53,0.40); background: rgba(255,255,255,0.07); }
+
+/* Submit button */
+.auth-btn {
+  width: 100%; padding: 13px; border-radius: 10px; border: none;
+  background: var(--accent); color: var(--bg);
+  font-size: 13.5px; font-weight: 600; font-family: var(--sans);
+  cursor: pointer; transition: background .2s, opacity .2s; margin-top: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.auth-btn:hover:not(:disabled) { background: var(--accent-d); }
+.auth-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Password hint */
+.pwd-hint {
+  font-family: var(--mono); font-size: 9.5px; color: var(--muted2);
+  margin-top: 6px; letter-spacing: .04em;
+}
+
+/* Divider */
+.card-footer {
+  padding: 16px 36px 24px; text-align: center;
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted2);
+  border-top: 1px solid var(--border);
+}
+.card-footer a { color: var(--accent); text-decoration: none; }
+.card-footer a:hover { text-decoration: underline; }
+
+/* Loading spinner */
+.spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(8,15,8,0.3); border-top-color: var(--bg);
+  animation: spin .6s linear infinite; display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+  .login-nav { padding: 0 20px; }
+  .login-wrap { padding-top: 56px; }
+  .card-header, .card-body { padding-left: 22px; padding-right: 22px; }
+  .card-footer { padding-left: 22px; padding-right: 22px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<!-- NAV -->
+<nav class="login-nav">
+  <a href="index.html" class="login-nav-logo">
+    <img src="img/logo3.png" alt="Evergreen">
+  </a>
+  <a href="lab.html" class="login-nav-back">
+    <i class="fas fa-arrow-left" style="font-size:9px;"></i>
+    Monitor Pro
+  </a>
+</nav>
+
+<!-- CARD -->
+<div class="login-wrap">
+  <div class="login-card">
+
+    <!-- Header -->
+    <div class="card-header">
+      <div class="card-badge">Monitor Pro · Beta 2026</div>
+      <div class="card-title">Acceso al Workspace</div>
+      <div class="card-sub">Inicia sesión o crea tu cuenta para acceder a tu<br>entorno de monitoreo personal.</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="setMode('login')">Iniciar sesión</button>
+      <button class="auth-tab" id="tab-register" onclick="setMode('register')">Registrarse</button>
+    </div>
+
+    <!-- Body -->
+    <div class="card-body">
+
+      <!-- Messages -->
+      <div class="auth-msg error" id="auth-error"></div>
+      <div class="auth-msg success" id="auth-success"></div>
+
+      <!-- LOGIN FORM -->
+      <form id="form-login" onsubmit="handleLogin(event)">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="login-email" placeholder="tu@email.cl" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Contraseña</label>
+          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button class="auth-btn" type="submit" id="login-btn">
+          <div class="spinner" id="login-spinner"></div>
+          <span id="login-btn-text">Ingresar al Workspace</span>
+        </button>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="form-register" onsubmit="handleRegister(event)" style="display:none;">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="tu@email.cl" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Contraseña</label>
+          <input type="password" id="reg-password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label>Confirmar contraseña</label>
+          <input type="password" id="reg-confirm" placeholder="Repite la contraseña" required autocomplete="new-password">
+          <p class="pwd-hint">Mínimo 8 caracteres · 1 número recomendado</p>
+        </div>
+        <button class="auth-btn" type="submit" id="register-btn">
+          <div class="spinner" id="register-spinner"></div>
+          <span id="register-btn-text">Crear cuenta</span>
+        </button>
+      </form>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer">
+      Acceso gratuito durante el piloto · <a href="index.html#contacto">¿Problemas? Contáctanos</a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/supabase-client.js"></script>
+<script>
+/* ── Si ya hay sesión, redirigir directo al workspace ── */
+(async function () {
+    if (!_sb) return;
+    try {
+        var r = await _sb.auth.getSession();
+        if (r.data && r.data.session) {
+            window.location.href = 'acceso-datos.html';
+        }
+    } catch (e) {}
+})();
+
+/* ── Modo: login | register ── */
+var _mode = 'login';
+
+function setMode(m) {
+    _mode = m;
+    document.getElementById('form-login').style.display    = m === 'login'    ? 'block' : 'none';
+    document.getElementById('form-register').style.display = m === 'register' ? 'block' : 'none';
+    document.getElementById('tab-login').classList.toggle('active',    m === 'login');
+    document.getElementById('tab-register').classList.toggle('active', m === 'register');
+    _clearMessages();
+}
+
+/* ── Mensajes ── */
+function _showError(msg) {
+    var el = document.getElementById('auth-error');
+    el.textContent = msg; el.style.display = 'block';
+    document.getElementById('auth-success').style.display = 'none';
+}
+function _showSuccess(msg) {
+    var el = document.getElementById('auth-success');
+    el.textContent = msg; el.style.display = 'block';
+    document.getElementById('auth-error').style.display = 'none';
+}
+function _clearMessages() {
+    document.getElementById('auth-error').style.display   = 'none';
+    document.getElementById('auth-success').style.display = 'none';
+}
+
+/* ── Spinner helpers ── */
+function _setBtnLoading(id, spinnerId, textId, loading, label) {
+    var btn = document.getElementById(id);
+    var sp  = document.getElementById(spinnerId);
+    var tx  = document.getElementById(textId);
+    btn.disabled = loading;
+    sp.style.display = loading ? 'block' : 'none';
+    if (!loading && label) tx.textContent = label;
+}
+
+/* ── Iniciar sesión ── */
+async function handleLogin(e) {
+    e.preventDefault();
+    if (!_sb) { _showError('Error de conexión. Recarga la página.'); return; }
+    _clearMessages();
+    _setBtnLoading('login-btn', 'login-spinner', 'login-btn-text', true);
+
+    var email    = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
+
+    try {
+        var result = await _sb.auth.signInWithPassword({ email: email, password: password });
+        if (result.error) {
+            var msg = result.error.message;
+            if (msg === 'Invalid login credentials') msg = 'Email o contraseña incorrectos.';
+            if (msg.includes('Email not confirmed'))   msg = 'Confirma tu email antes de ingresar.';
+            _showError(msg);
+            _setBtnLoading('login-btn', 'login-spinner', 'login-btn-text', false, 'Ingresar al Workspace');
+        } else {
+            _showSuccess('¡Bienvenido! Cargando tu workspace...');
+            setTimeout(function () { window.location.href = 'acceso-datos.html'; }, 700);
+        }
+    } catch (e) {
+        _showError('Error de red. Verifica tu conexión.');
+        _setBtnLoading('login-btn', 'login-spinner', 'login-btn-text', false, 'Ingresar al Workspace');
+    }
+}
+
+/* ── Registrarse ── */
+async function handleRegister(e) {
+    e.preventDefault();
+    if (!_sb) { _showError('Error de conexión. Recarga la página.'); return; }
+    _clearMessages();
+
+    var email    = document.getElementById('reg-email').value.trim();
+    var password = document.getElementById('reg-password').value;
+    var confirm  = document.getElementById('reg-confirm').value;
+
+    if (password !== confirm) {
+        _showError('Las contraseñas no coinciden.'); return;
+    }
+    if (password.length < 8) {
+        _showError('La contraseña debe tener al menos 8 caracteres.'); return;
+    }
+
+    _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', true);
+
+    try {
+        var result = await _sb.auth.signUp({ email: email, password: password });
+        if (result.error) {
+            _showError(result.error.message);
+            _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', false, 'Crear cuenta');
+        } else {
+            // Intentar login inmediato (si confirmación de email está desactivada)
+            var login = await _sb.auth.signInWithPassword({ email: email, password: password });
+            if (!login.error) {
+                _showSuccess('¡Cuenta creada! Cargando tu workspace...');
+                setTimeout(function () { window.location.href = 'acceso-datos.html'; }, 700);
+            } else {
+                _showSuccess('¡Cuenta creada! Revisa tu bandeja de entrada para confirmar el email y luego inicia sesión.');
+                _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', false, 'Crear cuenta');
+            }
+        }
+    } catch (e) {
+        _showError('Error de red. Verifica tu conexión.');
+        _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', false, 'Crear cuenta');
+    }
+}
+</script>
+</body>
+</html>

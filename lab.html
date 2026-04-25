@@ -1,509 +1,677 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evergreen Lab — Herramientas de Análisis Ambiental</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        /* ── LAB PAGE STYLES ── */
-        body {
-            background: var(--green-900);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor Pro — Evergreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ── RESET + VARS ─────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* NAV overrides for static page */
-        nav {
-            position: relative;
-            background: rgba(14, 26, 14, 0.95);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border-bottom: 1px solid var(--glass-brd);
-        }
+:root {
+  --bg:        #080f08;
+  --bg-2:      #0c160c;
+  --bg-3:      #111a11;
+  --border:    rgba(255,255,255,0.07);
+  --border-a:  rgba(200,168,130,0.18);
+  --white:     #f4f7f1;
+  --muted:     rgba(244,247,241,0.50);
+  --muted2:    rgba(244,247,241,0.28);
+  --accent:    #c8a882;
+  --accent-d:  #a8865e;
+  --green:     #3d7a2e;
+  --green-l:   #6aaa35;
+  --serif:     'Playfair Display', Georgia, serif;
+  --sans:      'DM Sans', system-ui, sans-serif;
+  --mono:      'DM Mono', 'Courier New', monospace;
+}
 
-        /* ── LAB HERO ── */
-        .lab-hero {
-            padding: 80px 64px 56px;
-            position: relative;
-            overflow: hidden;
-        }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-        .lab-hero::before {
-            content: '';
-            position: absolute;
-            top: -120px;
-            right: -80px;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(200, 168, 130, 0.06) 0%, transparent 65%);
-            pointer-events: none;
-        }
+/* ── NAV ───────────────────────────────────────── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 48px;
+  background: rgba(8,15,8,0.88);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  transition: border-color .3s;
+}
+.nav-brand { display: flex; align-items: center; text-decoration: none; }
+.nav-brand img { height: 40px; width: auto; display: block; }
+.nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+.nav-links a {
+  font-size: 13px; color: var(--muted); text-decoration: none; transition: color .2s; font-weight: 400;
+}
+.nav-links a:hover { color: var(--white); }
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 16px; border-radius: 8px;
+  background: var(--accent); color: var(--bg) !important;
+  font-size: 12.5px; font-weight: 600; transition: background .2s !important;
+}
+.nav-cta:hover { background: var(--accent-d) !important; }
 
-        .lab-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-family: var(--mono);
-            font-size: 11px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--accent);
-            background: rgba(200, 168, 130, 0.08);
-            border: 1px solid rgba(200, 168, 130, 0.20);
-            border-radius: 50px;
-            padding: 6px 14px;
-            margin-bottom: 24px;
-        }
+/* ── HERO ──────────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  position: relative; overflow: hidden;
+  padding: 120px 64px 80px;
+}
+.hero-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.hero-bg::before {
+  content: '';
+  position: absolute; top: -10%; left: 40%;
+  width: 900px; height: 900px;
+  background: radial-gradient(circle, rgba(61,122,46,0.12) 0%, transparent 60%);
+  animation: breathe 8s ease-in-out infinite;
+}
+.hero-bg::after {
+  content: '';
+  position: absolute; bottom: -10%; right: -5%;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(200,168,130,0.05) 0%, transparent 60%);
+  animation: breathe 10s ease-in-out infinite reverse;
+}
+@keyframes breathe {
+  0%,100% { transform: scale(1) translateY(0); opacity: .8; }
+  50%      { transform: scale(1.08) translateY(-20px); opacity: 1; }
+}
+.hero-inner {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 72px; align-items: center; max-width: 1280px; margin: 0 auto; width: 100%;
+}
+.hero-copy { max-width: 540px; }
+.hero-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); background: rgba(200,168,130,0.08);
+  border: 1px solid var(--border-a); border-radius: 50px;
+  padding: 5px 14px; margin-bottom: 24px;
+}
+.hero-label::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--green-l); animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+.hero-title-product {
+  font-family: var(--serif); font-size: clamp(52px, 5.5vw, 80px);
+  font-weight: 600; line-height: 1; color: var(--accent);
+  letter-spacing: -.02em; display: block; margin-bottom: 18px;
+}
+.hero-sub {
+  font-size: 16px; line-height: 1.75; color: var(--muted);
+  margin-bottom: 36px; max-width: 460px; font-weight: 300;
+}
+.hero-sub strong { color: var(--white); font-weight: 500; }
 
-        .lab-tag i {
-            font-size: 10px;
-        }
+/* Beta form */
+.beta-form { display: flex; gap: 10px; max-width: 440px; }
+.beta-input {
+  flex: 1; padding: 12px 16px; border-radius: 10px;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+  color: var(--white); font-size: 14px; font-family: var(--sans);
+  outline: none; transition: border-color .2s;
+}
+.beta-input::placeholder { color: var(--muted2); }
+.beta-input:focus { border-color: var(--border-a); }
+.beta-btn {
+  padding: 12px 22px; border-radius: 10px;
+  background: var(--accent); border: none;
+  color: var(--bg); font-size: 13.5px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer; white-space: nowrap;
+  transition: background .2s;
+}
+.beta-btn:hover { background: var(--accent-d); }
+.beta-hint { margin-top: 12px; font-size: 11.5px; color: var(--muted2); font-family: var(--mono); }
 
-        .lab-title {
-            font-family: var(--serif);
-            font-size: clamp(36px, 4.5vw, 62px);
-            font-weight: 500;
-            color: var(--white);
-            line-height: 1.15;
-            margin: 0 0 16px;
-        }
+/* Hero stats strip */
+.hero-stats {
+  display: flex; gap: 28px; margin-top: 36px;
+  padding-top: 28px; border-top: 1px solid var(--border);
+}
+.hero-stat-val { font-family: var(--serif); font-size: 24px; font-weight: 500; color: var(--white); display: block; }
+.hero-stat-label { font-size: 11px; color: var(--muted2); font-family: var(--mono); text-transform: uppercase; letter-spacing: .08em; }
 
-        .lab-title em {
-            color: var(--accent);
-            font-style: italic;
-        }
+/* ── SCREENSHOT FRAME (hero right) ─────────────── */
+.hero-visual { position: relative; }
+.screenshot-glow {
+  position: absolute; inset: -40px;
+  background: radial-gradient(circle at 50% 50%, rgba(61,122,46,0.18) 0%, transparent 65%);
+  pointer-events: none; z-index: 0;
+}
+.screenshot-frame {
+  position: relative; z-index: 1;
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 0 0 1px rgba(106,170,53,0.12),
+    0 40px 80px rgba(0,0,0,0.65),
+    0 0 60px rgba(61,122,46,0.10);
+  background: rgba(12,22,12,0.85);
+  backdrop-filter: blur(2px);
+}
+.screenshot-chrome {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.45);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.chrome-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.chrome-dot--red    { background: #ff5f56; }
+.chrome-dot--yellow { background: #febc2e; }
+.chrome-dot--green  { background: #27c840; }
+.chrome-address {
+  flex: 1; text-align: center;
+  font-family: var(--mono); font-size: 9px; color: rgba(244,247,241,0.32);
+  letter-spacing: .04em;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.screenshot-img {
+  display: block; width: 100%; height: auto;
+  max-height: 500px; object-fit: cover; object-position: top left;
+}
 
-        .lab-sub {
-            font-family: var(--sans);
-            font-size: 16px;
-            color: rgba(244, 247, 241, 0.65);
-            max-width: 520px;
-            line-height: 1.65;
-            margin: 0;
-        }
+/* ── ORIGIN STRIP ─────────────────────────────── */
+.origin-strip {
+  padding: 16px 64px;
+  background: rgba(200,168,130,0.04);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap;
+}
+.origin-text { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted2); }
+.origin-sep { width: 1px; height: 16px; background: var(--border); }
+.origin-tag {
+  font-family: var(--mono); font-size: 10px; color: var(--accent);
+  letter-spacing: .1em; text-transform: uppercase;
+  background: rgba(200,168,130,0.08); border: 1px solid var(--border-a);
+  padding: 3px 10px; border-radius: 4px;
+}
 
-        /* ── APPS GRID ── */
-        .lab-section {
-            padding: 0 64px 96px;
-            flex: 1;
-        }
+/* ── FEATURES ─────────────────────────────────── */
+.section { max-width: 1280px; margin: 0 auto; padding: 96px 64px; }
+.section-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+.section-title { font-family: var(--serif); font-size: clamp(30px, 3vw, 46px); font-weight: 500; color: var(--white); line-height: 1.2; margin-bottom: 14px; }
+.section-sub { font-size: 15px; color: var(--muted); line-height: 1.7; max-width: 520px; font-weight: 300; margin-bottom: 52px; }
 
-        .lab-section-label {
-            font-family: var(--mono);
-            font-size: 11px;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: rgba(244, 247, 241, 0.35);
-            margin-bottom: 24px;
-        }
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+  background: var(--border); border-radius: 18px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.feature-card {
+  background: var(--bg-3); padding: 32px 28px;
+  transition: background .25s; position: relative; overflow: hidden;
+}
+.feature-card:hover { background: rgba(20,32,20,0.95); }
+.feature-card::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(200,168,130,0.04) 0%, transparent 55%);
+  opacity: 0; transition: opacity .3s;
+}
+.feature-card:hover::after { opacity: 1; }
+.feature-icon {
+  width: 44px; height: 44px; border-radius: 11px;
+  background: rgba(200,168,130,0.07); border: 1px solid rgba(200,168,130,0.14);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent); font-size: 17px; margin-bottom: 20px;
+}
+.feature-name { font-family: var(--serif); font-size: 18px; font-weight: 500; color: var(--white); margin-bottom: 10px; line-height: 1.25; }
+.feature-desc { font-size: 13px; color: var(--muted); line-height: 1.7; font-weight: 300; }
+.feature-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 18px; }
+.feature-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em;
+  color: var(--muted2); background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); border-radius: 3px; padding: 2px 7px;
+}
 
-        .apps-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
+/* ── CÓMO FUNCIONA ────────────────────────────── */
+.product-section {
+  background: var(--bg-2);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 96px 0;
+  position: relative; overflow: hidden;
+}
+.product-section::before {
+  content: '';
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px; height: 900px;
+  background: radial-gradient(circle, rgba(61,122,46,0.07) 0%, transparent 60%);
+  pointer-events: none;
+}
+.product-inner {
+  max-width: 1280px; margin: 0 auto; padding: 0 64px;
+  position: relative; z-index: 1;
+}
+.product-head {
+  display: grid; grid-template-columns: 1fr 1.4fr;
+  gap: 60px; align-items: end; margin-bottom: 52px;
+}
+.product-head-left { }
+.product-head-right {
+  font-size: 14px; line-height: 1.8; color: rgba(244,247,241,0.65);
+  font-weight: 300; padding-bottom: 4px;
+}
 
-        /* ── APP CARD ── */
-        .app-card {
-            background: rgba(14, 26, 14, 0.55);
-            border: 1px solid var(--glass-brd);
-            border-radius: 20px;
-            padding: 36px 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            transition: border-color 0.35s, background 0.35s, transform 0.3s;
-            position: relative;
-            overflow: hidden;
-            text-decoration: none;
-        }
+/* Step cards grid (2×2) */
+.step-cards-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.step-card {
+  display: grid; grid-template-columns: 52px 1fr;
+  gap: 20px; align-items: start;
+  padding: 28px 28px;
+  background: rgba(18, 30, 18, 0.70);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(244, 247, 241, 0.09);
+  border-radius: 16px;
+  transition: background .3s, border-color .3s;
+}
+.step-card:hover {
+  background: rgba(26, 44, 26, 0.85);
+  border-color: rgba(200, 168, 130, 0.18);
+}
+.step-card:hover .step-card-num {
+  border-color: rgba(200, 168, 130, 0.40);
+  background: rgba(200, 168, 130, 0.07);
+  color: var(--accent);
+}
+.step-card-num {
+  width: 44px; height: 44px; border-radius: 12px;
+  border: 1px solid rgba(244, 247, 241, 0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 12px; color: rgba(244,247,241,0.35);
+  margin-top: 2px; flex-shrink: 0;
+  transition: all .3s;
+}
+.step-card-body { }
+.step-card-title {
+  font-family: var(--serif); font-size: 19px; font-weight: 500;
+  color: var(--white); margin-bottom: 10px; line-height: 1.25;
+}
+.step-card-desc {
+  font-size: 13.5px; line-height: 1.75;
+  color: rgba(244, 247, 241, 0.78); font-weight: 300;
+}
+.step-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 16px; }
+.step-card-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .07em;
+  color: rgba(106,170,53,0.75); background: rgba(106,170,53,0.07);
+  border: 1px solid rgba(106,170,53,0.18); border-radius: 3px; padding: 2px 8px;
+}
 
-        .app-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at 80% 20%, rgba(200, 168, 130, 0.04) 0%, transparent 55%);
-            opacity: 0;
-            transition: opacity 0.35s;
-            pointer-events: none;
-        }
+/* ── BETA CTA ──────────────────────────────────── */
+.cta-section {
+  padding: 120px 64px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.cta-section::before {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(61,122,46,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+.cta-inner { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; }
+.cta-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--green-l); background: rgba(106,170,53,0.08); border: 1px solid rgba(106,170,53,0.2);
+  border-radius: 50px; padding: 5px 14px; margin-bottom: 28px;
+}
+.cta-title { font-family: var(--serif); font-size: clamp(32px,3.5vw,50px); font-weight: 500; color: var(--white); line-height: 1.15; margin-bottom: 16px; }
+.cta-sub { font-size: 15px; color: var(--muted); line-height: 1.7; font-weight: 300; margin-bottom: 36px; }
+.cta-form { display: flex; gap: 10px; max-width: 420px; margin: 0 auto; }
+.cta-form .beta-input { background: rgba(255,255,255,0.05); }
+.cta-success {
+  display: none; padding: 14px 24px; border-radius: 10px;
+  background: rgba(106,170,53,0.12); border: 1px solid rgba(106,170,53,0.25);
+  font-size: 14px; color: var(--green-l); max-width: 420px; margin: 0 auto;
+}
+.cta-hint { margin-top: 14px; font-size: 11.5px; color: var(--muted2); font-family: var(--mono); }
 
-        .app-card:hover {
-            border-color: rgba(200, 168, 130, 0.22);
-            background: rgba(14, 26, 14, 0.72);
-            transform: translateY(-3px);
-        }
+/* ── FOOTER ────────────────────────────────────── */
+footer {
+  padding: 28px 64px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.foot-brand { display: flex; align-items: center; gap: 10px; }
+.foot-text { font-family: var(--mono); font-size: 10.5px; color: var(--muted2); }
+.foot-links { display: flex; gap: 24px; }
+.foot-link { font-family: var(--mono); font-size: 10.5px; color: var(--muted2); text-decoration: none; transition: color .2s; }
+.foot-link:hover { color: var(--accent); }
+.foot-lab {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent); background: rgba(200,168,130,0.06); border: 1px solid var(--border-a);
+  padding: 4px 11px; border-radius: 4px; text-decoration: none; transition: background .2s;
+}
+.foot-lab:hover { background: rgba(200,168,130,0.12); }
 
-        .app-card:hover::before {
-            opacity: 1;
-        }
-
-        .app-card.coming-soon {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        /* Card header */
-        .app-card-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            margin-bottom: 24px;
-        }
-
-        .app-icon {
-            width: 52px;
-            height: 52px;
-            background: rgba(200, 168, 130, 0.08);
-            border: 1px solid rgba(200, 168, 130, 0.18);
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            color: var(--accent);
-            flex-shrink: 0;
-        }
-
-        .app-status {
-            font-family: var(--mono);
-            font-size: 10px;
-            letter-spacing: 0.10em;
-            text-transform: uppercase;
-            padding: 4px 10px;
-            border-radius: 50px;
-        }
-
-        .app-status.activo {
-            color: #7bed9f;
-            background: rgba(123, 237, 159, 0.08);
-            border: 1px solid rgba(123, 237, 159, 0.20);
-        }
-
-        .app-status.beta {
-            color: var(--accent);
-            background: rgba(200, 168, 130, 0.08);
-            border: 1px solid rgba(200, 168, 130, 0.20);
-        }
-
-        .app-status.pronto {
-            color: rgba(244, 247, 241, 0.35);
-            background: rgba(244, 247, 241, 0.04);
-            border: 1px solid rgba(244, 247, 241, 0.08);
-        }
-
-        /* Card body */
-        .app-name {
-            font-family: var(--serif);
-            font-size: 21px;
-            font-weight: 500;
-            color: var(--white);
-            margin: 0 0 10px;
-            line-height: 1.25;
-        }
-
-        .app-desc {
-            font-family: var(--sans);
-            font-size: 13.5px;
-            color: rgba(244, 247, 241, 0.60);
-            line-height: 1.65;
-            margin: 0 0 24px;
-            flex: 1;
-        }
-
-        /* Tags */
-        .app-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 28px;
-        }
-
-        .app-tag {
-            font-family: var(--mono);
-            font-size: 10px;
-            letter-spacing: 0.08em;
-            color: rgba(244, 247, 241, 0.40);
-            background: rgba(244, 247, 241, 0.04);
-            border: 1px solid rgba(244, 247, 241, 0.08);
-            border-radius: 4px;
-            padding: 3px 8px;
-        }
-
-        /* CTA */
-        .app-cta {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-family: var(--sans);
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--accent);
-            margin-top: auto;
-            transition: gap 0.2s;
-        }
-
-        .app-card:hover .app-cta {
-            gap: 12px;
-        }
-
-        .app-cta i {
-            font-size: 11px;
-            transition: transform 0.2s;
-        }
-
-        .app-card:hover .app-cta i {
-            transform: translateX(2px);
-        }
-
-        /* ── FOOTER ── */
-        .lab-footer {
-            padding: 24px 64px;
-            border-top: 1px solid var(--glass-brd);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .lab-footer p {
-            font-family: var(--mono);
-            font-size: 11px;
-            color: rgba(244, 247, 241, 0.25);
-            margin: 0;
-        }
-
-        .lab-footer a {
-            font-family: var(--mono);
-            font-size: 11px;
-            color: rgba(244, 247, 241, 0.35);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-
-        .lab-footer a:hover {
-            color: var(--accent);
-        }
-
-        /* ── RESPONSIVE ── */
-        @media (max-width: 1024px) {
-            .apps-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .lab-hero,
-            .lab-section {
-                padding-left: 24px;
-                padding-right: 24px;
-            }
-
-            .apps-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .lab-footer {
-                padding: 20px 24px;
-                flex-direction: column;
-                gap: 8px;
-                text-align: center;
-            }
-        }
-    </style>
+/* ── RESPONSIVE ────────────────────────────────── */
+@media (max-width: 1100px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+  .hero-visual { max-width: 520px; margin: 0 auto; }
+  .features-grid { grid-template-columns: repeat(2,1fr); }
+  .product-head { grid-template-columns: 1fr; gap: 24px; margin-bottom: 36px; }
+  .step-cards-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .nav { padding: 0 24px; }
+  .nav-links { display: none; }
+  .hero, .section, .cta-section { padding-left: 24px; padding-right: 24px; }
+  .product-inner { padding-left: 24px; padding-right: 24px; }
+  .origin-strip { flex-wrap: wrap; gap: 10px; padding: 12px 24px; }
+  .features-grid { grid-template-columns: 1fr; }
+  footer { flex-direction: column; gap: 16px; text-align: center; padding: 20px 24px; }
+  .beta-form, .cta-form { flex-direction: column; }
+  .hero-stats { flex-wrap: wrap; gap: 16px; }
+}
+</style>
 </head>
-
 <body>
 
-    <!-- ── NAV ── -->
-    <nav id="nav" class="scrolled">
-        <a href="index.html" class="nav-brand">
-            <img src="img/logo3.png" alt="Logo Evergreen"
-                style="height: 46px; width: auto; margin-right: 16px;">
-            <span class="nav-wordmark"></span>
-        </a>
-        <ul class="nav-links">
-            <li><a href="index.html#servicios">Servicios</a></li>
-            <li><a href="index.html#proyectos">Proyectos</a></li>
-            <li><a href="index.html#enfoque">Enfoque</a></li>
-            <li><a href="index.html#contacto">Contacto</a></li>
-            <li>
-                <a href="lab.html" class="nav-btn">
-                    API LAB
-                    <svg viewBox="0 0 16 16" fill="none" class="nav-btn-icon">
-                        <path d="M8 1L10 6L15 8L10 10L8 15L6 10L1 8L6 6z" fill="currentColor" />
-                    </svg>
-                </a>
-            </li>
-        </ul>
-    </nav>
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-brand">
+    <img src="img/logo3.png" alt="Evergreen">
+  </a>
+  <ul class="nav-links">
+    <li><a href="#capacidades">Capacidades</a></li>
+    <li><a href="#como-funciona">Cómo funciona</a></li>
+    <li><a href="index.html#contacto">Contacto</a></li>
+    <li><a href="login.html" class="nav-cta"><i class="fas fa-arrow-right" style="font-size:10px;"></i> Abrir Workspace</a></li>
+  </ul>
+</nav>
 
-    <!-- ── HERO ── -->
-    <div class="lab-hero">
-        <div class="container">
-            <div class="lab-tag">
-                <i class="fas fa-flask"></i>
-                Evergreen Lab
-            </div>
-            <h1 class="lab-title">Herramientas de<br><em>Análisis Ambiental</em></h1>
-            <p class="lab-sub">En esta seccion diseñamos aplicaciones de libre acceso para la descarga de imágenes y datos satelitales, procesamiento de información ambiental a gran escala y visualización de resultados mediante dashboards interactivos, orientados al monitoreo de recursos naturales.</p>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-inner">
+
+    <!-- Copy -->
+    <div class="hero-copy">
+      <div class="hero-label">Beta · Piloto Chile 2026</div>
+      <span class="hero-title-product">Monitor Pro</span>
+      <p class="hero-sub">
+        Plataforma de monitoreo continuo para <strong>predios, terrenos y zonas de conservación.</strong>
+        Vegetación, agua, biodiversidad y clima — integrados en un solo workspace.
+      </p>
+      <form class="beta-form" onsubmit="submitBeta(event)">
+        <input class="beta-input" type="email" placeholder="tu@email.cl" required id="hero-email">
+        <button class="beta-btn" type="submit">Solicitar Acceso</button>
+      </form>
+      <p class="beta-hint">Acceso gratuito durante el piloto · Sin instalación requerida</p>
+      <div class="hero-stats">
+        <div>
+          <span class="hero-stat-val">6</span>
+          <span class="hero-stat-label">Módulos de análisis</span>
         </div>
+        <div>
+          <span class="hero-stat-val">Chile</span>
+          <span class="hero-stat-label">Cobertura inicial</span>
+        </div>
+        <div>
+          <span class="hero-stat-val">+20</span>
+          <span class="hero-stat-label">Indicadores ambientales</span>
+        </div>
+      </div>
     </div>
 
-    <!-- ── APPS ── -->
-    <div class="lab-section">
-        <div class="container">
-            <p class="lab-section-label">— Aplicaciones disponibles</p>
-            <div class="apps-grid">
-
-                <!-- App 1: Descarga de Datos -->
-                <a href="acceso-datos.html" class="app-card">
-                    <div class="app-card-head">
-                        <div class="app-icon">
-                            <i class="fas fa-satellite-dish"></i>
-                        </div>
-                        <span class="app-status activo">Activo</span>
-                    </div>
-                    <h2 class="app-name">Descarga de Datos Satelitales</h2>
-                    <p class="app-desc">Extrae series temporales de precipitación y temperatura para puntos o polígonos en
-                        Chile. Múltiples productos satelitales disponibles.</p>
-                    <div class="app-tags">
-                        <span class="app-tag">CHIRPS</span>
-                        <span class="app-tag">GPM-IMERG</span>
-                        <span class="app-tag">ERA5</span>
-                        <span class="app-tag">PERSIANN</span>
-                        <span class="app-tag">Google Earth Engine</span>
-                    </div>
-                    <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
-                </a>
-
-                <!-- App 2: Explorador de Biodiversidad -->
-                <a href="inaturalist/index.html" class="app-card">
-                    <div class="app-card-head">
-                        <div class="app-icon">
-                            <i class="fas fa-leaf"></i>
-                        </div>
-                        <span class="app-status activo">Activo</span>
-                    </div>
-                    <h2 class="app-name">Explorador de Biodiversidad</h2>
-                    <p class="app-desc">Consulta registros de flora, fauna y hongos para cualquier área de Chile. Cruza con
-                        el catálogo RCE oficial e índices de conservación.</p>
-                    <div class="app-tags">
-                        <span class="app-tag">GBIF</span>
-                        <span class="app-tag">RCE Chile</span>
-                        <span class="app-tag">SNASPE</span>
-                        <span class="app-tag">IUCN</span>
-                        <span class="app-tag">Turf.js</span>
-                    </div>
-                    <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
-                </a>
-
-                <!-- App 3: DEM -->
-                <a href="acceso-datos.html?tab=dem" class="app-card">
-                    <div class="app-card-head">
-                        <div class="app-icon">
-                            <i class="fas fa-mountain"></i>
-                        </div>
-                        <span class="app-status activo">Activo</span>
-                    </div>
-                    <h2 class="app-name">Modelo de Elevación DEM</h2>
-                    <p class="app-desc">Visualiza y analiza modelos digitales de elevación de alta resolución para cualquier
-                        zona de Chile usando Google Earth Engine.</p>
-                    <div class="app-tags">
-                        <span class="app-tag">Copernicus GLO-30</span>
-                        <span class="app-tag">ALOS AW3D30</span>
-                        <span class="app-tag">Google Earth Engine</span>
-                    </div>
-                    <span class="app-cta">Abrir app <i class="fas fa-arrow-right"></i></span>
-                </a>
-
-                <!-- Próximamente 1 -->
-                <div class="app-card coming-soon">
-                    <div class="app-card-head">
-                        <div class="app-icon">
-                            <i class="fas fa-water"></i>
-                        </div>
-                        <span class="app-status pronto">Próximamente</span>
-                    </div>
-                    <h2 class="app-name">Análisis de Cuerpos de Agua</h2>
-                    <p class="app-desc">Monitoreo de lagos, ríos y humedales mediante índices espectrales NDWI y MNDWI
-                        desde imágenes Sentinel-2.</p>
-                    <div class="app-tags">
-                        <span class="app-tag">Sentinel-2</span>
-                        <span class="app-tag">NDWI</span>
-                        <span class="app-tag">Google Earth Engine</span>
-                    </div>
-                    <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
-                </div>
-
-                <!-- Próximamente 2 -->
-                <div class="app-card coming-soon">
-                    <div class="app-card-head">
-                        <div class="app-icon">
-                            <i class="fas fa-fire"></i>
-                        </div>
-                        <span class="app-status pronto">Próximamente</span>
-                    </div>
-                    <h2 class="app-name">Monitor de Incendios</h2>
-                    <p class="app-desc">Detección y análisis de áreas quemadas históricas usando productos MODIS y Landsat.
-                        Cálculo de severidad y recuperación vegetal.</p>
-                    <div class="app-tags">
-                        <span class="app-tag">MODIS</span>
-                        <span class="app-tag">Landsat</span>
-                        <span class="app-tag">NBR</span>
-                    </div>
-                    <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
-                </div>
-
-                <!-- Próximamente 3 -->
-                <div class="app-card coming-soon">
-                    <div class="app-card-head">
-                        <div class="app-icon">
-                            <i class="fas fa-seedling"></i>
-                        </div>
-                        <span class="app-status pronto">Próximamente</span>
-                    </div>
-                    <h2 class="app-name">Índices de Vegetación</h2>
-                    <p class="app-desc">Series temporales NDVI, EVI y LAI para evaluar cobertura vegetal, estrés hídrico y
-                        fenología de ecosistemas terrestres.</p>
-                    <div class="app-tags">
-                        <span class="app-tag">NDVI</span>
-                        <span class="app-tag">EVI</span>
-                        <span class="app-tag">Sentinel-2</span>
-                        <span class="app-tag">MODIS</span>
-                    </div>
-                    <span class="app-cta">En desarrollo <i class="fas fa-clock"></i></span>
-                </div>
-
-            </div>
+    <!-- Screenshot frame -->
+    <div class="hero-visual">
+      <div class="screenshot-glow"></div>
+      <div class="screenshot-frame">
+        <div class="screenshot-chrome">
+          <div class="chrome-dot chrome-dot--red"></div>
+          <div class="chrome-dot chrome-dot--yellow"></div>
+          <div class="chrome-dot chrome-dot--green"></div>
+          <div class="chrome-address">
+            <i class="fas fa-lock" style="font-size:8px;"></i>
+            evergreen.cl/workspace
+          </div>
         </div>
+        <img src="img/workspace-preview.png" alt="Monitor Pro Workspace" class="screenshot-img">
+      </div>
     </div>
 
-    <!-- ── FOOTER ── -->
-    <footer class="lab-footer">
-        <div class="container" style="display: flex; align-items: center; justify-content: space-between; padding: 0;">
-            <p>&copy; 2025 Evergreen Consultores · Todos los derechos reservados</p>
-            <a href="index.html">← Volver al sitio principal</a>
+  </div>
+</section>
+
+<!-- ORIGIN STRIP -->
+<div class="origin-strip">
+  <span class="origin-text">Fuentes de datos</span>
+  <div class="origin-sep"></div>
+  <span class="origin-tag">GBIF · RCE Chile</span>
+  <span class="origin-tag">Sentinel-2 · ESA</span>
+  <span class="origin-tag">ERA5 · CHIRPS</span>
+  <span class="origin-tag">Hansen GFC</span>
+  <span class="origin-tag">Copernicus GLO-30</span>
+  <div class="origin-sep"></div>
+  <span class="origin-text">Chile · 2026</span>
+</div>
+
+<!-- FEATURES -->
+<section id="capacidades">
+  <div class="section">
+    <p class="section-label">— Capacidades</p>
+    <h2 class="section-title">Todo lo que necesitas para<br>monitorear un terreno</h2>
+    <p class="section-sub">Más de 20 indicadores ambientales organizados en 6 módulos — vegetación, agua, biodiversidad, clima, relieve y bosque — sin necesidad de experiencia en SIG o teledetección.</p>
+
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-seedling"></i></div>
+        <div class="feature-name">Vegetación Satelital</div>
+        <div class="feature-desc">Índices NDVI, EVI, NBR y NDMI calculados sobre imágenes Sentinel-2. Mediana de imágenes para tu zona y período de análisis seleccionado.</div>
+        <div class="feature-tags">
+          <span class="feature-tag">Sentinel-2 SR</span>
+          <span class="feature-tag">10 m resolución</span>
+          <span class="feature-tag">Serie temporal</span>
         </div>
-    </footer>
+      </div>
 
-    <script>
-        // Leer parámetro ?tab= para redirigir automáticamente dentro de acceso-datos
-        // (usado por la card del DEM)
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('tab') === 'dem') {
-            // Si alguien llega aquí con ?tab=dem, redirigir a acceso-datos con parámetro
-            // (lógica manejada en acceso-datos.html)
-        }
-    </script>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-leaf"></i></div>
+        <div class="feature-name">Biodiversidad GBIF</div>
+        <div class="feature-desc">Flora, fauna y hongos cruzados con el Reglamento de Clasificación de Especies (RCE) de Chile e IUCN. IVC e intersección con áreas protegidas SNASPE.</div>
+        <div class="feature-tags">
+          <span class="feature-tag">GBIF API</span>
+          <span class="feature-tag">RCE Chile</span>
+          <span class="feature-tag">SNASPE · SIMBIO</span>
+        </div>
+      </div>
 
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-cloud-rain"></i></div>
+        <div class="feature-name">Clima e Hidrología</div>
+        <div class="feature-desc">Series temporales de precipitación y temperatura desde múltiples productos satelitales. Estadísticas anuales y descarga directa en CSV.</div>
+        <div class="feature-tags">
+          <span class="feature-tag">CHIRPS</span>
+          <span class="feature-tag">ERA5 Land</span>
+          <span class="feature-tag">Open-Meteo</span>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-mountain"></i></div>
+        <div class="feature-name">Elevación y Relieve</div>
+        <div class="feature-desc">DEM de alta resolución, pendiente y aspecto de ladera. Identifica flujo superficial, zonas de acumulación hídrica y microclimas altitudinales.</div>
+        <div class="feature-tags">
+          <span class="feature-tag">Copernicus GLO-30</span>
+          <span class="feature-tag">ALOS AW3D30</span>
+          <span class="feature-tag">30 m resolución</span>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-water"></i></div>
+        <div class="feature-name">Agua Superficial</div>
+        <div class="feature-desc">Índices NDWI y MNDWI para detectar ríos, lagos y humedales. Monitoreo de estrés hídrico en vegetación con NDMI sobre imágenes Sentinel-2.</div>
+        <div class="feature-tags">
+          <span class="feature-tag">NDWI · MNDWI</span>
+          <span class="feature-tag">Sentinel-2</span>
+          <span class="feature-tag">Análisis temporal</span>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon"><i class="fas fa-tree"></i></div>
+        <div class="feature-name">Pérdida de Bosque</div>
+        <div class="feature-desc">Análisis de deforestación histórica 2000–2023 con Hansen GFC. Stock de carbono biomásico estimado por año, zona de estudio y buffer de 5 km.</div>
+        <div class="feature-tags">
+          <span class="feature-tag">Hansen GFC 2023</span>
+          <span class="feature-tag">NASA ORNL</span>
+          <span class="feature-tag">Carbon Stock</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CÓMO FUNCIONA -->
+<section id="como-funciona" class="product-section">
+  <div class="product-inner">
+
+    <!-- Intro header -->
+    <div class="product-head">
+      <div class="product-head-left">
+        <p class="section-label">— Cómo funciona</p>
+        <h2 class="section-title">De la zona al informe<br>en minutos</h2>
+      </div>
+      <div class="product-head-right">
+        Define tu área de estudio una vez y todos los módulos trabajan sobre ella de forma integrada. Sin configuración compleja, sin experiencia en SIG requerida.
+      </div>
+    </div>
+
+    <!-- Step cards 2×2 -->
+    <div class="step-cards-grid">
+
+      <div class="step-card">
+        <div class="step-card-num">01</div>
+        <div class="step-card-body">
+          <div class="step-card-title">Define tu zona de estudio</div>
+          <div class="step-card-desc">Dibuja un polígono en el mapa, importa un GeoJSON o selecciona una cuenca DGA desde la base hidrológica nacional. Soporta hasta 50.000 ha.</div>
+          <div class="step-card-tags">
+            <span class="step-card-tag">GeoJSON · KML</span>
+            <span class="step-card-tag">Cuencas DGA</span>
+            <span class="step-card-tag">Leaflet Draw</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-card-num">02</div>
+        <div class="step-card-body">
+          <div class="step-card-title">Ejecuta los análisis</div>
+          <div class="step-card-desc">Un clic por módulo. Las imágenes satelitales se procesan en segundos y los resultados se superponen directamente sobre el mapa interactivo.</div>
+          <div class="step-card-tags">
+            <span class="step-card-tag">Sentinel-2</span>
+            <span class="step-card-tag">ERA5 · CHIRPS</span>
+            <span class="step-card-tag">GBIF API</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-card-num">03</div>
+        <div class="step-card-body">
+          <div class="step-card-title">Visualiza y compara</div>
+          <div class="step-card-desc">Superpon capas sobre el mapa, compara períodos y guarda series de monitoreo en el panel de indicadores. Todo en un workspace persistente.</div>
+          <div class="step-card-tags">
+            <span class="step-card-tag">Dashboard</span>
+            <span class="step-card-tag">Series temporales</span>
+            <span class="step-card-tag">Indicadores</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-card-num">04</div>
+        <div class="step-card-body">
+          <div class="step-card-title">Exporta y documenta</div>
+          <div class="step-card-desc">Descarga tus series en CSV, exporta capas en GeoJSON y genera resúmenes técnicos de línea base listos para informes ambientales.</div>
+          <div class="step-card-tags">
+            <span class="step-card-tag">CSV · GeoJSON</span>
+            <span class="step-card-tag">PNG · Export</span>
+            <span class="step-card-tag">Línea base</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- BETA CTA -->
+<section id="beta" class="cta-section">
+  <div class="cta-inner">
+    <div class="cta-pill"><i class="fas fa-circle" style="font-size:7px;"></i> Acceso Beta abierto</div>
+    <h2 class="cta-title">Empieza a monitorear<br>tu terreno hoy</h2>
+    <p class="cta-sub">Acceso gratuito durante el piloto. Sin tarjeta de crédito. Sin instalación. Solo tu zona y los datos que necesitas.</p>
+    <form class="cta-form" onsubmit="submitBeta(event)">
+      <input class="beta-input" type="email" placeholder="tu@email.cl" required id="cta-email">
+      <button class="beta-btn" type="submit">Solicitar Acceso</button>
+    </form>
+    <div class="cta-success" id="cta-success">
+      <i class="fas fa-check" style="margin-right:8px;"></i> ¡Registrado! Te contactaremos pronto con tu acceso.
+    </div>
+    <p class="cta-hint">Datos protegidos · Piloto en Chile · Evergreen Consultores 2026</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-brand">
+    <div class="nav-logo">E</div>
+    <span class="foot-text">Evergreen Consultores · Monitor Pro · 2026</span>
+  </div>
+  <div class="foot-links">
+    <a href="login.html" class="foot-link">Abrir Workspace</a>
+    <a href="#capacidades" class="foot-link">Capacidades</a>
+    <a href="index.html#contacto" class="foot-link">Contacto</a>
+    <a href="index.html" class="foot-link">Inicio</a>
+  </div>
+  <a href="index.html" class="foot-lab"><i class="fas fa-arrow-left" style="font-size:9px;"></i> Volver al sitio</a>
+</footer>
+
+<script>
+/* ── Beta form ── */
+function submitBeta(e) {
+  e.preventDefault();
+  const form = e.target;
+  form.style.display = 'none';
+  const success = document.getElementById('cta-success');
+  if (success) success.style.display = 'block';
+  const heroForm = document.querySelector('.beta-form');
+  if (heroForm && form !== heroForm) {
+    heroForm.innerHTML = '<p style="font-family:var(--mono);font-size:11.5px;color:var(--green-l);padding:12px 0;"><i class="fas fa-check" style="margin-right:6px;"></i>¡Registrado! Te contactaremos pronto.</p>';
+  }
+}
+
+/* ── Scroll nav border ── */
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').style.borderBottomColor =
+    window.scrollY > 20 ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)';
+});
+</script>
 </body>
-
 </html>

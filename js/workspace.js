@@ -1,0 +1,2856 @@
+/* ==========================================================================
+   WORKSPACE.JS - Estado Compartido y Lógica de Tabs
+   ========================================================================== */
+
+   var WorkspaceState = {
+    zona: null,       // GeoJSON completo
+    zonaGEE: null,    // GeoJSON simplificado
+    zonaNombre: 'Mi zona de estudio',
+    zonaHa: 0,
+    zonaId: null,     // UUID del workspace en Supabase
+    capasActivas: {},
+    resultados: {}    // Cache de análisis: key = 'tipo_indice' (sin tilesUrl — expiran)
+};
+
+// Caché en MEMORIA de URLs de tiles GEE (expiran ~24h, nunca van a localStorage)
+// Clave: 'tipo_indice_ts'  (ej: 'vegetacion_NDVI_1737500000000')
+var _tilesCache = {};
+
+// Instancias Chart.js del panel de monitoreo (para poder destruirlas en re-render)
+var _monitorCharts = {};
+
+// Cargar estado inicial
+function loadWorkspaceState() {
+    var stored = localStorage.getItem('evergreen_workspace');
+    if (stored) {
+        try {
+            var parsed = JSON.parse(stored);
+            WorkspaceState = parsed;
+            if (!WorkspaceState.resultados) WorkspaceState.resultados = {};
+            // Migrar formato viejo (objeto) → nuevo (array por índice)
+            Object.keys(WorkspaceState.resultados).forEach(function(k) {
+                var v = WorkspaceState.resultados[k];
+                if (v && !Array.isArray(v)) WorkspaceState.resultados[k] = [v];
+            });
+            updateZoneUI();
+            renderIndicadorCards();
+            refreshIndRows();
+            restoreDetailVegStats();
+        } catch (e) {
+            console.error("Error restaurando workspace", e);
+        }
+    }
+}
+
+function saveWorkspaceState() {
+    localStorage.setItem('evergreen_workspace', JSON.stringify(WorkspaceState));
+    // Cloud sync (no bloquea — async en segundo plano)
+    if (window._sbUserId && typeof saveWorkspaceToCloud === 'function') {
+        saveWorkspaceToCloud(window._sbUserId, WorkspaceState);
+    }
+}
+
+// ---------------------------------------------------------
+// INDICATOR DASHBOARD — Resultados cacheados
+// ---------------------------------------------------------
+
+var IND_CONFIG = {
+    'vegetacion':   { icon: 'fas fa-seedling',   iconClass: 'rs-ind-icon--veg',  cat: 'Vegetación' },
+    'agua':         { icon: 'fas fa-tint',        iconClass: 'rs-ind-icon--agua', cat: 'Agua' },
+    'dem':          { icon: 'fas fa-mountain',    iconClass: 'rs-ind-icon--dem',  cat: 'Elevación' },
+    'biodiversidad':{ icon: 'fas fa-leaf',        iconClass: 'rs-ind-icon--bio',  cat: 'Biodiversidad' }
+};
+
+var _indicadorActivo = null;
+var _indicadorLayer  = null;
+
+/**
+ * Guarda un resultado de análisis y actualiza el dashboard.
+ * @param {string} tipo - 'vegetacion' | 'agua' | 'dem'
+ * @param {string} indice - Nombre del índice (NDVI, NDWI, etc.)
+ * @param {object} stats - Objeto con mean, min, max, etc.
+ * @param {string} tilesUrl - URL del tile layer
+ * @param {string|null} fechaInicio - Fecha inicio del rango
+ * @param {string|null} fechaFin - Fecha fin del rango
+ */
+function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin) {
+    var key = tipo + '_' + indice;
+    var ts  = Date.now();
+
+    // URL en memoria — clave incluye ts para soportar múltiples mediciones
+    if (tilesUrl) _tilesCache[key + '_' + ts] = tilesUrl;
+
+    if (!WorkspaceState.resultados) WorkspaceState.resultados = {};
+    // Migración defensiva: si existe formato viejo, convertir
+    if (WorkspaceState.resultados[key] && !Array.isArray(WorkspaceState.resultados[key])) {
+        WorkspaceState.resultados[key] = [WorkspaceState.resultados[key]];
+    }
+    if (!WorkspaceState.resultados[key]) WorkspaceState.resultados[key] = [];
+
+    WorkspaceState.resultados[key].push({
+        tipo: tipo, indice: indice, stats: stats,
+        fechaInicio: fechaInicio, fechaFin: fechaFin, ts: ts
+    });
+
+    // Máximo 12 mediciones por índice — eliminar la más antigua
+    var arr = WorkspaceState.resultados[key];
+    if (arr.length > 12) {
+        var old = arr.shift();
+        delete _tilesCache[key + '_' + old.ts];
+    }
+
+    saveWorkspaceState();
+    // Sincronizar resultados de este índice con la nube
+    if (window._sbUserId && typeof saveResultsToCloud === 'function') {
+        saveResultsToCloud(window._sbUserId, key, WorkspaceState.resultados[key]);
+    }
+    renderIndicadorCards();
+    refreshIndRows();
+}
+
+/** Formatea el valor principal a mostrar en la tarjeta */
+function _getIndicadorValue(r) {
+    if (!r || !r.stats) return '—';
+    var s = r.stats;
+    // Biodiversidad
+    if (r.tipo === 'biodiversidad') {
+        return s.n_especies !== undefined ? s.n_especies + ' spp.' : '—';
+    }
+    // Elevación
+    if (r.tipo === 'dem' && r.indice === 'Elevacion') {
+        return s.mean !== undefined ? Math.round(s.mean) + ' m' : '—';
+    }
+    // Pendiente
+    if (r.tipo === 'dem' && r.indice === 'Pendiente') {
+        return s.mean !== undefined ? s.mean.toFixed(1) + '°' : '—';
+    }
+    // Aspecto sin valor útil
+    if (r.tipo === 'dem' && r.indice === 'Aspecto') return '—';
+    // Índices espectrales (mean genérico)
+    return s.mean !== undefined ? s.mean.toFixed(3) : '—';
+}
+
+/** Calcula tendencia entre la última y penúltima medición */
+function _calcTrend(arr) {
+    if (arr.length < 2) return null;
+    var last = arr[arr.length - 1], prev = arr[arr.length - 2];
+    var a = last.stats && last.stats.mean, b = prev.stats && prev.stats.mean;
+    if (a === null || a === undefined || b === null || b === undefined) return null;
+    var delta = a - b;
+    return { delta: delta, dir: Math.abs(delta) < 0.005 ? 'flat' : (delta > 0 ? 'up' : 'down') };
+}
+
+/** Renderiza la sparkline Chart.js para una card de monitoreo */
+function _renderSparkline(key, arr) {
+    var chartId = 'mon-chart-' + key;
+    var canvas = document.getElementById(chartId);
+    if (!canvas) return;
+    if (_monitorCharts[key]) { try { _monitorCharts[key].destroy(); } catch(e){} }
+
+    var labels = arr.map(function(e) {
+        return e.fechaFin ? e.fechaFin.substring(0, 7) : new Date(e.ts).toLocaleDateString('es-CL');
+    });
+    var values = arr.map(function(e) {
+        return (e.stats && e.stats.mean !== null && e.stats.mean !== undefined)
+            ? parseFloat(parseFloat(e.stats.mean).toFixed(3)) : null;
+    });
+
+    // Si todos son null, no renderizar
+    if (values.every(function(v) { return v === null; })) { canvas.style.display = 'none'; return; }
+
+    var tipo = arr[0].tipo;
+    var lineColor = tipo === 'vegetacion' ? '#66bb6a' : tipo === 'agua' ? '#42a5f5' : '#a1887f';
+    var fillColor = tipo === 'vegetacion' ? 'rgba(102,187,106,0.10)' : tipo === 'agua' ? 'rgba(66,165,245,0.10)' : 'rgba(161,136,127,0.10)';
+
+    _monitorCharts[key] = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                borderColor: lineColor,
+                backgroundColor: fillColor,
+                fill: true,
+                tension: 0.35,
+                pointRadius: arr.length <= 6 ? 3 : 0,
+                pointHoverRadius: 4,
+                pointBackgroundColor: lineColor,
+                borderWidth: 1.5,
+                spanGaps: true
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(10,20,10,0.9)',
+                    titleColor: '#c8e6c9', bodyColor: '#fff',
+                    padding: 6, cornerRadius: 4
+                }
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(100,140,100,0.6)', font: { size: 8 }, maxRotation: 0, maxTicksLimit: 4 }, grid: { display: false } },
+                y: { ticks: { color: 'rgba(100,140,100,0.6)', font: { size: 8 }, maxTicksLimit: 3 }, grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false } }
+            },
+            animation: { duration: 300 }
+        }
+    });
+}
+
+/** Panel de monitoreo principal */
+function renderMonitorPanel() {
+    var container = document.getElementById('rs-indicators-list');
+    if (!container) return;
+
+    // Destruir charts existentes
+    Object.keys(_monitorCharts).forEach(function(k) {
+        if (_monitorCharts[k]) { try { _monitorCharts[k].destroy(); } catch(e){} delete _monitorCharts[k]; }
+    });
+
+    var resultados = WorkspaceState.resultados || {};
+    var keys = Object.keys(resultados).filter(function(k) {
+        return Array.isArray(resultados[k]) && resultados[k].length > 0;
+    });
+
+    // Ordenar por ts de última medición descendente
+    keys.sort(function(a, b) {
+        var aLast = resultados[a][resultados[a].length - 1];
+        var bLast = resultados[b][resultados[b].length - 1];
+        return bLast.ts - aLast.ts;
+    });
+
+    // Badge
+    var countBadge = document.getElementById('rs-ind-count');
+    if (countBadge) {
+        countBadge.textContent = keys.length;
+        countBadge.className = keys.length > 0 ? 'rs-badge rs-badge--active' : 'rs-badge rs-badge--empty';
+    }
+
+    if (keys.length === 0) {
+        container.innerHTML =
+            '<div class="rs-ind-empty"><i class="fas fa-chart-area"></i>' +
+            '<p>Los resultados aparecerán aquí al procesar Vegetación, Agua o Elevación.</p>' +
+            '<small>Click en una tarjeta para activar la capa en el mapa</small></div>';
+        return;
+    }
+
+    var html = '';
+    keys.forEach(function(key) {
+        var arr = resultados[key];
+        var latest = arr[arr.length - 1];
+        var cfg = IND_CONFIG[latest.tipo] || { icon: 'fas fa-chart-line', iconClass: '', cat: latest.tipo };
+        var latestActiveKey = key + '_' + latest.ts;
+        var isActive = _indicadorActivo === latestActiveKey;
+        var val = _getIndicadorValue(latest);
+        var trend = _calcTrend(arr);
+        var chartId = 'mon-chart-' + key;
+
+        // Tendencia HTML
+        var trendHtml = '';
+        if (trend) {
+            var arrow = trend.dir === 'up' ? '▲' : trend.dir === 'down' ? '▼' : '—';
+            var trendClass = 'mon-trend--' + trend.dir;
+            var trendVal = trend.dir !== 'flat'
+                ? arrow + ' ' + Math.abs(trend.delta).toFixed(3)
+                : arrow;
+            trendHtml = '<span class="mon-trend ' + trendClass + '">' + trendVal + '</span>';
+        }
+
+        // Fecha última medición
+        var lastDate = '';
+        if (latest.fechaInicio && latest.fechaFin) {
+            lastDate = latest.fechaInicio.substring(0, 7) + ' → ' + latest.fechaFin.substring(0, 7);
+        }
+
+        html += '<div class="mon-card' + (isActive ? ' active' : '') + '">';
+
+        // Header
+        html += '<div class="mon-card-header" onclick="activarIndicador(\'' + key + '\')">';
+        html += '<div class="rs-ind-icon ' + cfg.iconClass + '"><i class="' + cfg.icon + '"></i></div>';
+        html += '<div class="mon-card-title">';
+        html += '<span class="rs-ind-name">' + latest.indice + '</span>';
+        html += '<span class="rs-ind-cat">' + cfg.cat + '</span>';
+        html += '</div>';
+        if (arr.length > 1) html += '<span class="mon-count-badge">' + arr.length + '</span>';
+        html += '<button class="rs-ind-delete" title="Eliminar índice" onclick="event.stopPropagation(); eliminarIndicador(\'' + key + '\')">×</button>';
+        html += '</div>';
+
+        // Valor + tendencia
+        html += '<div class="mon-main-row">';
+        html += '<span class="mon-val">' + val + '</span>';
+        html += trendHtml;
+        html += '</div>';
+        if (lastDate) html += '<div class="mon-last-date">' + lastDate + '</div>';
+
+        // Bio mini-stats grid (RCE / CR / EN / VU)
+        if (latest.tipo === 'biodiversidad' && latest.stats) {
+            var bs = latest.stats;
+            html += '<div class="mon-bio-stats">';
+            html += '<div class="mon-bio-stat"><span class="mon-bio-stat-val rce">' + (bs.n_rce != null ? bs.n_rce : '—') + '</span><span class="mon-bio-stat-lbl">RCE</span></div>';
+            html += '<div class="mon-bio-stat"><span class="mon-bio-stat-val cr">'  + (bs.n_cr  != null ? bs.n_cr  : '—') + '</span><span class="mon-bio-stat-lbl">CR</span></div>';
+            html += '<div class="mon-bio-stat"><span class="mon-bio-stat-val en">'  + (bs.n_en  != null ? bs.n_en  : '—') + '</span><span class="mon-bio-stat-lbl">EN</span></div>';
+            html += '<div class="mon-bio-stat"><span class="mon-bio-stat-val vu">'  + (bs.n_vu  != null ? bs.n_vu  : '—') + '</span><span class="mon-bio-stat-lbl">VU</span></div>';
+            html += '</div>';
+        }
+
+        // Sparkline (solo si hay ≥2 mediciones)
+        if (arr.length >= 2) {
+            html += '<div class="mon-chart-wrap"><canvas id="' + chartId + '"></canvas></div>';
+        }
+
+        // Historial de mediciones (solo si hay ≥2)
+        if (arr.length >= 2) {
+            html += '<div class="mon-history">';
+            // Más reciente primero
+            var arrDesc = arr.slice().reverse();
+            arrDesc.forEach(function(e) {
+                var eKey = key + '_' + e.ts;
+                var eActive = _indicadorActivo === eKey;
+                var eVal = _getIndicadorValue(e);
+                var eDate = (e.fechaInicio && e.fechaFin)
+                    ? e.fechaInicio.substring(0, 7) + ' → ' + e.fechaFin.substring(0, 7)
+                    : new Date(e.ts).toLocaleDateString('es-CL');
+                html += '<div class="mon-history-item' + (eActive ? ' active' : '') + '"' +
+                    ' onclick="activarIndicador(\'' + key + '\',' + e.ts + ')">';
+                html += '<span class="mon-history-date">' + eDate + '</span>';
+                html += '<span class="mon-history-val">' + eVal + '</span>';
+                html += '<button class="rs-ind-delete" style="opacity:1;font-size:11px;" title="Eliminar medición"' +
+                    ' onclick="event.stopPropagation(); eliminarMedicion(\'' + key + '\',' + e.ts + ')">×</button>';
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+
+        html += '</div>'; // /mon-card
+    });
+
+    container.innerHTML = html;
+
+    // Renderizar sparklines tras DOM update
+    keys.forEach(function(key) {
+        var arr = resultados[key];
+        if (arr.length >= 2) {
+            setTimeout(function() { _renderSparkline(key, arr); }, 0);
+        }
+    });
+}
+
+/** Alias para compatibilidad con código existente */
+function renderIndicadorCards() { renderMonitorPanel(); }
+
+/**
+ * Elimina el índice completo (todas sus mediciones) del dashboard.
+ */
+function eliminarIndicador(key) {
+    var arr = WorkspaceState.resultados && WorkspaceState.resultados[key];
+    if (arr) {
+        arr.forEach(function(e) {
+            var tileKey = key + '_' + e.ts;
+            if (_indicadorActivo === tileKey) {
+                if (_indicadorLayer) { map.removeLayer(_indicadorLayer); _indicadorLayer = null; }
+                _indicadorActivo = null;
+            }
+            delete _tilesCache[tileKey];
+        });
+        delete WorkspaceState.resultados[key];
+    }
+    saveWorkspaceState();
+    renderIndicadorCards();
+}
+
+/**
+ * Elimina una medición individual de un índice.
+ */
+function eliminarMedicion(key, ts) {
+    var tileKey = key + '_' + ts;
+    if (_indicadorActivo === tileKey) {
+        if (_indicadorLayer) { map.removeLayer(_indicadorLayer); _indicadorLayer = null; }
+        _indicadorActivo = null;
+    }
+    delete _tilesCache[tileKey];
+    if (WorkspaceState.resultados && WorkspaceState.resultados[key]) {
+        WorkspaceState.resultados[key] = WorkspaceState.resultados[key].filter(function(e) {
+            return e.ts !== ts;
+        });
+        if (WorkspaceState.resultados[key].length === 0) {
+            delete WorkspaceState.resultados[key];
+        }
+    }
+    saveWorkspaceState();
+    renderIndicadorCards();
+}
+
+/**
+ * Activa o desactiva una capa de indicador en el mapa.
+ * @param {string} key   - 'tipo_indice'
+ * @param {number} [ts]  - timestamp de la medición (default: última)
+ */
+function activarIndicador(key, ts) {
+    var arr = (WorkspaceState.resultados || {})[key];
+    if (!arr || arr.length === 0) return;
+
+    // Resolver la medición a activar
+    var entry = ts
+        ? arr.find(function(e) { return e.ts === ts; })
+        : arr[arr.length - 1];
+    if (!entry) return;
+
+    var activeKey = key + '_' + entry.ts;
+
+    // Limpiar todas las capas de análisis activas
+    if (vegLayer)          { map.removeLayer(vegLayer);         vegLayer = null; }
+    if (aguaLayer)         { map.removeLayer(aguaLayer);        aguaLayer = null; }
+    if (_demLayerActual)   { map.removeLayer(_demLayerActual);  _demLayerActual = null; }
+    if (_indicadorLayer)   { map.removeLayer(_indicadorLayer);  _indicadorLayer = null; }
+
+    // Toggle
+    if (_indicadorActivo === activeKey) {
+        _indicadorActivo = null;
+        renderIndicadorCards();
+        return;
+    }
+
+    var url = _tilesCache[activeKey];
+    if (!url) {
+        mostrarNotificacion('⏱️ Capa expirada. Recalcula en el tab correspondiente.');
+        _indicadorActivo = null;
+        renderIndicadorCards();
+        return;
+    }
+
+    _indicadorLayer = L.tileLayer(url, { pane: 'overlayPane', zIndex: 400 });
+    _indicadorLayer.addTo(map);
+    _indicadorActivo = activeKey;
+    renderIndicadorCards();
+}
+
+// Actualiza el UI del panel izquierdo con la info de la zona
+function updateZoneUI() {
+    var zonaActiva = WorkspaceState.zonaHa > 0;
+    var haTexto = zonaActiva
+        ? WorkspaceState.zonaHa.toLocaleString('es-CL') + ' hectáreas'
+        : 'Sin zona definida';
+
+    // --- Header (siempre visible) ---
+    var displayName = document.getElementById('ws-zone-name-display');
+    if (displayName) displayName.textContent = WorkspaceState.zonaNombre;
+
+    var headerName = document.getElementById('ws-header-zone-name');
+    if (headerName) headerName.innerText = WorkspaceState.zonaNombre;
+
+    var haHeader = document.getElementById('ws-zone-ha');
+    if (haHeader) haHeader.innerText = haTexto;
+
+    // --- Resumen Tab ---
+    var nameInput = document.getElementById('ws-zone-name');
+    if (nameInput) nameInput.value = WorkspaceState.zonaNombre;
+
+    var haCard = document.getElementById('ws-zone-ha-card');
+    if (haCard) haCard.textContent = zonaActiva ? WorkspaceState.zonaHa.toLocaleString('es-CL') : '—';
+
+    var subtitle = document.getElementById('rs-subtitle');
+    if (subtitle) subtitle.textContent = zonaActiva
+        ? 'Última modificación: ' + new Date().toLocaleDateString('es-CL')
+        : 'Define tu área de análisis en el mapa';
+
+    var badge = document.getElementById('rs-status-badge');
+    if (badge) {
+        badge.textContent = zonaActiva ? 'Zona activa' : 'Sin zona';
+        badge.className = zonaActiva ? 'rs-badge rs-badge--active' : 'rs-badge rs-badge--empty';
+    }
+
+    var geeEl = document.getElementById('rs-meta-gee');
+    if (geeEl) {
+        geeEl.textContent = zonaActiva ? '✓ Listo' : 'Pendiente';
+        geeEl.style.color = zonaActiva ? 'var(--accent)' : 'var(--muted)';
+    }
+
+    // Vértices
+    if (WorkspaceState.zona && WorkspaceState.zona.geometry) {
+        var coords = WorkspaceState.zona.geometry.coordinates;
+        if (coords && coords[0]) {
+            var verticesEl = document.getElementById('rs-meta-vertices');
+            if (verticesEl) verticesEl.textContent = coords[0].length;
+        }
+    } else {
+        var verticesEl = document.getElementById('rs-meta-vertices');
+        if (verticesEl) verticesEl.textContent = '—';
+    }
+
+    // Cargar clima de la zona si hay zona y aún no se cargó
+    if (zonaActiva) fetchClimaWidget();
+}
+
+// Al cambiar el input del nombre
+function onZoneNameChange(e) {
+    WorkspaceState.zonaNombre = e.target.value || 'Mi zona de estudio';
+    var headerName = document.getElementById('ws-header-zone-name');
+    if (headerName) headerName.innerText = WorkspaceState.zonaNombre;
+    saveWorkspaceState();
+}
+
+// Metadatos por tab — icono y título del panel header
+var TAB_META = {
+    'resumen':       { icon: 'fas fa-th-large',   title: 'Resumen' },
+    'vegetacion':    { icon: 'fas fa-seedling',   title: 'Vegetación' },
+    'agua':          { icon: 'fas fa-tint',        title: 'Agua' },
+    'elevacion':     { icon: 'fas fa-mountain',   title: 'Elevación' },
+    'bosque':        { icon: 'fas fa-tree',        title: 'Bosque' },
+    'biodiversidad': { icon: 'fas fa-leaf',        title: 'Biodiversidad' },
+    'clima':         { icon: 'fas fa-cloud',       title: 'Clima' }
+};
+
+// Cambiar de Módulo (Tab)
+function switchWorkspaceTab(tabId) {
+    // 1. Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
+    var activeBtn = document.getElementById('tab-btn-' + tabId);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // 2. Hide all modules
+    document.querySelectorAll('.ws-module-content').forEach(function(mod) { mod.classList.remove('active'); });
+
+    // 3. Show selected module
+    var activeMod = document.getElementById('tab-' + tabId + '-content');
+    if (activeMod) activeMod.classList.add('active');
+
+    // 4. Update panel header icon + title
+    var meta = TAB_META[tabId] || { icon: 'fas fa-chart-bar', title: tabId };
+    var iconEl = document.getElementById('panel-icon-i');
+    var titleEl = document.getElementById('panel-title');
+    if (iconEl) iconEl.className = meta.icon;
+    if (titleEl) titleEl.textContent = meta.title;
+
+    // 5. Make sure panel is visible
+    var panel = document.getElementById('ws-left-panel');
+    if (panel && panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+    }
+
+    // 6. Biodiversidad iframe — siempre en background, nunca full-screen
+    var bioIframe = document.getElementById('iframe-biodiversidad');
+    if (bioIframe) {
+        bioIframe.classList.remove('ws-iframe-active');
+        if (!bioIframe.src || bioIframe.src === window.location.href) {
+            bioIframe.src = 'inaturalist/index.html';
+        }
+        if (tabId === 'biodiversidad') {
+            setTimeout(function() { enviarZonaABiodiversidad(); }, 800);
+        }
+    }
+}
+
+// Toggle Left Panel
+function toggleLeftPanel() {
+    var panel = document.getElementById('ws-left-panel');
+    if (panel) panel.classList.toggle('hidden');
+}
+
+// Toggle Mini Panel (Bosque widget bottom-right)
+function toggleMiniPanel() {
+    var mp = document.getElementById('mini-panel');
+    if (mp) mp.classList.toggle('hidden');
+}
+
+// Toggle map layers dropdown
+function toggleLayersPanel() {
+    var body = document.getElementById('map-layers-body');
+    var chev = document.getElementById('layers-chevron');
+    var overlay = document.getElementById('map-overlay');
+    if (!body) return;
+    body.classList.toggle('collapsed');
+    if (overlay) overlay.classList.toggle('open', !body.classList.contains('collapsed'));
+    if (chev) chev.style.transform = body.classList.contains('collapsed') ? '' : 'rotate(180deg)';
+}
+
+// Cambiar opacidad AOI directamente desde slider (0-1)
+function changeAoiOpacityDirect(val) {
+    _aoiOpacity = val;
+    if (globalWorkspaceAOILayer && typeof globalWorkspaceAOILayer.setStyle === 'function') {
+        globalWorkspaceAOILayer.setStyle({ fillOpacity: _aoiVisible ? _aoiOpacity : 0 });
+    }
+}
+
+// Funciones de Dibujo compartidas (se enlaza con Leaflet)
+var globalDrawControl = null;
+var globalDrawnItems = null;
+var globalWorkspaceAOILayer = null;
+var _aoiVisible = true;
+var _aoiOpacity = 0.25;
+
+function initWorkspaceMap() {
+    // Se asume que el map base está en `map` global (desde acceso-datos.js)
+    if (typeof map !== 'undefined') {
+        globalDrawnItems = new L.FeatureGroup();
+        map.addLayer(globalDrawnItems);
+
+        // Remove old draw controls if any
+        
+        globalDrawControl = new L.Draw.Polygon(map, {
+            shapeOptions: {
+                color: '#6AAA35',
+                weight: 2,
+                fillOpacity: 0.2
+            }
+        });
+
+        var aoiButton = document.getElementById('btn-aoi-opacity');
+        if (aoiButton) {
+            aoiButton.textContent = 'AOI opacidad ' + Math.round(_aoiOpacity * 100) + '%';
+        }
+
+        map.on(L.Draw.Event.CREATED, function (e) {
+            var layer = e.layer;
+            globalDrawnItems.clearLayers();
+            globalDrawnItems.addLayer(layer);
+            globalWorkspaceAOILayer = layer;
+            
+            // Mantener AOI visible en el mapa (zona de estudio)
+            if (typeof layer.setStyle === 'function') {
+                layer.setStyle({
+                    color: '#00C88E',
+                    weight: 2,
+                    opacity: 0.9,
+                    fillColor: '#00C88E',
+                    fillOpacity: _aoiVisible ? _aoiOpacity : 0
+                });
+            }
+            
+            var geojson = layer.toGeoJSON();
+            var ha = 0;
+            
+            // Solo calcular área para polígonos
+            if (typeof layer.getLatLngs === 'function') {
+                var areaSqM = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+                ha = Math.round(areaSqM / 10000);
+            }
+
+            if (ha > 50000) {
+                alert("La zona supera el límite de 50.000 ha (" + ha + " ha). Por favor dibuja una zona más pequeña.");
+                globalDrawnItems.clearLayers();
+                return;
+            }
+
+            WorkspaceState.zona = geojson;
+            WorkspaceState.zonaHa = ha;
+
+            // Simplificar para GEE usando Turf si está disponible - SOLO a poligonos
+            if (typeof turf !== 'undefined' && geojson.geometry.type.includes('Polygon')) {
+                WorkspaceState.zonaGEE = turf.simplify(geojson, { tolerance: 0.001, highQuality: true });
+            } else {
+                WorkspaceState.zonaGEE = geojson; // Fallback para puntos (no necesitan simplificar)
+            }
+
+            updateZoneUI();
+            saveWorkspaceState();   // saveWorkspaceToCloud se encarga de insert/update según zonaId
+
+            // Si estamos en clima, inyectar el polígono
+            if (typeof agregarPoligonoDesdeWorkspace === 'function') {
+                agregarPoligonoDesdeWorkspace(geojson, WorkspaceState.zonaNombre, ha);
+            }
+
+            enviarZonaABiodiversidad();
+        });
+    }
+}
+
+function _enableDrawing() {
+    if (!globalDrawControl) return;
+    globalDrawnItems.clearLayers();
+    if (typeof poligonos !== 'undefined') poligonos = [];
+    if (typeof puntos !== 'undefined') {
+        puntos.forEach(function(p) { if (p.marker) try { map.removeLayer(p.marker); } catch(e){} });
+        puntos = [];
+    }
+    globalDrawControl.enable();
+}
+
+function startDrawingZone() {
+    // Si ya tiene zona activa → solo redibuja en el mismo workspace (sin chequeo de cuota)
+    if (WorkspaceState.zona) {
+        _enableDrawing();
+        return;
+    }
+    // Primera zona: verificar cuota según plan
+    if (window._sbUserId && typeof checkZoneQuota === 'function') {
+        checkZoneQuota(window._sbUserId).then(function(result) {
+            if (!result.ok) { mostrarModalLimite(result); return; }
+            _enableDrawing();
+        });
+    } else {
+        _enableDrawing();
+    }
+}
+
+// Crear una zona NUEVA (workspace adicional) — llamada desde el selector de zonas
+function startNewZone() {
+    closeZoneSelector();
+    if (window._sbUserId && typeof checkZoneQuota === 'function') {
+        checkZoneQuota(window._sbUserId).then(function(result) {
+            if (!result.ok) { mostrarModalLimite(result); return; }
+            // Limpiar estado local para el nuevo workspace
+            WorkspaceState.zona       = null;
+            WorkspaceState.zonaGEE    = null;
+            WorkspaceState.zonaHa     = 0;
+            WorkspaceState.zonaId     = null;
+            WorkspaceState.zonaNombre = 'Mi zona de estudio';
+            WorkspaceState.resultados = {};
+            if (globalDrawnItems) globalDrawnItems.clearLayers();
+            updateZoneUI();
+            renderIndicadorCards();
+            _enableDrawing();
+        });
+    } else {
+        _enableDrawing();
+    }
+}
+
+// ---------------------------------------------------------
+// CUENCAS — Toggle de visibilidad en el mapa
+// ---------------------------------------------------------
+var _cuencasVisible = true;
+
+function toggleCapasCuencas() {
+    if (typeof cuencasLayer === 'undefined' || !cuencasLayer) return;
+    _cuencasVisible = !_cuencasVisible;
+    if (_cuencasVisible) {
+        cuencasLayer.addTo(map);
+    } else {
+        map.removeLayer(cuencasLayer);
+    }
+    var btn = document.getElementById('btn-toggle-cuencas');
+    if (btn) btn.classList.toggle('off', !_cuencasVisible);
+}
+
+function toggleAoiVisibility() {
+    _aoiVisible = !_aoiVisible;
+    if (globalWorkspaceAOILayer && typeof globalWorkspaceAOILayer.setStyle === 'function') {
+        globalWorkspaceAOILayer.setStyle({
+            opacity: _aoiVisible ? 0.9 : 0,
+            fillOpacity: _aoiVisible ? _aoiOpacity : 0
+        });
+    }
+    var btn = document.getElementById('btn-toggle-aoi');
+    if (btn) {
+        btn.classList.toggle('off', !_aoiVisible);
+        btn.textContent = _aoiVisible ? '⛰️ AOI Visible' : '🚫 AOI Oculto';
+    }
+}
+
+function changeAoiOpacity() {
+    var levels = [0.08, 0.2, 0.4, 0.6];
+    var idx = levels.indexOf(_aoiOpacity);
+    _aoiOpacity = levels[(idx + 1) % levels.length];
+    if (globalWorkspaceAOILayer && typeof globalWorkspaceAOILayer.setStyle === 'function') {
+        globalWorkspaceAOILayer.setStyle({
+            fillOpacity: _aoiVisible ? _aoiOpacity : 0
+        });
+    }
+    var btn = document.getElementById('btn-aoi-opacity');
+    if (btn) btn.textContent = `AOI opacidad ${Math.round(_aoiOpacity * 100)}%`;
+}
+
+// ---------------------------------------------------------
+// HELPERS COMPARTIDOS — usados por todos los módulos GEE
+// ---------------------------------------------------------
+
+/**
+ * Guard: si no hay zona definida, muestra toast + va al tab Resumen.
+ * Usar con: if (!WorkspaceState.zonaGEE) return _noZonaGuard();
+ */
+function _noZonaGuard() {
+    if (typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion('⚠️ Dibuja una zona en el mapa o selecciona una cuenca DGA.');
+    }
+    switchWorkspaceTab('resumen');
+}
+
+/**
+ * Centra el mapa en la zona activa después de un análisis.
+ */
+function _fitToZone() {
+    if (!WorkspaceState.zona || typeof map === 'undefined') return;
+    try {
+        var bounds = L.geoJSON(WorkspaceState.zona).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40] });
+    } catch (e) { /* silent — mapa no listo todavía */ }
+}
+
+// ---------------------------------------------------------
+// BOSQUE — Hansen Forest Loss + Carbon Stock Charts
+// ---------------------------------------------------------
+var _chartCarbon = null;
+var _chartBosque = null;
+
+var CHART_DEFAULTS = {
+    scales: {
+        x: {
+            ticks: { color: 'rgba(180,220,180,0.55)', font: { size: 9 }, maxRotation: 0 },
+            grid:  { color: 'rgba(255,255,255,0.04)', drawBorder: false }
+        },
+        y: {
+            ticks: { color: 'rgba(180,220,180,0.55)', font: { size: 9 }, maxTicksLimit: 4 },
+            grid:  { color: 'rgba(255,255,255,0.06)', drawBorder: false }
+        }
+    },
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: 'rgba(10,30,10,0.9)',
+            titleColor: '#c8e6c9',
+            bodyColor: '#fff',
+            padding: 8,
+            cornerRadius: 6
+        }
+    },
+    animation: { duration: 600 },
+    responsive: true,
+    maintainAspectRatio: false
+};
+
+function requestBosque() {
+    if (!WorkspaceState.zonaGEE) return _noZonaGuard();
+
+    var bufferKm = parseFloat(document.getElementById('bosque-buffer').value) || 5;
+    var btn = document.getElementById('btn-bosque-gen');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    btn.disabled = true;
+
+    // Mostrar mensaje de espera (Hansen es rápido, ~15-30s)
+    var emptyEl = document.getElementById('bosque-empty');
+    if (emptyEl) emptyEl.innerHTML =
+        '<i class="fas fa-spinner fa-spin" style="font-size:22px; color:var(--accent); display:block; margin-bottom:10px;"></i>' +
+        '<p style="font-size:12px; color:var(--muted); margin:0;">Consultando Hansen GFC + NASA ORNL…<br><small>30–60 segundos en primera consulta</small></p>';
+
+    fetch('https://evergreen-backend-awv1.onrender.com/api/bosque', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            geojson:   WorkspaceState.zonaGEE.geometry,
+            buffer_km: bufferKm
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.innerHTML = '<i class="fas fa-satellite-dish"></i> Calcular';
+        btn.disabled = false;
+
+        if (data.error) { alert('Error: ' + data.error); return; }
+
+        // Ocultar empty state
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        // Actualizar buffer label
+        var bufLabel = document.getElementById('bosque-buffer-label');
+        if (bufLabel) bufLabel.textContent = bufferKm + ' km';
+
+        // ── Render Carbon Stock chart ───────────────────────────
+        renderChartCarbon(data.carbono, data.baseline_tonC);
+
+        // ── Render Forest Loss chart ────────────────────────────
+        renderChartBosque(data.perdida, data.total_ha_perdida);
+
+        // ── Mini panel bottom-right ─────────────────────────────
+        if (data.perdida && data.perdida.length > 0) renderMiniPanel(data.perdida);
+
+        // ── Guardar datos reales y actualizar panel Resumen ─────
+        _bosqueRealData = data;
+        updateDetailBosqueStats(data);
+
+        // ── Registrar capa de pérdida en el panel de capas ──────
+        if (data.tiles_perdida) registerLayer('bosque', L.tileLayer(data.tiles_perdida, { pane: 'overlayPane', zIndex: 380 }));
+
+        _fitToZone();
+    })
+    .catch(function() {
+        btn.innerHTML = '<i class="fas fa-satellite-dish"></i> Calcular';
+        btn.disabled = false;
+        if (emptyEl) emptyEl.innerHTML =
+            '<p style="font-size:12px; color:#e57373; margin:0;">Error de conexión al servidor.</p>';
+    });
+}
+
+function renderChartCarbon(serie, baselineTonC) {
+    var card = document.getElementById('bosque-card-carbon');
+    if (!card) return;
+    card.style.display = 'block';
+
+    // Valor headline: total actual (último año)
+    var ultimo = serie[serie.length - 1];
+    var totalEl = document.getElementById('bosque-carbon-total');
+    if (totalEl) totalEl.textContent = (ultimo.tonC / 1000).toFixed(1).replace('.', ',') + ' K TonC';
+
+    var periodEl = document.getElementById('bosque-carbon-period');
+    if (periodEl) periodEl.textContent = serie[0].year + ' – ' + ultimo.year;
+
+    var labels = serie.map(function(d) { return d.year; });
+    var values = serie.map(function(d) { return d.tonC; });
+
+    var ctx = document.getElementById('chart-carbon').getContext('2d');
+    if (_chartCarbon) _chartCarbon.destroy();
+
+    _chartCarbon = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                borderColor: '#66bb6a',
+                backgroundColor: 'rgba(102,187,106,0.12)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                borderWidth: 2
+            }]
+        },
+        options: Object.assign({}, CHART_DEFAULTS, {
+            scales: Object.assign({}, CHART_DEFAULTS.scales, {
+                x: Object.assign({}, CHART_DEFAULTS.scales.x, {
+                    ticks: { color: 'rgba(180,220,180,0.55)', font: { size: 9 },
+                             maxRotation: 0, callback: function(v, i) {
+                                 return i % 4 === 0 ? labels[i] : '';
+                             }}
+                }),
+                y: Object.assign({}, CHART_DEFAULTS.scales.y, {
+                    ticks: { color: 'rgba(180,220,180,0.55)', font: { size: 9 },
+                             maxTicksLimit: 3,
+                             callback: function(v) {
+                                 return (v / 1000).toFixed(0) + 'K';
+                             }}
+                })
+            })
+        })
+    });
+}
+
+function renderChartBosque(perdida, totalHa) {
+    var card = document.getElementById('bosque-card-perdida');
+    if (!card) return;
+    card.style.display = 'block';
+
+    var perdidaEl = document.getElementById('bosque-perdida-total');
+    if (perdidaEl) perdidaEl.textContent = totalHa.toLocaleString('es-CL', { maximumFractionDigits: 1 }) + ' Ha';
+
+    var labels     = perdida.map(function(d) { return d.year; });
+    var vals_zona  = perdida.map(function(d) { return d.ha_zona; });
+    var vals_buf   = perdida.map(function(d) { return d.ha_buffer; });
+
+    var ctx = document.getElementById('chart-bosque').getContext('2d');
+    if (_chartBosque) _chartBosque.destroy();
+
+    _chartBosque = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Zona',
+                    data: vals_zona,
+                    backgroundColor: '#4caf50',
+                    borderRadius: 2,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Buffer',
+                    data: vals_buf,
+                    backgroundColor: 'rgba(165,214,167,0.55)',
+                    borderRadius: 2,
+                    borderSkipped: false
+                }
+            ]
+        },
+        options: Object.assign({}, CHART_DEFAULTS, {
+            scales: Object.assign({}, CHART_DEFAULTS.scales, {
+                x: Object.assign({}, CHART_DEFAULTS.scales.x, {
+                    stacked: false,
+                    ticks: { color: 'rgba(180,220,180,0.55)', font: { size: 9 },
+                             maxRotation: 0, callback: function(v, i) {
+                                 return i % 4 === 0 ? labels[i] : '';
+                             }}
+                }),
+                y: Object.assign({}, CHART_DEFAULTS.scales.y, {
+                    stacked: false,
+                    ticks: { color: 'rgba(180,220,180,0.55)', font: { size: 9 },
+                             maxTicksLimit: 4,
+                             callback: function(v) { return v + ' Ha'; }}
+                })
+            })
+        })
+    });
+}
+
+// ---------------------------------------------------------
+// HISTORY CHARTS — comparación temporal de índices
+// ---------------------------------------------------------
+var _vegHistoryChart  = null;
+var _aguaHistoryChart = null;
+
+/**
+ * Dibuja/actualiza el gráfico de barras temporal para un índice de vegetación.
+ * Aparece automáticamente desde la 2.ª medición del mismo índice.
+ */
+function renderVegHistoryChart(indice) {
+    var key = 'vegetacion_' + indice;
+    var arr = (WorkspaceState.resultados || {})[key];
+    var wrap = document.getElementById('veg-historial');
+    if (!arr || arr.length < 2) { if (wrap) wrap.style.display = 'none'; return; }
+    if (wrap) wrap.style.display = 'block';
+
+    var canvas = document.getElementById('veg-history-chart');
+    if (!canvas) return;
+    if (_vegHistoryChart) { try { _vegHistoryChart.destroy(); } catch(e){} }
+
+    var labels = arr.map(function(e) {
+        if (e.fechaInicio && e.fechaFin)
+            return e.fechaInicio.slice(0,7) + '→' + e.fechaFin.slice(0,7);
+        return new Date(e.ts).toLocaleDateString('es-CL', {month:'short', year:'2-digit'});
+    });
+    var values = arr.map(function(e) {
+        return (e.stats && e.stats.mean != null) ? parseFloat(e.stats.mean.toFixed(3)) : null;
+    });
+    var colors = values.map(function(_, i) {
+        return i === values.length - 1 ? '#6aaa35' : 'rgba(106,170,53,0.45)';
+    });
+
+    _vegHistoryChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ data: values, backgroundColor: colors, borderRadius: 3, borderSkipped: false }]
+        },
+        options: _histChartOptions('rgba(100,140,100,0.6)')
+    });
+}
+
+/**
+ * Ídem para índices de agua (NDWI, MNDWI, NDMI).
+ */
+function renderAguaHistoryChart(indice) {
+    var key = 'agua_' + indice;
+    var arr = (WorkspaceState.resultados || {})[key];
+    var wrap = document.getElementById('agua-historial');
+    if (!arr || arr.length < 2) { if (wrap) wrap.style.display = 'none'; return; }
+    if (wrap) wrap.style.display = 'block';
+
+    var canvas = document.getElementById('agua-history-chart');
+    if (!canvas) return;
+    if (_aguaHistoryChart) { try { _aguaHistoryChart.destroy(); } catch(e){} }
+
+    var labels = arr.map(function(e) {
+        if (e.fechaInicio && e.fechaFin)
+            return e.fechaInicio.slice(0,7) + '→' + e.fechaFin.slice(0,7);
+        return new Date(e.ts).toLocaleDateString('es-CL', {month:'short', year:'2-digit'});
+    });
+    var values = arr.map(function(e) {
+        return (e.stats && e.stats.mean != null) ? parseFloat(e.stats.mean.toFixed(3)) : null;
+    });
+    var colors = values.map(function(_, i) {
+        return i === values.length - 1 ? '#1e6ea0' : 'rgba(30,110,160,0.4)';
+    });
+
+    _aguaHistoryChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ data: values, backgroundColor: colors, borderRadius: 3, borderSkipped: false }]
+        },
+        options: _histChartOptions('rgba(80,130,180,0.6)')
+    });
+}
+
+/** Opciones base compartidas para history charts */
+function _histChartOptions(tickColor) {
+    return {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(10,20,10,0.9)',
+                titleColor: '#c8e6c9', bodyColor: '#fff',
+                padding: 5, cornerRadius: 4,
+                callbacks: {
+                    title: function(items) { return items[0].label; },
+                    label: function(item) { return '  Media: ' + item.parsed.y; }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: tickColor, font: { size: 8 }, maxRotation: 25, maxTicksLimit: 8 },
+                grid: { display: false }
+            },
+            y: {
+                ticks: { color: tickColor, font: { size: 8 }, maxTicksLimit: 4 },
+                grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }
+            }
+        },
+        animation: { duration: 350 }
+    };
+}
+
+// ---------------------------------------------------------
+// INDICATOR ROWS — Resumen tab accordion (dinámico)
+// ---------------------------------------------------------
+var _indActive         = null;  // key string activo, ej: 'vegetacion_NDVI', 'bosque'
+var _chartDetailBosque = null;
+var _bosqueRealData    = null;  // datos reales del último requestBosque() exitoso
+var _climaFetchDone    = false; // Open-Meteo ya cargado para la zona actual
+
+// Abre/cierra el panel de detalle por key (ej: 'vegetacion_NDVI', 'bosque', 'agua_NDWI')
+function toggleIndDetail(key) {
+    var panel = document.getElementById('ind-detail-panel');
+    if (!panel) return;
+
+    // Clic en la fila activa → cerrar
+    if (_indActive === key) {
+        var activeRow = document.getElementById('ind-row-' + key);
+        if (activeRow) activeRow.classList.remove('active');
+        _hideAllDetailContents();
+        panel.style.display = 'none';
+        _indActive = null;
+        return;
+    }
+
+    // Cerrar la anterior
+    if (_indActive !== null) {
+        var prevRow = document.getElementById('ind-row-' + _indActive);
+        if (prevRow) prevRow.classList.remove('active');
+        _hideAllDetailContents();
+    }
+
+    _indActive = key;
+    var row = document.getElementById('ind-row-' + key);
+    if (row) row.classList.add('active');
+    panel.style.display = 'block';
+
+    // Activar capa GEE en el mapa (silencioso — no bloquea el detalle)
+    try { _activateMapLayer(key); } catch(e) { console.warn('activateMapLayer:', e); }
+
+    if (key === 'bosque') {
+        document.getElementById('ind-detail-bosque-content').style.display = 'block';
+        setTimeout(initDetailBosqueChart, 60);
+    } else if (key.indexOf('vegetacion_') === 0) {
+        var arr  = WorkspaceState.resultados && WorkspaceState.resultados[key];
+        var last = arr && arr.length ? arr[arr.length - 1] : null;
+        if (last) updateDetailVegStats(last.indice, last.stats, last.fechaInicio, last.fechaFin);
+        document.getElementById('ind-detail-veg-content').style.display = 'block';
+    } else if (key.indexOf('biodiversidad_') === 0) {
+        var arrBio  = WorkspaceState.resultados && WorkspaceState.resultados[key];
+        var lastBio = arrBio && arrBio.length ? arrBio[arrBio.length - 1] : null;
+        if (lastBio) populateBioDetail(lastBio);
+        document.getElementById('ind-detail-bio-content').style.display = 'block';
+    } else {
+        var arr2  = WorkspaceState.resultados && WorkspaceState.resultados[key];
+        var last2 = arr2 && arr2.length ? arr2[arr2.length - 1] : null;
+        if (last2) populateGenericDetail(key, last2);
+        document.getElementById('ind-detail-generic-content').style.display = 'block';
+    }
+
+    // Desplazar el panel lateral para que ind-detail-panel quede visible
+    setTimeout(function() {
+        var container = document.getElementById('tab-resumen-content');
+        if (!container || !panel) return;
+        var cRect = container.getBoundingClientRect();
+        var pRect = panel.getBoundingClientRect();
+        // Si el panel no está completamente dentro del área visible, desplazar
+        if (pRect.top < cRect.top + 8 || pRect.top > cRect.bottom - 80) {
+            var scrollTo = container.scrollTop + (pRect.top - cRect.top) - 16;
+            container.scrollTo({ top: Math.max(0, scrollTo), behavior: 'smooth' });
+        }
+    }, 200);
+}
+
+function _hideAllDetailContents() {
+    ['ind-detail-veg-content','ind-detail-bosque-content','ind-detail-generic-content','ind-detail-bio-content'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+}
+
+function initDetailBosqueChart() {
+    var canvas = document.getElementById('chart-detail-bosque');
+    if (!canvas) return;
+    if (_chartDetailBosque) { try { _chartDetailBosque.destroy(); } catch(e){} }
+
+    // Usar datos reales si ya se corrió el análisis; si no, datos demo
+    var perdida = (_bosqueRealData && _bosqueRealData.perdida && _bosqueRealData.perdida.length)
+        ? _bosqueRealData.perdida
+        : [
+            {year:2001,ha_zona:185,ha_buffer:72},{year:2002,ha_zona:143,ha_buffer:55},
+            {year:2003,ha_zona:247,ha_buffer:93},{year:2004,ha_zona:112,ha_buffer:42},
+            {year:2005,ha_zona:318,ha_buffer:121},{year:2006,ha_zona:198,ha_buffer:76},
+            {year:2007,ha_zona:276,ha_buffer:104},{year:2008,ha_zona:189,ha_buffer:72},
+            {year:2009,ha_zona:154,ha_buffer:59},{year:2010,ha_zona:304,ha_buffer:115},
+            {year:2011,ha_zona:267,ha_buffer:102},{year:2012,ha_zona:221,ha_buffer:84},
+            {year:2013,ha_zona:389,ha_buffer:148},{year:2014,ha_zona:319,ha_buffer:122},
+            {year:2015,ha_zona:334,ha_buffer:127},{year:2016,ha_zona:251,ha_buffer:96},
+            {year:2017,ha_zona:378,ha_buffer:144},{year:2018,ha_zona:456,ha_buffer:174},
+            {year:2019,ha_zona:303,ha_buffer:115},{year:2020,ha_zona:371,ha_buffer:141},
+            {year:2021,ha_zona:293,ha_buffer:111},{year:2022,ha_zona:312,ha_buffer:98},
+            {year:2023,ha_zona:428,ha_buffer:163}
+          ];
+
+    var years    = perdida.map(function(d) { return d.year; });
+    var zona     = perdida.map(function(d) { return d.ha_zona; });
+    var buffer   = perdida.map(function(d) { return d.ha_buffer; });
+    var lastYear = years[years.length - 1];
+
+    _chartDetailBosque = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets: [
+                {
+                    label: 'Zona',
+                    data: zona,
+                    backgroundColor: years.map(function(y) { return y === lastYear ? '#6aaa35' : '#3d8a3a'; }),
+                    borderRadius: 2, borderSkipped: false
+                },
+                {
+                    label: 'Buffer',
+                    data: buffer,
+                    backgroundColor: '#c8e8c5',
+                    borderRadius: 2, borderSkipped: false
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(10,20,10,0.9)',
+                    titleColor: '#c8e6c9', bodyColor: '#fff',
+                    padding: 6, cornerRadius: 4,
+                    callbacks: {
+                        title: function(items) { return items[0].label; },
+                        label: function(item) {
+                            return item.dataset.label + ': ' +
+                                   item.raw.toLocaleString('es-CL', {maximumFractionDigits:1}) + ' Ha';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: false,
+                    ticks: { color: 'rgba(100,120,100,0.6)', font: { size: 8 }, maxRotation: 0,
+                             callback: function(v, i) { return years[i] % 5 === 1 ? years[i] : ''; } },
+                    grid: { display: false }
+                },
+                y: {
+                    ticks: { color: 'rgba(100,120,100,0.6)', font: { size: 8 }, maxTicksLimit: 4,
+                             callback: function(v) { return v >= 1000 ? (v/1000).toFixed(1)+'K' : v; } },
+                    grid: { color: 'rgba(0,0,0,0.04)' }
+                }
+            },
+            animation: { duration: 400 }
+        }
+    });
+}
+
+/**
+ * Actualiza los stats del panel detalle de bosque (Resumen tab)
+ * con datos reales devueltos por /api/bosque.
+ */
+function updateDetailBosqueStats(data) {
+    var perdida  = data.perdida || [];
+    var haZona   = data.total_ha_perdida || 0;
+    var haBuf    = perdida.reduce(function(s, d) { return s + (d.ha_buffer || 0); }, 0);
+    var haTotal  = haZona + haBuf;
+
+    // Formato local: "10.798" en es-CL
+    var fmt = function(n) { return Math.round(n).toLocaleString('es-CL'); };
+
+    var set = function(id, v) { var el=document.getElementById(id); if(el) el.textContent=v; };
+    set('bosque-stat-zona',  fmt(haZona));
+    set('bosque-stat-buf',   fmt(haBuf));
+    set('bosque-stat-total', fmt(haTotal));
+
+    if (perdida.length) {
+        var yr0 = perdida[0].year;
+        var yr1 = perdida[perdida.length - 1].year;
+        set('bosque-stat-zona-lbl',  'HA \u00B7 ZONA '   + yr0 + '\u2013' + yr1);
+        set('bosque-stat-buf-lbl',   'HA \u00B7 BUFFER ' + yr0 + '\u2013' + yr1);
+        set('bosque-stat-total-lbl', 'HA \u00B7 TOTAL '  + yr0 + '\u2013' + yr1);
+    }
+
+    // Si el detalle bosque está abierto, refrescar el chart
+    if (_indActive === 'bosque') initDetailBosqueChart();
+
+    // Actualizar fila de bosque en el panel Resumen
+    refreshIndRows();
+}
+
+// ---------------------------------------------------------
+// DETAIL PANEL STATS — conectar resultados reales
+// ---------------------------------------------------------
+
+/**
+ * Actualiza los stats del detalle 1 (Vegetación) en el Resumen
+ * con datos reales de requestVegetacion().
+ */
+function updateDetailVegStats(indice, stats, fechaInicio, fechaFin) {
+    if (!stats) return;
+
+    var fmt = function(v, dec) {
+        if (v == null) return '—';
+        return Number(v).toFixed(dec != null ? dec : 3);
+    };
+
+    // Título y fecha
+    var titleEl = document.getElementById('d1-title');
+    var dateEl  = document.getElementById('d1-date');
+    if (titleEl) titleEl.textContent = 'Análisis ' + indice;
+    if (dateEl && fechaInicio && fechaFin) {
+        dateEl.textContent = fechaInicio.slice(0, 10) + ' → ' + fechaFin.slice(0, 10);
+    }
+
+    // Stats: el backend devuelve keys como 'NDVI_mean', 'NDVI_min', etc.
+    var prefix = indice + '_';
+    var mean = stats.mean   != null ? stats.mean   : stats[prefix + 'mean'];
+    var min  = stats.min    != null ? stats.min    : stats[prefix + 'min'];
+    var max  = stats.max    != null ? stats.max    : stats[prefix + 'max'];
+
+    var meanEl   = document.getElementById('d1-mean');
+    var minEl    = document.getElementById('d1-min');
+    var maxEl    = document.getElementById('d1-max');
+    var meanLbl  = document.getElementById('d1-mean-lbl');
+    var minLbl   = document.getElementById('d1-min-lbl');
+    var maxLbl   = document.getElementById('d1-max-lbl');
+
+    if (meanEl) meanEl.textContent = fmt(mean);
+    if (minEl)  minEl.textContent  = fmt(min);
+    if (maxEl)  maxEl.textContent  = fmt(max);
+    if (meanLbl) meanLbl.textContent = indice + ' · MEDIA ZONA';
+    if (minLbl)  minLbl.textContent  = indice + ' · MÍNIMO ZONA';
+    if (maxLbl)  maxLbl.textContent  = indice + ' · MÁXIMO ZONA';
+
+    // Si el detalle de vegetación está abierto, scroll para que se vea actualizado
+    if (_indActive && _indActive.indexOf('vegetacion_') === 0) {
+        var panel = document.getElementById('ind-detail-panel');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+/**
+ * Restaura los stats de vegetación desde WorkspaceState.resultados
+ * (usado al recargar la página con datos en localStorage).
+ */
+function restoreDetailVegStats() {
+    if (!WorkspaceState.resultados) return;
+    var best = null;
+    Object.keys(WorkspaceState.resultados).forEach(function(k) {
+        if (k.indexOf('vegetacion_') !== 0) return;
+        var arr = WorkspaceState.resultados[k];
+        if (!arr || !arr.length) return;
+        var last = arr[arr.length - 1];
+        if (!best || last.ts > best.ts) best = last;
+    });
+    if (best) updateDetailVegStats(best.indice, best.stats, best.fechaInicio, best.fechaFin);
+}
+
+// ---------------------------------------------------------
+// IND-ROWS — conectar resultados reales al panel Resumen
+// ---------------------------------------------------------
+
+/**
+ * Genera dinámicamente las filas de indicadores en el tab Resumen.
+ * Una fila por cada índice calculado en WorkspaceState.resultados + bosque.
+ */
+function refreshIndRows() {
+    var list     = document.getElementById('ind-list');
+    var emptyEl  = document.getElementById('ind-empty-state');
+    if (!list) return;
+
+    // ── Recolectar resultados ─────────────────────────────────
+    var rows = [];
+    if (WorkspaceState.resultados) {
+        Object.keys(WorkspaceState.resultados).forEach(function(key) {
+            var arr = WorkspaceState.resultados[key];
+            if (!arr || !arr.length) return;
+            var last = arr[arr.length - 1];
+            rows.push({ key: key, tipo: last.tipo, indice: last.indice, result: last });
+        });
+    }
+    if (_bosqueRealData && _bosqueRealData.total_ha_perdida != null) {
+        rows.push({ key: 'bosque', tipo: 'bosque', indice: 'Hansen', result: _bosqueRealData });
+    }
+    rows.sort(function(a, b) { return (b.result.ts || 0) - (a.result.ts || 0); });
+
+    // ── Limpiar filas anteriores ──────────────────────────────
+    list.querySelectorAll('.ind-row').forEach(function(r) { r.remove(); });
+    if (emptyEl) emptyEl.style.display = rows.length ? 'none' : 'flex';
+
+    // ── Generar nuevas filas ──────────────────────────────────
+    rows.forEach(function(r) {
+        var el = _buildIndRow(r);
+        list.appendChild(el);
+        if (_indActive === r.key) el.classList.add('active');
+    });
+}
+
+function _buildIndRow(r) {
+    var key    = r.key;
+    var tipo   = r.tipo;
+    var indice = r.indice;
+    var result = r.result;
+
+    var iconCls = 'ind-icon--veg',   iconFA = 'fas fa-seedling';
+    if (tipo === 'bosque')        { iconCls = 'ind-icon--forest'; iconFA = 'fas fa-tree'; }
+    else if (tipo === 'agua')     { iconCls = 'ind-icon--agua';   iconFA = 'fas fa-tint'; }
+    else if (tipo === 'dem')      { iconCls = 'ind-icon--dem';    iconFA = 'fas fa-mountain'; }
+    else if (tipo === 'biodiversidad') { iconCls = 'ind-icon--bio'; iconFA = 'fas fa-leaf'; }
+
+    var val = '—', unit = '';
+    if (tipo === 'bosque') {
+        var ha = result.total_ha_perdida || 0;
+        val  = ha >= 1000 ? (ha / 1000).toFixed(1) + 'K' : Math.round(ha).toString();
+        unit = 'Ha pérdida total';
+    } else if (tipo === 'biodiversidad' && result.stats) {
+        val  = result.stats.n_especies != null ? String(result.stats.n_especies) : '—';
+        unit = 'Spp. registradas';
+    } else if (result.stats) {
+        var mean = result.stats.mean;
+        if (mean != null) val = Number(mean).toFixed(tipo === 'dem' ? 0 : 3);
+        unit = 'Media · ' + indice;
+    }
+
+    var src = tipo === 'bosque'
+        ? 'Hansen GFC · 2001–2023'
+        : tipo === 'biodiversidad'
+        ? 'iNaturalist · GBIF'
+        : (tipo.charAt(0).toUpperCase() + tipo.slice(1)) +
+          (result.fechaInicio ? ' · ' + result.fechaInicio.slice(0,4) +
+          (result.fechaFin ? '–' + result.fechaFin.slice(0,4) : '') : '');
+    var name = tipo === 'bosque' ? 'Pérdida de Bosque'
+             : tipo === 'biodiversidad' ? 'Biodiversidad GBIF'
+             : indice;
+
+    var div = document.createElement('div');
+    div.className  = 'ind-row has-data';
+    div.id         = 'ind-row-' + key;
+    div.setAttribute('onclick', 'toggleIndDetail("' + key + '")');
+    div.innerHTML  =
+        '<span class="ind-row-dot"></span>' +
+        '<div class="ind-icon ' + iconCls + '"><i class="' + iconFA + '"></i></div>' +
+        '<div class="ind-info">' +
+            '<span class="ind-name">'   + name + '</span>' +
+            '<span class="ind-source">' + src  + '</span>' +
+        '</div>' +
+        '<div class="ind-value-group">' +
+            '<span class="ind-value">' + val  + '</span>' +
+            '<span class="ind-unit">'  + unit + '</span>' +
+        '</div>' +
+        '<i class="fas fa-chevron-right ind-chev"></i>';
+    return div;
+}
+
+/** Popula el panel genérico con stats de agua / elevación / otros. */
+function populateGenericDetail(key, result) {
+    var parts  = key.split('_');
+    var tipo   = parts[0];
+    var indice = parts.slice(1).join('_');
+    var stats  = result.stats || {};
+    var isDem  = tipo === 'dem';
+
+    var fmt = function(v) {
+        if (v == null) return '—';
+        return isDem ? Math.round(v) + ' m' : Number(v).toFixed(3);
+    };
+
+    var titleEl = document.getElementById('dg-title');
+    var dateEl  = document.getElementById('dg-date');
+    if (titleEl) titleEl.textContent = 'Análisis ' + indice;
+    if (dateEl && result.fechaInicio)
+        dateEl.textContent = result.fechaInicio.slice(0,10) + ' → ' + (result.fechaFin||'').slice(0,10);
+
+    var unit = isDem ? 'm.s.n.m.' : indice;
+    var ids  = ['dg-mean','dg-min','dg-max','dg-mean-lbl','dg-min-lbl','dg-max-lbl'];
+    var vals = [
+        fmt(stats.mean  != null ? stats.mean  : stats.elev_mean),
+        fmt(stats.min   != null ? stats.min   : stats.elev_min),
+        fmt(stats.max   != null ? stats.max   : stats.elev_max),
+        unit + ' · MEDIA ZONA', unit + ' · MÍNIMO ZONA', unit + ' · MÁXIMO ZONA'
+    ];
+    ids.forEach(function(id, i) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = vals[i];
+    });
+}
+
+/** Popula el panel de detalle de Biodiversidad con stats del último análisis. */
+function populateBioDetail(entry) {
+    var s = entry.stats || {};
+    var set = function(id, v) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = (v != null && v !== '') ? v : '—';
+    };
+    set('db-spp', s.n_especies);
+    set('db-rce', s.n_rce);
+    set('db-cr',  s.n_cr);
+    set('db-en',  s.n_en);
+    set('db-vu',  s.n_vu);
+
+    var ivc = s.ivc != null ? Number(s.ivc).toFixed(2) : null;
+    set('db-ivc', ivc);
+
+    var interp = '';
+    if (s.ivc != null) {
+        if (s.ivc > 1.5)      interp = '— Alta sensibilidad';
+        else if (s.ivc > 0.5) interp = '— Sensibilidad moderada';
+        else                   interp = '— Baja sensibilidad';
+    }
+    set('db-ivc-interp', interp);
+    set('db-piso', s.piso);
+}
+
+// ---------------------------------------------------------
+// CLIMA WIDGET — Open-Meteo (temperatura + precipitación)
+// ---------------------------------------------------------
+function fetchClimaWidget() {
+    if (!WorkspaceState.zonaGEE) return;
+    if (_climaFetchDone) return;
+
+    var geom   = WorkspaceState.zonaGEE.geometry;
+    var coords = geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0][0];
+    var lon = coords.reduce(function(s,c){return s+c[0];},0) / coords.length;
+    var lat = coords.reduce(function(s,c){return s+c[1];},0) / coords.length;
+
+    var widget  = document.getElementById('clima-widget');
+    var loading = document.getElementById('clima-loading');
+    if (widget) widget.style.display = 'block';
+    if (loading) loading.style.display = 'block';
+
+    var yr        = new Date().getFullYear() - 1;
+    var startDate = yr + '-01-01';
+    var endDate   = yr + '-12-31';
+
+    fetch('https://archive-api.open-meteo.com/v1/archive?' +
+          'latitude='  + lat.toFixed(4) + '&longitude=' + lon.toFixed(4) +
+          '&start_date=' + startDate + '&end_date=' + endDate +
+          '&daily=temperature_2m_mean,temperature_2m_max,precipitation_sum&timezone=auto')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (loading) loading.style.display = 'none';
+        if (!data || !data.daily) return;
+
+        var temps = (data.daily.temperature_2m_mean || []).filter(function(v){return v!=null;});
+        var maxT  = (data.daily.temperature_2m_max  || []).filter(function(v){return v!=null;});
+        var pp    = (data.daily.precipitation_sum    || []).filter(function(v){return v!=null;});
+
+        var meanT  = temps.length ? temps.reduce(function(s,v){return s+v;},0)/temps.length : null;
+        var topT   = maxT.length  ? Math.max.apply(null, maxT) : null;
+        var totalP = pp.length    ? pp.reduce(function(s,v){return s+v;},0) : null;
+
+        var set = function(id, v) { var el=document.getElementById(id); if(el&&v!=null) el.textContent=v; };
+        set('clima-temp-mean', meanT  != null ? meanT.toFixed(1)  + '°C' : '—');
+        set('clima-temp-max',  topT   != null ? topT.toFixed(1)   + '°C' : '—');
+        set('clima-pp',        totalP != null ? Math.round(totalP) + ' mm' : '—');
+        set('clima-period',    'Año ' + yr);
+        _climaFetchDone = true;
+    })
+    .catch(function() { if (loading) loading.style.display = 'none'; });
+}
+
+// ---------------------------------------------------------
+// RESET ANÁLISIS — borra resultados sin tocar la zona
+// ---------------------------------------------------------
+function resetAnalisis() {
+    if (!confirm('¿Reiniciar todos los análisis? Se borrarán los resultados guardados pero se mantendrá la zona.')) return;
+
+    // Remover capas de análisis del mapa
+    if (typeof map !== 'undefined') {
+        Object.keys(_layerRegistry).forEach(function(id) {
+            var l = _layerRegistry[id];
+            if (l && map.hasLayer(l)) map.removeLayer(l);
+        });
+        if (vegLayer        && map.hasLayer(vegLayer))        map.removeLayer(vegLayer);
+        if (aguaLayer       && map.hasLayer(aguaLayer))       map.removeLayer(aguaLayer);
+        if (_demLayerActual && map.hasLayer(_demLayerActual)) map.removeLayer(_demLayerActual);
+    }
+    vegLayer = null; aguaLayer = null; _demLayerActual = null;
+
+    WorkspaceState.resultados = {};
+    _bosqueRealData = null;
+    _tilesCache     = {};
+    _layerRegistry  = {};
+    saveWorkspaceState();
+    renderIndicadorCards();
+    refreshIndRows();
+    _refreshGeeLayersPanel();
+    // Resetear mini-panel a demo
+    var _DEMO_RESET = [
+        {year:2001,ha_zona:185,ha_buffer:72},{year:2003,ha_zona:247,ha_buffer:93},
+        {year:2005,ha_zona:318,ha_buffer:121},{year:2007,ha_zona:276,ha_buffer:104},
+        {year:2010,ha_zona:304,ha_buffer:115},{year:2013,ha_zona:389,ha_buffer:148},
+        {year:2015,ha_zona:334,ha_buffer:127},{year:2018,ha_zona:456,ha_buffer:174},
+        {year:2020,ha_zona:371,ha_buffer:141},{year:2022,ha_zona:312,ha_buffer:98},
+        {year:2023,ha_zona:428,ha_buffer:163}
+    ];
+    renderMiniPanel(_DEMO_RESET);
+    if (typeof mostrarNotificacion === 'function') mostrarNotificacion('✅ Análisis reiniciados');
+}
+
+// ---------------------------------------------------------
+// DRAW TOOLS TOGGLE (Resumen tab)
+// ---------------------------------------------------------
+function toggleDrawTools() {
+    var wrap = document.getElementById('draw-tools-wrap');
+    var btn  = document.getElementById('draw-toggle-btn');
+    if (!wrap) return;
+    var isOpen = wrap.classList.toggle('open');
+    if (btn) btn.classList.toggle('open', isOpen);
+}
+
+// ---------------------------------------------------------
+// LAYER REGISTRY — capas GEE por id
+// ---------------------------------------------------------
+var _layerRegistry = {};
+
+function registerLayer(id, layerInstance) {
+    _layerRegistry[id] = layerInstance;
+    _refreshGeeLayersPanel();
+}
+
+// Labels legibles para cada clave de registro
+var _GEE_LAYER_LABELS = {
+    'vegetacion_NDVI':  'NDVI · Vegetación',
+    'vegetacion_EVI':   'EVI · Vegetación',
+    'vegetacion_SAVI':  'SAVI · Vegetación',
+    'vegetacion_MSAVI': 'MSAVI · Vegetación',
+    'vegetacion_NDRE':  'NDRE · Vegetación',
+    'vegetacion_NBR':   'NBR · Área Quemada',
+    'agua_NDWI':        'NDWI · Agua',
+    'agua_MNDWI':       'MNDWI · Agua',
+    'agua_NDMI':        'NDMI · Humedad',
+    'dem_Elevacion':    'Elevación · DEM',
+    'dem_Pendiente':    'Pendiente · DEM',
+    'dem_Aspecto':      'Aspecto · DEM',
+    'bosque':           'Pérdida de Bosque'
+};
+
+/** Reconstruye la sección dinámica de capas GEE en el panel de capas. */
+function _refreshGeeLayersPanel() {
+    var container = document.getElementById('gee-layers-dynamic');
+    if (!container) return;
+    var ids = Object.keys(_layerRegistry);
+    if (ids.length === 0) { container.style.display = 'none'; return; }
+    container.style.display = 'block';
+    var html = '<div class="gee-layers-sep"></div><div class="gee-layers-header">Análisis GEE</div>';
+    ids.forEach(function(id) {
+        var label = _GEE_LAYER_LABELS[id] || id;
+        var rowId = 'glayer-' + id.replace(/_/g, '-');
+        html += '<div class="map-layer-row off" id="' + rowId + '"' +
+                ' onclick="toggleLayerById(\'' + id + '\', this);">' +
+                '<div class="map-layer-check"><i class="fas fa-check"></i></div>' +
+                '<span class="map-layer-label">' + label + '</span>' +
+                '<span class="map-gee-badge">GEE</span>' +
+                '</div>' +
+                '<div class="map-layer-opacity">' +
+                '<span class="opacity-label">Opacidad</span>' +
+                '<input type="range" min="0" max="100" value="80" class="opacity-slider"' +
+                ' oninput="setLayerOpacity(\'' + id + '\', this.value/100);">' +
+                '<span class="opacity-val">80%</span>' +
+                '</div>';
+    });
+    container.innerHTML = html;
+}
+
+/**
+ * Desactiva todas las capas de análisis del mapa y activa la indicada por key.
+ * Llamado desde toggleIndDetail() al abrir una fila del panel Resumen.
+ */
+function _activateMapLayer(key) {
+    if (typeof map === 'undefined') return;
+
+    // Quitar todas las capas de análisis que puedan estar visibles
+    var candidatos = [vegLayer, aguaLayer, _demLayerActual, _indicadorLayer];
+    candidatos.forEach(function(l) {
+        if (l && map.hasLayer(l)) map.removeLayer(l);
+    });
+    _indicadorLayer = null;
+
+    // Quitar capas del registro que estén en el mapa y resetear filas
+    Object.keys(_layerRegistry).forEach(function(id) {
+        var l = _layerRegistry[id];
+        if (l && map.hasLayer(l)) map.removeLayer(l);
+        var rowEl = document.getElementById('glayer-' + id.replace(/_/g, '-'));
+        if (rowEl) { rowEl.classList.remove('on'); rowEl.classList.add('off'); }
+    });
+
+    // Activar la capa solicitada
+    var layer = _layerRegistry[key];
+    if (!layer) return; // Sin capa registrada — silencioso (el detalle igual se muestra)
+
+    layer.addTo(map);
+
+    // Mantener referencias de tracking coherentes
+    if (key.indexOf('vegetacion_') === 0) vegLayer = layer;
+    else if (key.indexOf('agua_') === 0)  aguaLayer = layer;
+    else if (key.indexOf('dem_') === 0)   _demLayerActual = layer;
+
+    // Marcar fila de capas como activa
+    var rowEl = document.getElementById('glayer-' + key.replace(/_/g, '-'));
+    if (rowEl) { rowEl.classList.add('on'); rowEl.classList.remove('off'); }
+}
+
+function setLayerOpacity(id, val) {
+    var layer = _layerRegistry[id];
+    if (layer && typeof layer.setOpacity === 'function') {
+        layer.setOpacity(parseFloat(val));
+    }
+}
+
+function toggleLayerById(id, rowEl) {
+    var layer = _layerRegistry[id];
+    var row = rowEl || document.getElementById('layer-' + id);
+    if (!row) return;
+    var wasOn = row.classList.contains('on');
+    row.classList.toggle('on',  !wasOn);
+    row.classList.toggle('off', wasOn);
+    if (typeof map !== 'undefined' && layer) {
+        if (wasOn) map.removeLayer(layer);
+        else       map.addLayer(layer);
+    }
+}
+
+function setCuencasOpacity(val) {
+    if (typeof cuencasLayer === 'undefined' || !cuencasLayer) return;
+    if (typeof cuencasLayer.setStyle === 'function') {
+        cuencasLayer.setStyle({ opacity: parseFloat(val), fillOpacity: parseFloat(val) * 0.3 });
+    } else if (typeof cuencasLayer.setOpacity === 'function') {
+        cuencasLayer.setOpacity(parseFloat(val));
+    }
+}
+
+// ---------------------------------------------------------
+// MINI PANEL — Bosque bottom-right widget
+// ---------------------------------------------------------
+var _miniChartInstance = null;
+var _miniPanelData     = null;
+var _miniSelectedYear  = null;
+
+function renderMiniPanel(perdida) {
+    if (!perdida || perdida.length === 0) return;
+    _miniPanelData = perdida;
+    var mp = document.getElementById('mini-panel');
+    if (!mp) return;
+    mp.classList.remove('hidden');
+
+    // Año más reciente por defecto
+    _miniSelectedYear = perdida[perdida.length - 1].year;
+
+    // Pills de años
+    var strip = document.getElementById('mini-years-strip');
+    if (strip) {
+        strip.innerHTML = perdida.map(function(d) {
+            return '<button class="mini-yr-pill' + (d.year === _miniSelectedYear ? ' active' : '') +
+                '" onclick="selectMiniYear(' + d.year + ')">' + d.year + '</button>';
+        }).join('');
+    }
+
+    updateMiniHero(_miniSelectedYear);
+    renderMiniChart();
+}
+
+function selectMiniYear(year) {
+    _miniSelectedYear = year;
+    document.querySelectorAll('.mini-yr-pill').forEach(function(pill) {
+        pill.classList.toggle('active', parseInt(pill.textContent) === year);
+    });
+    updateMiniHero(year);
+    renderMiniChart();
+}
+
+function updateMiniHero(year) {
+    if (!_miniPanelData) return;
+    var entry = _miniPanelData.find(function(d) { return d.year === year; });
+    if (!entry) return;
+    var yearEl = document.getElementById('mini-year-big');
+    var valEl  = document.getElementById('mini-val-num');
+    if (yearEl) yearEl.textContent = year;
+    if (valEl)  valEl.textContent  = Math.round(entry.ha_zona) + ' Ha';
+}
+
+function renderMiniChart() {
+    if (!_miniPanelData) return;
+    var canvas = document.getElementById('mini-chart');
+    if (!canvas) return;
+    if (_miniChartInstance) { try { _miniChartInstance.destroy(); } catch(e){} }
+
+    var labels = _miniPanelData.map(function(d) { return d.year; });
+    var values = _miniPanelData.map(function(d) { return d.ha_zona; });
+    var colors = _miniPanelData.map(function(d) {
+        return d.year === _miniSelectedYear ? '#6aaa35' : 'rgba(106,170,53,0.35)';
+    });
+
+    _miniChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ data: values, backgroundColor: colors, borderRadius: 2, borderSkipped: false }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: {
+                x: {
+                    ticks: {
+                        color: 'rgba(255,255,255,0.2)', font: { size: 8 }, maxRotation: 0,
+                        callback: function(v, i) { return i % 5 === 0 ? labels[i] : ''; }
+                    },
+                    grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }
+                },
+                y: {
+                    ticks: { color: 'rgba(255,255,255,0.2)', font: { size: 8 }, maxTicksLimit: 3 },
+                    grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }
+                }
+            },
+            animation: { duration: 300 }
+        }
+    });
+}
+
+function enviarZonaABiodiversidad() {
+    var iframe = document.getElementById('iframe-biodiversidad');
+    if (iframe && iframe.contentWindow && WorkspaceState.zona) {
+        iframe.contentWindow.postMessage({ tipo: 'zona_activa', geojson: WorkspaceState.zona }, '*');
+    }
+}
+
+// ---------------------------------------------------------
+// FUNCIONES DE TABS ESPECÍFICOS (Vegetación y Elevación)
+// ---------------------------------------------------------
+// GRADIENTES FRONTEND — deben coincidir exactamente con VIZ_PALETTES del backend
+// ---------------------------------------------------------
+var VEG_GRADIENTE = {
+    'NDVI':  'linear-gradient(90deg,#d73027,#f46d43,#fdae61,#fee08b,#ffffbf,#d9ef8b,#a6d96a,#66bd63,#1a9850,#006837)',
+    'EVI':   'linear-gradient(90deg,#d73027,#f46d43,#fdae61,#fee08b,#ffffbf,#d9ef8b,#a6d96a,#66bd63,#1a9850,#006837)',
+    'EVI2':  'linear-gradient(90deg,#d73027,#f46d43,#fdae61,#fee08b,#ffffbf,#d9ef8b,#a6d96a,#66bd63,#1a9850,#006837)',
+    'SAVI':  'linear-gradient(90deg,#d73027,#f46d43,#fdae61,#fee08b,#ffffbf,#d9ef8b,#a6d96a,#66bd63,#1a9850,#006837)',
+    'LAI':   'linear-gradient(90deg,#fff7bc,#fec44f,#fe9929,#ec7014,#cc4c02,#8c2d04)',
+    'VARI':  'linear-gradient(90deg,#d73027,#f46d43,#fdae61,#ffffbf,#a6d96a,#1a9850,#006837)',
+    'NDMI':  'linear-gradient(90deg,#d7191c,#fdae61,#ffffbf,#abd9e9,#2c7bb6)',
+    'MSI':   'linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c)',
+    'NDWI':  'linear-gradient(90deg,#d4a96a,#f5f5dc,#9ecae1,#2166ac,#084081)',
+    'MNDWI': 'linear-gradient(90deg,#c7a46b,#faf0dc,#74b9d4,#1a6aaa,#053061)',
+    'NBR':   'linear-gradient(90deg,#006837,#1a9850,#a6d96a,#ffffbf,#fdae61,#f46d43,#d73027)',
+    'NBR2':  'linear-gradient(90deg,#006837,#1a9850,#a6d96a,#ffffbf,#fdae61,#f46d43,#d73027)',
+    'NDDI':  'linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c)',
+    'BSI':   'linear-gradient(90deg,#1a9850,#ffffbf,#d73027)',
+    'NDSI':  'linear-gradient(90deg,#f7fbff,#c6dbef,#6baed6,#2171b5,#084594)'
+};
+var _VEG_GRADIENTE_DEFAULT = 'linear-gradient(90deg,#440154,#31688e,#35b779,#fde725)';
+
+var vegLayer = null;
+var demLayer = null;
+
+function requestVegetacion() {
+    if (!WorkspaceState.zonaGEE) return _noZonaGuard();
+
+    var btn = document.getElementById('btn-veg-gen');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    btn.disabled = true;
+
+    var payload = {
+        geojson: WorkspaceState.zonaGEE.geometry,
+        indice: document.getElementById('veg-indice').value,
+        fecha_inicio: document.getElementById('veg-inicio').value,
+        fecha_fin: document.getElementById('veg-fin').value
+    };
+
+    fetch('https://evergreen-backend-awv1.onrender.com/api/vegetacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.innerHTML = '<i class="fas fa-seedling"></i> Generar Análisis';
+        btn.disabled = false;
+        if (data.error) {
+            if (typeof mostrarNotificacion === 'function') mostrarNotificacion('❌ ' + data.error);
+            else alert('Error: ' + data.error);
+            return;
+        }
+
+        if (vegLayer) map.removeLayer(vegLayer);
+        vegLayer = L.tileLayer(data.tiles, { pane: 'overlayPane', zIndex: 400 });
+        vegLayer.addTo(map);
+
+        // Stats
+        document.getElementById('veg-mean').textContent = (data.stats.mean !== null ? data.stats.mean.toFixed(3) : '—');
+        document.getElementById('veg-min').textContent  = (data.stats.min  !== null ? data.stats.min.toFixed(3)  : '—');
+        document.getElementById('veg-max').textContent  = (data.stats.max  !== null ? data.stats.max.toFixed(3)  : '—');
+
+        // N imágenes
+        var nimEl = document.getElementById('veg-nimages');
+        if (nimEl) nimEl.textContent = 'Mediana de ' + (data.n_imagenes || '?') + ' imágenes · p2–p98 adaptado';
+
+        // Leyenda min/max reales
+        var lblMin = document.getElementById('veg-legend-min');
+        var lblMax = document.getElementById('veg-legend-max');
+        if (lblMin && data.min_viz !== undefined) lblMin.textContent = data.min_viz.toFixed(2);
+        if (lblMax && data.max_viz !== undefined) lblMax.textContent = data.max_viz.toFixed(2);
+
+        // Gradiente dinámico según índice (coincide con palette del backend)
+        var gradBar = document.getElementById('veg-gradient-bar');
+        if (gradBar) gradBar.style.background = VEG_GRADIENTE[payload.indice] || _VEG_GRADIENTE_DEFAULT;
+
+        // Mostrar panel y centrar mapa
+        document.getElementById('veg-resultados').style.display = 'block';
+        _fitToZone();
+
+        // Registrar capa en el panel de capas (todas las variantes)
+        registerLayer('vegetacion_' + payload.indice, vegLayer);
+
+        // Guardar en dashboard Resumen
+        saveResultado('vegetacion', payload.indice, data.stats, data.tiles,
+                      payload.fecha_inicio, payload.fecha_fin);
+
+        // Actualizar panel detalle 1 en Resumen con datos reales
+        updateDetailVegStats(payload.indice, data.stats, payload.fecha_inicio, payload.fecha_fin);
+
+        // Gráfico de evolución temporal (aparece desde la 2.ª medición)
+        renderVegHistoryChart(payload.indice);
+    })
+    .catch(function() {
+        btn.innerHTML = '<i class="fas fa-seedling"></i> Generar Análisis';
+        btn.disabled = false;
+        if (typeof mostrarNotificacion === 'function') mostrarNotificacion('❌ Error de conexión al servidor.');
+        else alert('Error de conexión al servidor.');
+    });
+}
+
+// ---------------------------------------------------------
+// AGUA — Análisis NDWI / MNDWI / NDMI
+// ---------------------------------------------------------
+var aguaLayer = null;
+
+// Info descriptiva por índice
+var AGUA_INFO = {
+    'NDWI':  'Detecta agua superficial usando Verde (B3) e Infrarrojo Cercano (B8). Valores > 0 indican presencia de agua.',
+    'MNDWI': 'Versión mejorada del NDWI usando Verde (B3) e Infrarrojo de Onda Corta (B11). Más eficiente en zonas urbanas y turbias.',
+    'NDMI':  'Índice de humedad foliar y del suelo usando NIR (B8) y SWIR (B11). Útil para detectar estrés hídrico en vegetación.'
+};
+
+// Gradiente visual por índice
+var AGUA_GRADIENTE = {
+    'NDWI':  'linear-gradient(90deg, #d4a96a, #f5f5dc, #9ecae1, #2166ac, #084081)',
+    'MNDWI': 'linear-gradient(90deg, #c7a46b, #faf0dc, #74b9d4, #1a6aaa, #053061)',
+    'NDMI':  'linear-gradient(90deg, #d7191c, #fdae61, #ffffbf, #abd9e9, #2c7bb6)'
+};
+
+function actualizarInfoAgua() {
+    var sel = document.getElementById('agua-indice');
+    if (!sel) return;
+    var indice = sel.value;
+    var infoEl = document.getElementById('agua-info-text');
+    if (infoEl) infoEl.textContent = AGUA_INFO[indice] || '';
+}
+
+function requestAgua() {
+    if (!WorkspaceState.zonaGEE) return _noZonaGuard();
+
+    var indice = document.getElementById('agua-indice').value;
+    var btn = document.getElementById('btn-agua-gen');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    btn.disabled = true;
+
+    var payload = {
+        geojson: WorkspaceState.zonaGEE.geometry,
+        indice: indice,
+        fecha_inicio: document.getElementById('agua-inicio').value,
+        fecha_fin: document.getElementById('agua-fin').value
+    };
+
+    fetch('https://evergreen-backend-awv1.onrender.com/api/vegetacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.innerHTML = '<i class="fas fa-tint"></i> Generar Análisis de Agua';
+        btn.disabled = false;
+        if (data.error) {
+            mostrarNotificacion('❌ ' + data.error);
+            return;
+        }
+
+        // Capa en el mapa
+        if (aguaLayer) map.removeLayer(aguaLayer);
+        aguaLayer = L.tileLayer(data.tiles, { pane: 'overlayPane', zIndex: 400 });
+        aguaLayer.addTo(map);
+
+        // Actualizar stats (null-safe)
+        document.getElementById('agua-mean').textContent = (data.stats.mean !== null ? data.stats.mean.toFixed(3) : '—');
+        document.getElementById('agua-min').textContent  = (data.stats.min  !== null ? data.stats.min.toFixed(3)  : '—');
+        document.getElementById('agua-max').textContent  = (data.stats.max  !== null ? data.stats.max.toFixed(3)  : '—');
+        document.getElementById('agua-indice-label').textContent = indice;
+
+        // Gradiente según índice
+        var gradBar = document.getElementById('agua-gradient-bar');
+        if (gradBar) gradBar.style.background = AGUA_GRADIENTE[indice] || AGUA_GRADIENTE['NDWI'];
+
+        document.getElementById('agua-resultados').style.display = 'block';
+        _fitToZone();
+
+        // Registrar capa en el panel de capas
+        registerLayer('agua_' + indice, aguaLayer);
+
+        // Guardar en dashboard de Resumen
+        saveResultado('agua', indice, data.stats, data.tiles,
+                      payload.fecha_inicio, payload.fecha_fin);
+
+        // Gráfico de evolución temporal
+        renderAguaHistoryChart(indice);
+    })
+    .catch(function() {
+        btn.innerHTML = '<i class="fas fa-tint"></i> Generar Análisis de Agua';
+        btn.disabled = false;
+        mostrarNotificacion('❌ Error de conexión al servidor.');
+    });
+}
+
+// Almacena las 3 URLs de tiles del DEM para alternar sin re-procesar
+var _demTiles = { dem: null, slope: null, aspect: null };
+var _demLayerActual = null;
+
+function switchDemLayer(tipo) {
+    if (!_demTiles[tipo]) return;
+
+    // Actualizar pill activo
+    ['dem', 'slope', 'aspect'].forEach(function(t) {
+        var pill = document.getElementById('dem-pill-' + t);
+        var panel = document.getElementById('dem-panel-' + t);
+        if (pill)  pill.classList.toggle('active', t === tipo);
+        if (panel) panel.style.display = (t === tipo) ? 'block' : 'none';
+    });
+
+    // Cambiar capa en el mapa
+    if (_demLayerActual) map.removeLayer(_demLayerActual);
+    _demLayerActual = L.tileLayer(_demTiles[tipo], { pane: 'overlayPane', zIndex: 390 });
+    _demLayerActual.addTo(map);
+}
+
+function requestElevacion() {
+    if (!WorkspaceState.zonaGEE) return _noZonaGuard();
+
+    var fuente = document.getElementById('dem-fuente').value;
+    var btn = document.getElementById('btn-dem-gen');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    btn.disabled = true;
+
+    var payload = {
+        geojson: WorkspaceState.zonaGEE.geometry,
+        fuente: fuente
+    };
+
+    fetch('https://evergreen-backend-awv1.onrender.com/api/dem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.innerHTML = '<i class="fas fa-layer-group"></i> Procesar Capas';
+        btn.disabled = false;
+        if (data.error) {
+            mostrarNotificacion('❌ ' + data.error);
+            return;
+        }
+
+        // Guardar las 3 URLs
+        _demTiles.dem    = data.tiles_dem;
+        _demTiles.slope  = data.tiles_slope;
+        _demTiles.aspect = data.tiles_aspect;
+
+        // Etiqueta de fuente
+        var srcLabel = document.getElementById('dem-source-label');
+        if (srcLabel) srcLabel.textContent = fuente === 'copernicus' ? 'Copernicus GLO-30' : 'ALOS AW3D30';
+
+        // Stats elevación (null-safe)
+        document.getElementById('dem-mean').textContent = (data.stats.elev_mean !== null ? data.stats.elev_mean.toFixed(1) + ' m' : '—');
+        document.getElementById('dem-min').textContent  = (data.stats.elev_min  !== null ? data.stats.elev_min.toFixed(1)  + ' m' : '—');
+        document.getElementById('dem-max').textContent  = (data.stats.elev_max  !== null ? data.stats.elev_max.toFixed(1)  + ' m' : '—');
+
+        // Stats pendiente
+        var slopeMeanEl = document.getElementById('dem-slope-mean');
+        if (slopeMeanEl && data.stats.slope_mean !== undefined && data.stats.slope_mean !== null) {
+            slopeMeanEl.textContent = data.stats.slope_mean.toFixed(1) + '°';
+        }
+
+        // Mostrar panel y activar capa DEM por defecto
+        document.getElementById('dem-resultados').style.display = 'block';
+
+        // Limpiar capas anteriores
+        if (demLayer) { map.removeLayer(demLayer); demLayer = null; }
+        if (_demLayerActual) { map.removeLayer(_demLayerActual); _demLayerActual = null; }
+
+        // Reset pills al DEM y centrar mapa
+        switchDemLayer('dem');
+        _fitToZone();
+
+        // Registrar capas DEM en el panel de capas (instancias independientes para el registro)
+        registerLayer('dem_Elevacion', L.tileLayer(data.tiles_dem, { pane: 'overlayPane', zIndex: 390 }));
+        if (data.tiles_slope)  registerLayer('dem_Pendiente', L.tileLayer(data.tiles_slope,  { pane: 'overlayPane', zIndex: 390 }));
+        if (data.tiles_aspect) registerLayer('dem_Aspecto',   L.tileLayer(data.tiles_aspect, { pane: 'overlayPane', zIndex: 390 }));
+
+        // Guardar en dashboard de Resumen (3 capas)
+        saveResultado('dem', 'Elevacion',
+            { mean: data.stats.elev_mean, min: data.stats.elev_min, max: data.stats.elev_max },
+            data.tiles_dem, null, null);
+        if (data.stats.slope_mean !== undefined && data.stats.slope_mean !== null) {
+            saveResultado('dem', 'Pendiente',
+                { mean: data.stats.slope_mean },
+                data.tiles_slope, null, null);
+        }
+        if (data.tiles_aspect) {
+            saveResultado('dem', 'Aspecto',
+                { mean: null },
+                data.tiles_aspect, null, null);
+        }
+    })
+    .catch(function() {
+        btn.innerHTML = '<i class="fas fa-layer-group"></i> Procesar Capas';
+        btn.disabled = false;
+        mostrarNotificacion('❌ Error de conexión al servidor.');
+    });
+}
+
+function exportarGeoJSON() {
+    if (!WorkspaceState.zona) return alert("No hay zona definida.");
+    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(WorkspaceState.zona));
+    var dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href", dataStr);
+    dlAnchorElem.setAttribute("download", "zona_estudio.geojson");
+    dlAnchorElem.click();
+}
+
+// Limpiar zona activa
+function clearZoneState() {
+    WorkspaceState.zona       = null;
+    WorkspaceState.zonaGEE    = null;
+    WorkspaceState.zonaHa     = 0;
+    WorkspaceState.zonaId     = null;
+    WorkspaceState.zonaNombre = 'Mi zona de estudio';
+    _climaFetchDone = false;
+    _layerRegistry  = {};
+    _refreshGeeLayersPanel();
+    var w = document.getElementById('clima-widget');
+    if (w) w.style.display = 'none';
+
+    if (globalDrawnItems) globalDrawnItems.clearLayers();
+
+    var nameInput = document.getElementById('ws-zone-name');
+    if (nameInput) nameInput.value = WorkspaceState.zonaNombre;
+
+    updateZoneUI();
+    saveWorkspaceState();
+}
+
+function clearZone() {
+    if (!WorkspaceState.zona) return;
+    if (!confirm('¿Eliminar la zona activa y todos sus análisis?\n\nEsta acción no se puede deshacer.')) return;
+
+    var deletedId = WorkspaceState.zonaId;
+
+    // Borrar datos en Supabase (cascade borra también los results)
+    if (window._sbUserId && typeof clearCloudData === 'function') {
+        clearCloudData(window._sbUserId, deletedId);
+    }
+
+    WorkspaceState.resultados = {};
+    clearZoneState();
+
+    // Si queda otra zona en la lista, cambiar a ella automáticamente
+    var remaining = (window._sbUserZones || []).filter(function(z) { return z.id !== deletedId; });
+    if (remaining.length > 0 && window._sbUserId) {
+        switchToZone(remaining[0].id);
+        return;
+    }
+
+    // Actualizar selector
+    if (typeof renderZoneSelector === 'function') renderZoneSelector(window._sbUserZones || []);
+
+    if (typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion('✅ Zona y análisis eliminados');
+    }
+}
+
+// Usar cuenca DGA seleccionada como zona de estudio
+function usarCuencaEnWorkspace() {
+    if (typeof cuencaSeleccionada === 'undefined' || !cuencaSeleccionada) {
+        alert('⚠️ Selecciona primero una cuenca haciendo click en el mapa.');
+        return;
+    }
+
+    var feature = cuencaSeleccionada.feature;
+    var geojson = cuencaSeleccionada.toGeoJSON();
+    var props   = feature.properties;
+
+    var latLngs  = cuencaSeleccionada.getLatLngs();
+    var flatLngs = Array.isArray(latLngs[0]) && Array.isArray(latLngs[0][0])
+        ? latLngs[0][0]
+        : (Array.isArray(latLngs[0]) ? latLngs[0] : latLngs);
+    var areaSqM  = L.GeometryUtil.geodesicArea(flatLngs);
+    var ha       = Math.round(areaSqM / 10000);
+
+    if (ha > 50000) {
+        alert('⚠️ La cuenca supera el límite de 50,000 ha (' + ha.toLocaleString('es-CL') + ' ha). Elige otra más pequeña.');
+        return;
+    }
+
+    function _aplicarCuenca() {
+        WorkspaceState.zona       = geojson;
+        WorkspaceState.zonaHa     = ha;
+        WorkspaceState.zonaNombre = props.nombre || 'Cuenca DGA';
+
+        if (typeof turf !== 'undefined') {
+            WorkspaceState.zonaGEE = turf.simplify(geojson, { tolerance: 0.001, highQuality: true });
+        } else {
+            WorkspaceState.zonaGEE = geojson;
+        }
+
+        if (typeof agregarPoligonoDesdeWorkspace === 'function') {
+            agregarPoligonoDesdeWorkspace(geojson, WorkspaceState.zonaNombre, ha);
+        }
+
+        updateZoneUI();
+        saveWorkspaceState();
+        enviarZonaABiodiversidad();
+
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('✅ Cuenca "' + WorkspaceState.zonaNombre + '" establecida como zona activa');
+        }
+    }
+
+    // Si ya tiene zona → solo reemplaza el polígono en el mismo workspace
+    if (WorkspaceState.zona) {
+        _aplicarCuenca();
+        return;
+    }
+
+    // Primera zona: verificar cuota según plan
+    if (window._sbUserId && typeof checkZoneQuota === 'function') {
+        checkZoneQuota(window._sbUserId).then(function(result) {
+            if (!result.ok) { mostrarModalLimite(result); return; }
+            _aplicarCuenca();
+        });
+    } else {
+        _aplicarCuenca();
+    }
+}
+
+/**
+ * Redibuja el AOI guardado en el mapa al recargar la página.
+ * Debe llamarse DESPUÉS de initWorkspaceMap().
+ */
+function restoreZoneOnMap() {
+    if (!WorkspaceState.zona || typeof map === 'undefined' || !globalDrawnItems) return;
+    try {
+        globalDrawnItems.clearLayers();
+        L.geoJSON(WorkspaceState.zona, {
+            style: {
+                color: '#00C88E',
+                weight: 2,
+                opacity: 0.9,
+                fillColor: '#00C88E',
+                fillOpacity: _aoiVisible ? _aoiOpacity : 0
+            }
+        }).eachLayer(function(layer) {
+            globalDrawnItems.addLayer(layer);
+            globalWorkspaceAOILayer = layer;
+        });
+    } catch(e) { console.warn('restoreZoneOnMap:', e); }
+}
+
+// ==========================================================================
+//  ZONE SELECTOR — Multi-zona (pro/admin)
+// ==========================================================================
+
+/**
+ * Renderiza el dropdown de zonas guardadas.
+ * Para free con 1 zona: oculta el botón selector.
+ * Para pro/admin con ≥1 zona: muestra el chevron.
+ */
+function renderZoneSelector(zones) {
+    var btn      = document.getElementById('zone-selector-btn');
+    var dropdown = document.getElementById('zone-selector-dropdown');
+    if (!btn || !dropdown) return;
+
+    var plan     = window._sbUserPlan || 'free';
+    var maxZones = (typeof PLAN_LIMITS !== 'undefined' && PLAN_LIMITS[plan] !== undefined)
+        ? PLAN_LIMITS[plan] : 1;
+
+    // Mostrar el botón solo si el plan permite más de 1 zona
+    var showSelector = maxZones > 1 || (zones && zones.length > 1);
+    btn.style.display = showSelector ? 'flex' : 'none';
+
+    if (!zones || zones.length === 0) return;
+
+    var activeId = WorkspaceState.zonaId;
+    var used     = zones.length;
+    var max      = maxZones === Infinity ? '∞' : maxZones;
+
+    var html = '';
+    zones.forEach(function(z) {
+        var isActive = z.id === activeId;
+        var ha       = z.zona_ha ? z.zona_ha.toLocaleString('es-CL') + ' ha' : 'Sin área';
+        html += '<div class="zone-selector-item' + (isActive ? ' active' : '') + '"' +
+            ' onclick="switchToZone(\'' + z.id + '\')">' +
+            '<span class="zone-sel-dot"></span>' +
+            '<span class="zone-sel-name">' + (z.zone_name || 'Sin nombre') + '</span>' +
+            '<span class="zone-sel-ha">' + ha + '</span>' +
+            '</div>';
+    });
+
+    // Botón "Nueva zona" (solo si está bajo el límite)
+    if (maxZones === Infinity || used < maxZones) {
+        html += '<div class="zone-selector-add" onclick="startNewZone()">' +
+            '<i class="fas fa-plus" style="font-size:10px;"></i>' +
+            '<span>Nueva zona</span>' +
+            '<span style="margin-left:auto;font-size:10px;opacity:0.5;">' + used + '/' + max + '</span>' +
+            '</div>';
+    }
+
+    dropdown.innerHTML = html;
+}
+
+function toggleZoneSelector() {
+    var dropdown = document.getElementById('zone-selector-dropdown');
+    var chev     = document.getElementById('zone-selector-chev');
+    if (!dropdown) return;
+    var open = dropdown.style.display === 'block';
+    dropdown.style.display = open ? 'none' : 'block';
+    if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function closeZoneSelector() {
+    var dropdown = document.getElementById('zone-selector-dropdown');
+    var chev     = document.getElementById('zone-selector-chev');
+    if (dropdown) dropdown.style.display = 'none';
+    if (chev) chev.style.transform = '';
+}
+
+/**
+ * Cambia la zona activa y recarga todos los datos de esa zona.
+ */
+function switchToZone(zoneId) {
+    closeZoneSelector();
+    if (zoneId === WorkspaceState.zonaId) return;
+    if (!window._sbUserId) return;
+
+    // Limpiar capas de análisis del mapa
+    if (typeof vegLayer !== 'undefined' && vegLayer)        { try { map.removeLayer(vegLayer); }       catch(e){} vegLayer = null; }
+    if (typeof aguaLayer !== 'undefined' && aguaLayer)      { try { map.removeLayer(aguaLayer); }      catch(e){} aguaLayer = null; }
+    if (typeof _demLayerActual !== 'undefined' && _demLayerActual) { try { map.removeLayer(_demLayerActual); } catch(e){} _demLayerActual = null; }
+    if (typeof _indicadorLayer !== 'undefined' && _indicadorLayer) { try { map.removeLayer(_indicadorLayer); } catch(e){} _indicadorLayer = null; }
+    if (globalDrawnItems) globalDrawnItems.clearLayers();
+
+    switchZoneCloud(window._sbUserId, zoneId).then(function(zone) {
+        if (!zone) { mostrarNotificacion('❌ Error cargando la zona'); return; }
+
+        updateZoneUI();
+        renderIndicadorCards();
+        if (typeof refreshIndRows === 'function') refreshIndRows();
+
+        if (WorkspaceState.zona) {
+            try { restoreZoneOnMap(); } catch(e) {}
+        }
+
+        // Actualizar lista local con nuevo is_active
+        (window._sbUserZones || []).forEach(function(z) { z.is_active = z.id === zoneId; });
+        renderZoneSelector(window._sbUserZones);
+
+        mostrarNotificacion('📍 Zona "' + zone.zone_name + '" cargada');
+    });
+}
+
+// ==========================================================================
+//  MODAL LÍMITE DE PLAN
+// ==========================================================================
+
+function mostrarModalLimite(result) {
+    var overlay = document.getElementById('modal-limite-overlay');
+    if (!overlay) return;
+
+    var plan    = result && result.plan ? result.plan : 'free';
+    var used    = result && result.used !== undefined ? result.used : '?';
+    var max     = result && result.max  !== undefined ? result.max  : 1;
+
+    var planLabel = plan === 'free' ? 'Free' : plan === 'pro' ? 'Pro' : plan;
+
+    var msgEl = document.getElementById('modal-limite-msg');
+    if (msgEl) {
+        msgEl.innerHTML =
+            'Tu plan <strong>' + planLabel + '</strong> permite ' + max +
+            (max === 1 ? ' zona almacenada.' : ' zonas almacenadas.') +
+            '<br>Elimina una zona existente o contacta a Evergreen para ampliar tu acceso.';
+    }
+
+    overlay.classList.add('open');
+}
+
+function cerrarModalLimite() {
+    var overlay = document.getElementById('modal-limite-overlay');
+    if (overlay) overlay.classList.remove('open');
+}
+
+// Cerrar selector al clickear fuera
+document.addEventListener('click', function(e) {
+    var btn      = document.getElementById('zone-selector-btn');
+    var dropdown = document.getElementById('zone-selector-dropdown');
+    if (!dropdown || dropdown.style.display === 'none') return;
+    if (btn && btn.contains(e.target)) return;
+    if (dropdown.contains(e.target)) return;
+    closeZoneSelector();
+});
+
+// ==========================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Bind zone name input
+    var nameInput = document.getElementById('ws-zone-name');
+    if (nameInput) nameInput.addEventListener('change', onZoneNameChange);
+
+    // Bind buttons
+    var btnDibujar = document.getElementById('btn-dibujar-zona');
+    if (btnDibujar) btnDibujar.addEventListener('click', startDrawingZone);
+    var btnExport = document.getElementById('btn-export-geojson');
+    if (btnExport) btnExport.addEventListener('click', exportarGeoJSON);
+    var btnLimpiar = document.getElementById('btn-limpiar-zona');
+    if (btnLimpiar) btnLimpiar.addEventListener('click', clearZone);
+
+    // Estado inicial (renderiza indicadores si hay resultados guardados)
+    loadWorkspaceState();
+    renderIndicadorCards();
+    refreshIndRows();
+
+    // Texto descriptivo del índice de agua
+    actualizarInfoAgua();
+
+    // Mini-panel: mostrar con datos demo para que sea visible
+    // (se sobreescribirá con datos reales al procesar bosque)
+    var _DEMO_PERDIDA = [
+        {year:2001,ha_zona:185,ha_buffer:72},
+        {year:2003,ha_zona:247,ha_buffer:93},
+        {year:2005,ha_zona:318,ha_buffer:121},
+        {year:2007,ha_zona:276,ha_buffer:104},
+        {year:2010,ha_zona:304,ha_buffer:115},
+        {year:2013,ha_zona:389,ha_buffer:148},
+        {year:2015,ha_zona:334,ha_buffer:127},
+        {year:2018,ha_zona:456,ha_buffer:174},
+        {year:2020,ha_zona:371,ha_buffer:141},
+        {year:2022,ha_zona:312,ha_buffer:98},
+        {year:2023,ha_zona:428,ha_buffer:163}
+    ];
+    setTimeout(function() { renderMiniPanel(_DEMO_PERDIDA); }, 600);
+
+    // Cargar iframe de biodiversidad en background al inicio
+    (function() {
+        var bioIframe = document.getElementById('iframe-biodiversidad');
+        if (bioIframe && (!bioIframe.src || bioIframe.src === window.location.href)) {
+            bioIframe.src = 'inaturalist/index.html';
+        }
+    })();
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   PANEL BIODIVERSIDAD — UI y puente postMessage con iframe GBIF
+   ══════════════════════════════════════════════════════════════════════ */
+
+// Charts del panel bio (inicializados al activar el tab)
+var _biodonutChart = null, _bioRegionalChart = null, _bioDecadaChart = null, _bioRceIucnChart = null;
+var _bioTableFilter = null;
+var _bioFinalList = [];  // cache de la lista de especies
+
+// ── Actualizar zona en el badge del panel bio ────────────────────────
+function updateBioZoneBadge() {
+    var nombre = document.getElementById('bio-zona-nombre');
+    var status = document.getElementById('bio-zona-status');
+    if (nombre) nombre.textContent = WorkspaceState.zonaNombre || 'Sin zona definida';
+    if (status) status.textContent = WorkspaceState.zonaHa > 0
+        ? WorkspaceState.zonaHa.toLocaleString('es-CL') + ' ha · AOI sincronizado'
+        : 'AOI no definido';
+}
+
+// ── Delegados al iframe (vía postMessage — no depende del estado del botón) ──
+function runBioAnalysis() {
+    var iframe = document.getElementById('iframe-biodiversidad');
+    if (!iframe) return;
+
+    // Validar zona
+    if (!WorkspaceState.zona) {
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('⚠️ Dibuja una zona en el mapa primero.');
+        }
+        return;
+    }
+
+    // Asegurar carga del iframe
+    if (!iframe.src || iframe.src === window.location.href) {
+        iframe.src = 'inaturalist/index.html';
+    }
+
+    // Mostrar barra de progreso
+    var progress    = document.getElementById('bio-progress');
+    var progressText = document.getElementById('bio-progress-text');
+    var progressFill = document.getElementById('bio-progress-fill');
+    if (progress) progress.classList.add('show');
+    if (progressText) progressText.textContent = 'Enviando zona...';
+    if (progressFill) progressFill.style.width = '15%';
+
+    function _dispatchAnalysis() {
+        var ifrWin = iframe.contentWindow;
+        if (!ifrWin) return;
+
+        // 1) Enviar zona
+        ifrWin.postMessage({ tipo: 'zona_activa', geojson: WorkspaceState.zona }, '*');
+
+        // 2) Esperar brevemente (zona_activa es síncrono en el listener, pero postMessage
+        //    es siempre asíncrono — 200ms garantiza que el iframe ya procesó la zona)
+        setTimeout(function() {
+            if (progressText) progressText.textContent = 'Consultando GBIF...';
+            if (progressFill) progressFill.style.width = '35%';
+            // 3) Disparar análisis directamente desde el closure del módulo
+            ifrWin.postMessage({ tipo: 'ejecutar_analisis' }, '*');
+        }, 200);
+    }
+
+    // Si el iframe ya cargó, ejecutar de inmediato
+    try {
+        var doc = iframe.contentDocument;
+        if (doc && doc.readyState === 'complete') {
+            _dispatchAnalysis();
+        } else {
+            iframe.addEventListener('load', _dispatchAnalysis, { once: true });
+        }
+    } catch(e) {
+        // cross-origin guard — en teoría no aplica (same origin)
+        _dispatchAnalysis();
+    }
+}
+
+function addBioExtended() {
+    var iframe = document.getElementById('iframe-biodiversidad');
+    if (!iframe) return;
+    try {
+        iframe.contentWindow.postMessage({ tipo: 'agregar_extendido' }, '*');
+    } catch(e) { console.warn('addBioExtended:', e); }
+}
+
+// ── Escuchar resultados del iframe de biodiversidad ──────────────────
+window.addEventListener('message', function(event) {
+    if (!event.data || event.data.tipo !== 'biodiversidad_resultado') return;
+    var d = event.data.data;
+
+    // Ocultar barra de progreso
+    var progress = document.getElementById('bio-progress');
+    if (progress) progress.classList.remove('show');
+
+    // Mostrar panel de resultados
+    var panel = document.getElementById('bio-resultados-panel');
+    if (panel) panel.style.display = 'block';
+
+    // Stats principales
+    _setBioEl('bio-stat-spp', d.n_especies);
+    _setBioEl('bio-stat-rce', d.n_rce);
+    _setBioEl('bio-stat-cr',  d.n_cr);
+    _setBioEl('bio-stat-en',  d.n_en);
+    _setBioEl('bio-stat-vu',  d.n_vu);
+
+    // IVC
+    var ivc = d.ivc != null ? d.ivc.toFixed(2) : '—';
+    _setBioEl('bio-ivc-score', ivc);
+    var interp = 'Baja sensibilidad ambiental';
+    if (d.ivc > 1.5) interp = 'Alta sensibilidad ambiental';
+    else if (d.ivc > 0.5) interp = 'Sensibilidad moderada';
+    _setBioEl('bio-ivc-interp', interp);
+
+    // Áreas protegidas
+    _setBioAlert('bio-alert-snaspe', d.snaspe_int, d.snaspe_dist);
+    _setBioAlert('bio-alert-19300',  d.int_19300,  null);
+    _setBioAlert('bio-alert-erb',    d.int_erb,    null);
+    _setBioAlert('bio-alert-humedal',d.int_humedal,null);
+    _setBioEl('bio-piso', d.piso || '—');
+
+    // Métricas
+    _setBioEl('bio-m-s',       d.n_especies);
+    _setBioEl('bio-m-chao',    d.chao1 ? Math.round(d.chao1) : '—');
+    _setBioEl('bio-m-comp',    d.completitud ? d.completitud.toFixed(1) + '%' : '—');
+    _setBioEl('bio-m-rce-pct', d.pct_rce ? d.pct_rce.toFixed(1) + '%' : '—');
+    _setBioEl('bio-m-amen',    d.pct_amenazadas ? d.pct_amenazadas.toFixed(1) + '%' : '—');
+    _setBioEl('bio-m-marg',    d.marginales != null ? d.marginales : '—');
+
+    // Top amenazadas
+    if (d.top_amenazadas && d.top_amenazadas.length > 0) {
+        _renderBioThreatenedList(d.top_amenazadas);
+    }
+
+    // Doughnut por reino
+    if (d.kingdom_counts) _updateBioDonut(d.kingdom_counts);
+
+    // Charts bioestadística
+    if (d.regional_data) _updateBioRegional(d.regional_data, d.region_name);
+    if (d.decada_data)   _updateBioDecada(d.decada_data);
+    if (d.rce_iucn_data) _updateBioRceIucn(d.rce_iucn_data);
+
+    // Cache lista de especies para tabla
+    if (d.final_list) {
+        _bioFinalList = d.final_list;
+        _setBioEl('bio-table-subtitle', (WorkspaceState.zonaNombre || '') + ' · ' + d.n_especies + ' registros únicos');
+        var csvBtn = document.getElementById('bio-export-csv-btn');
+        if (csvBtn) csvBtn.disabled = false;
+    }
+
+    // Guardar en dashboard Resumen
+    saveResultado('biodiversidad', 'Biodiversidad', {
+        n_especies: d.n_especies, n_rce: d.n_rce,
+        n_cr: d.n_cr, n_en: d.n_en, n_vu: d.n_vu,
+        ivc: d.ivc, mean: d.n_especies,
+        piso: d.piso, snaspe_int: d.snaspe_int,
+        top_amenazadas: d.top_amenazadas
+    }, null, null, null);
+
+    if (typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion('🌿 Análisis GBIF completo: ' + d.n_especies + ' especies.');
+    }
+});
+
+function _setBioEl(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = val != null ? val : '—';
+}
+
+function _setBioAlert(id, intersecta, distKm) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (intersecta) {
+        el.textContent = 'Intersecta';
+        el.className = 'bio-alert-val intersect';
+    } else if (distKm != null) {
+        el.textContent = 'A ' + distKm.toFixed(1) + ' km';
+        el.className = 'bio-alert-val';
+    } else {
+        el.textContent = 'No intersecta';
+        el.className = 'bio-alert-val ok';
+    }
+}
+
+function _renderBioThreatenedList(list) {
+    var el = document.getElementById('bio-threatened-list');
+    if (!el) return;
+    var catColors = { CR:'#e74c3c', EN:'#e67e22', VU:'#f1c40f' };
+    el.innerHTML = list.map(function(t) {
+        return '<div class="bio-threat-item ' + (t.cat||'').toLowerCase() + '">' +
+            '<div class="bio-threat-meta">' +
+            '<span class="bio-cat-badge ' + (t.cat||'').toLowerCase() + '">RCE: ' + (t.cat||'') + '</span>' +
+            (t.iucn ? '<span class="bio-iucn-badge" style="color:' + (catColors[t.iucn]||'#9ca3af') + ';">IUCN: ' + t.iucn + '</span>' : '') +
+            '<span class="bio-threat-obs">' + (t.obs||'') + ' reg.</span>' +
+            '</div>' +
+            '<div class="bio-threat-name">' + (t.nombre||'') + '</div>' +
+            (t.comun ? '<div class="bio-threat-common">' + t.comun + '</div>' : '') +
+            '</div>';
+    }).join('') + (list.length >= 5 ? '<p style="font-size:10.5px;color:#9ca3af;margin-top:6px;">+ más · Ver tabla completa</p>' : '');
+}
+
+// ── Charts ───────────────────────────────────────────────────────────
+function initBioCharts() {
+    if (typeof Chart === 'undefined') return;
+    var baseOpts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false },
+            tooltip: { backgroundColor: 'rgba(10,20,10,0.88)', bodyColor: '#fff', padding: 5, cornerRadius: 4 } },
+        scales: {
+            x: { ticks: { color: '#9ca3af', font: { size: 9 }, maxRotation: 0, maxTicksLimit: 6 },
+                 grid: { display: false }, border: { display: false } },
+            y: { ticks: { color: '#9ca3af', font: { size: 9 }, maxTicksLimit: 4 },
+                 grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false } }
+        },
+        animation: { duration: 400 }
+    };
+
+    var dCtx = document.getElementById('bio-donut-chart');
+    if (dCtx && !_biodonutChart) {
+        _biodonutChart = new Chart(dCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: [], datasets: [{ data: [],
+                backgroundColor: ['#6aaa35','#3b82f6','#a855f7','#f59e0b','#ef4444','#14b8a6','#f97316','#6b7280'],
+                borderWidth: 2, borderColor: '#fff' }] },
+            options: {
+                responsive: false,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: { color: '#6b7280', font: { size: 8 }, boxWidth: 9, padding: 5, usePointStyle: true, pointStyle: 'circle' }
+                    },
+                    tooltip: { backgroundColor: 'rgba(10,20,10,0.88)', bodyColor: '#fff', padding: 5, cornerRadius: 4,
+                        callbacks: { label: function(ctx) { return ' ' + ctx.label + ': ' + ctx.raw; } } }
+                }
+            }
+        });
+    }
+
+    var rCtx = document.getElementById('bio-regional-chart');
+    if (rCtx && !_bioRegionalChart) {
+        _bioRegionalChart = new Chart(rCtx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [
+                { label: 'Gap', data: [], backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 2 },
+                { label: 'Observadas', data: [], backgroundColor: '#6aaa35', borderRadius: 2 }
+            ]},
+            options: Object.assign({}, baseOpts, { indexAxis: 'y',
+                scales: {
+                    x: Object.assign({}, baseOpts.scales.x, { stacked: true }),
+                    y: Object.assign({}, baseOpts.scales.y, { stacked: true })
+                }
+            })
+        });
+    }
+
+    var decCtx = document.getElementById('bio-decada-chart');
+    if (decCtx && !_bioDecadaChart) {
+        _bioDecadaChart = new Chart(decCtx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Registros', data: [], backgroundColor: '#6aaa35', borderRadius: 2 }] },
+            options: baseOpts
+        });
+    }
+
+    var riCtx = document.getElementById('bio-rce-iucn-chart');
+    if (riCtx && !_bioRceIucnChart) {
+        _bioRceIucnChart = new Chart(riCtx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: ['Amenazada RCE','Amenazada IUCN','En Ambas'],
+                datasets: [{ data: [0,0,0], backgroundColor: ['#f1c40f','#e67e22','#e74c3c'], borderRadius: 3 }] },
+            options: baseOpts
+        });
+    }
+}
+
+function _updateBioDonut(kingdomCounts) {
+    if (!_biodonutChart) return;
+    _biodonutChart.data.labels   = Object.keys(kingdomCounts);
+    _biodonutChart.data.datasets[0].data = Object.values(kingdomCounts);
+    _biodonutChart.update();
+}
+
+function _updateBioRegional(data, regionName) {
+    if (!_bioRegionalChart) return;
+    if (regionName) _setBioEl('bio-region-name', regionName.toUpperCase());
+    _bioRegionalChart.data.labels = data.labels;
+    _bioRegionalChart.data.datasets[0].data = data.gap;
+    _bioRegionalChart.data.datasets[1].data = data.observadas;
+    _bioRegionalChart.update();
+}
+
+function _updateBioDecada(data) {
+    if (!_bioDecadaChart) return;
+    _bioDecadaChart.data.labels = data.labels;
+    _bioDecadaChart.data.datasets[0].data = data.values;
+    _bioDecadaChart.update();
+}
+
+function _updateBioRceIucn(data) {
+    if (!_bioRceIucnChart) return;
+    _bioRceIucnChart.data.datasets[0].data = [data.rce, data.iucn, data.ambas];
+    _bioRceIucnChart.update();
+}
+
+// ── Tabla de especies ────────────────────────────────────────────────
+function openBioTable() {
+    var overlay = document.getElementById('bio-table-overlay');
+    if (overlay) overlay.classList.add('show');
+    _renderBioTable(_bioTableFilter);
+}
+function closeBioTable() {
+    var overlay = document.getElementById('bio-table-overlay');
+    if (overlay) overlay.classList.remove('show');
+}
+
+function filterBioTable(cls, btn) {
+    _bioTableFilter = _bioTableFilter === cls ? null : cls;
+    document.querySelectorAll('.bio-filter-pill').forEach(function(p) { p.classList.remove('active'); });
+    if (_bioTableFilter && btn) btn.classList.add('active');
+    _renderBioTable(_bioTableFilter);
+}
+
+function _renderBioTable(filter) {
+    var tbody = document.getElementById('bio-table-body');
+    if (!tbody) return;
+    var data = filter
+        ? _bioFinalList.filter(function(s) { return (s.clase || s.group || '') === filter; })
+        : _bioFinalList;
+    _setBioEl('bio-table-count', data.length + ' registros' + (filter ? ' · ' + filter : ''));
+    var catColor = { CR:'#e74c3c', EN:'#e67e22', VU:'#f1c40f', NT:'#7bed9f', LC:'#4a7c2e' };
+    tbody.innerHTML = data.map(function(s) {
+        var threat = ['CR','EN','VU'].indexOf(s.rceCategory) >= 0;
+        var rce   = s.rceCategory
+            ? '<span class="bio-rce-badge ' + s.rceCategory + '">' + s.rceCategory + '</span>'
+            : '—';
+        var iucn  = s.iucnCategory
+            ? '<span class="bio-rce-badge iucn" style="border-color:' + (catColor[s.iucnCategory]||'#9ca3af') + ';color:' + (catColor[s.iucnCategory]||'#9ca3af') + ';">' + s.iucnCategory + '</span>'
+            : '—';
+        var spe = s.specialProtection
+            ? '<span class="bio-special-tag">' + (typeof s.specialProtection === 'object' ? (s.specialProtection.status||'Sí') : s.specialProtection) + '</span>'
+            : '—';
+        var rie = s.riesgo
+            ? '<span style="font-size:10px;color:#e74c3c;">' + s.riesgo + '</span>'
+            : '<span style="color:#9ca3af;font-size:10px;">—</span>';
+        return '<tr class="' + (threat ? 'threat' : '') + '">' +
+            '<td><div class="bio-spp-name">' + (s.officialName||s.scientificName||'') + '</div></td>' +
+            '<td><div class="bio-spp-common">' + (s.commonName||'') + '</div></td>' +
+            '<td style="font-size:10.5px;color:#6b7280;">' + (s.group||s.clase||'') + '</td>' +
+            '<td style="text-align:center;">' + (s.nRegistrosAOI||s.count||'—') + '</td>' +
+            '<td>' + rce + '</td><td>' + iucn + '</td><td>' + spe + '</td>' +
+            '<td style="font-size:10px;color:#6b7280;">' + (s.piso_vegetacional||'—') + '</td>' +
+            '<td>' + rie + '</td>' +
+            '<td><button class="bio-dist-btn" onclick="openBioDistModal(this)"><i class="fas fa-map" style="font-size:9px;"></i></button></td>' +
+            '</tr>';
+    }).join('');
+}
+
+function openBioDistModal(btn) {
+    // Delegar al iframe si está disponible
+    try {
+        var iframe = document.getElementById('iframe-biodiversidad');
+        if (iframe && iframe.contentWindow && typeof iframe.contentWindow.openDistribucionModal === 'function') {
+            // Encontrar la fila y obtener el nombre
+            var row = btn.closest('tr');
+            var nombre = row ? row.querySelector('.bio-spp-name') : null;
+            if (nombre) {
+                var spp = _bioFinalList.find(function(s) {
+                    return (s.officialName||s.scientificName||'') === nombre.textContent.trim();
+                });
+                if (spp) iframe.contentWindow.openDistribucionModal(spp);
+            }
+        }
+    } catch(e) { console.warn('openBioDistModal:', e); }
+}
+
+function exportBioCSV() {
+    try {
+        var iframe = document.getElementById('iframe-biodiversidad');
+        if (iframe && iframe.contentWindow && typeof iframe.contentWindow.exportCSVToFile === 'function') {
+            iframe.contentWindow.exportCSVToFile();
+        }
+    } catch(e) { console.warn('exportBioCSV:', e); }
+}
+
+// ── Inicializar charts cuando se activa el tab biodiversidad ─────────
+var _origSwitchTab = switchWorkspaceTab;
+switchWorkspaceTab = function(tabId) {
+    _origSwitchTab(tabId);
+    if (tabId === 'biodiversidad') {
+        updateBioZoneBadge();
+        setTimeout(initBioCharts, 80);
+    }
+};

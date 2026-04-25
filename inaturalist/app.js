@@ -79,6 +79,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.exportCSV = exportCSVToFile;
+
+    // Escuchar mensajes desde el Workspace padre (postMessage)
+    window.addEventListener('message', function(event) {
+        if (!event.data) return;
+
+        // ── Zona geométrica ──────────────────────────────────────────
+        if (event.data.tipo === 'zona_activa') {
+            const incomingGeoJSON = event.data.geojson;
+            if (incomingGeoJSON) {
+                appState.polygon = incomingGeoJSON;
+                currentPolygon   = incomingGeoJSON;
+                if (drawnItems) {
+                    drawnItems.clearLayers();
+                    const layer = L.geoJSON(incomingGeoJSON, {
+                        style: { color: '#6AAA35', weight: 2, fillOpacity: 0.2 }
+                    });
+                    layer.eachLayer(l => drawnItems.addLayer(l));
+                }
+                const areaStatus = document.getElementById('areaStatus');
+                if (areaStatus) {
+                    areaStatus.innerHTML = '<i class="fa-solid fa-check"></i> Zona sincronizada desde Workspace';
+                }
+                validateRunReady();
+            }
+            return;
+        }
+
+        // ── Ejecutar análisis principal (desde panel bio del workspace) ──
+        if (event.data.tipo === 'ejecutar_analisis') {
+            runGBIFAnalysis();
+            return;
+        }
+
+        // ── Agregar grupos extendidos ──────────────────────────────────
+        if (event.data.tipo === 'agregar_extendido') {
+            addGBIFExtended();
+            return;
+        }
+    });
 });
 
 function initMap() {
@@ -1138,6 +1177,83 @@ function updatePanels() {
     document.getElementById('exportBtn').disabled = false;
     const seiaBtn = document.getElementById('seiaBtn');
     if (seiaBtn) seiaBtn.disabled = false;
+
+    // ── Enviar resumen al Workspace padre (panel Resumen + panel Biodiversidad) ──
+    if (window.parent && window.parent !== window) {
+        const topAmenazadas = [...appState.threatened]
+            .sort((a, b) => ({ CR: 1, EN: 2, VU: 3 }[a.rceCategory || 'VU'] - { CR: 1, EN: 2, VU: 3 }[b.rceCategory || 'VU']))
+            .slice(0, 5)
+            .map(s => ({
+                nombre: s.officialName,
+                cat:    s.rceCategory,
+                iucn:   s.iucnCategory,
+                comun:  s.commonName,
+                obs:    s.nRegistrosAOI
+            }));
+
+        // Datos para gráfico regional
+        const regionalData = {
+            labels:     gLabels,
+            gap:        gLabels.map(l => grps[l].pot - grps[l].obs),
+            observadas: gLabels.map(l => grps[l].obs)
+        };
+
+        // Datos para gráfico de décadas
+        const decadaData = {
+            labels: decadas.map(d => d + 's'),
+            values: decadas.map(d => porDecada[d])
+        };
+
+        // Proporción RCE vs IUCN
+        const countRceThreat  = appState.threatened.filter(s => s.rceCategory  && ['CR','EN','VU'].includes(s.rceCategory)).length;
+        const countIucnThreat = appState.threatened.filter(s => s.iucnCategory && ['CR','EN','VU'].includes(s.iucnCategory)).length;
+        const countBothThreat = appState.threatened.filter(s =>
+            s.rceCategory  && ['CR','EN','VU'].includes(s.rceCategory) &&
+            s.iucnCategory && ['CR','EN','VU'].includes(s.iucnCategory)
+        ).length;
+
+        // kingdomCounts ya calculado arriba
+        const completitud = sObs / (chao1 > 0 ? chao1 : 1) * 100;
+
+        window.parent.postMessage({
+            tipo: 'biodiversidad_resultado',
+            data: {
+                // Métricas principales
+                n_especies:      list.length,
+                n_rce:           rceCount,
+                n_cr:            counts.CR,
+                n_en:            counts.EN,
+                n_vu:            counts.VU,
+                ivc:             ivc,
+                piso:            appState.global_piso_vegetacional || null,
+
+                // Áreas protegidas
+                snaspe_int:      appState.global_snaspe_int  || false,
+                snaspe_dist:     appState.global_snaspe_dist || null,
+                int_19300:       appState.global_19300_int   || false,
+                int_erb:         appState.global_erb_int     || false,
+                int_humedal:     appState.global_humedales_int || false,
+
+                // Bioestadística
+                chao1:           chao1,
+                completitud:     completitud,
+                pct_rce:         S > 0 ? (rceCount / S * 100) : 0,
+                pct_amenazadas:  S > 0 ? ((counts.CR + counts.EN + counts.VU) / S * 100) : 0,
+                marginales:      marginal,
+
+                // Datos para charts
+                kingdom_counts:  kingdomCounts,
+                regional_data:   regionalData,
+                region_name:     regKey,
+                decada_data:     decadaData,
+                rce_iucn_data:   { rce: countRceThreat, iucn: countIucnThreat, ambas: countBothThreat },
+
+                // Lista completa de especies y amenazadas
+                final_list:      appState.finalList,
+                top_amenazadas:  topAmenazadas
+            }
+        }, '*');
+    }
 }
 
 /**

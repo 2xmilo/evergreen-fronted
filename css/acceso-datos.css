@@ -553,7 +553,7 @@
 /* ── BOTÓN DESCARGA ── */
 .btn-download {
     width: calc(100% - 24px) !important;
-    padding: 13px !important;
+    padding: 13px 20px !important;
     margin: 12px !important;
     background: var(--green-600) !important;
     color: var(--white) !important;
@@ -566,12 +566,25 @@
     letter-spacing: 0.06em;
     cursor: pointer;
     transition: all 0.25s;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 48px;
+    line-height: 1.4 !important;
 }
 
 .btn-download:hover {
     background: var(--green-500) !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.btn-download .btn-text {
+    display: block;
+    width: 100%;
+    word-wrap: break-word;
+    white-space: normal;
 }
 
 /* ── DISCLAIMER ── */
@@ -767,6 +780,42 @@
     display: none !important;
 }
 
+/* Dibujar Handle y Marker control (Leaflet Draw) */
+.leaflet-draw .leaflet-marker-icon,
+.leaflet-vertex,
+.leaflet-helper-line {
+    width: 10px !important;
+    height: 10px !important;
+    margin-left: -5px !important;
+    margin-top: -5px !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+    border: 2px solid rgba(0, 200, 142, 0.9) !important;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25) !important;
+}
+
+.leaflet-draw .leaflet-draw-tooltip {
+    background: rgba(14, 26, 14, 0.92) !important;
+    color: #f4f7f1 !important;
+    border: 1px solid rgba(200, 168, 130, 0.5) !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+}
+
+.leaflet-draw-tooltip::before {
+    border-top-color: rgba(14, 26, 14, 0.92) !important;
+}
+
+.leaflet-draw .leaflet-draw-tooltip.leaflet-draw-tooltip-single {
+    background: rgba(200, 168, 130, 0.9) !important;
+    color: #0e1a0e !important;
+    pointer-events: auto !important;
+}
+
 /* ── DRAW TOOLS BAR (siempre visible, sobre los acordeones) ── */
 .draw-tools-bar {
     display: flex;
@@ -777,39 +826,44 @@
 
 /* ── DRAW TOOLS (dentro de acordeón — legado) ── */
 .draw-tools {
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
     margin: 8px 0 4px;
 }
 
 .draw-btn {
-    flex: 1;
+    background: transparent;
+    border: 1px solid var(--ws-panel-border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 8px 12px;
-    background: rgba(244, 247, 241, 0.08);
-    border: 1px solid rgba(244, 247, 241, 0.22);
-    border-radius: 8px;
-    color: rgba(244, 247, 241, 0.85);
-    font-family: var(--sans);
-    font-size: 12px;
-    cursor: pointer;
-    transition: background 0.18s, border-color 0.18s, color 0.18s;
+    color: var(--ws-text-main);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    font-family: inherit;
+    line-height: 1;
 }
 
 .draw-btn:hover {
-    background: rgba(244, 247, 241, 0.14);
-    border-color: rgba(244, 247, 241, 0.40);
-    color: #fff;
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .draw-btn.active {
-    background: rgba(200, 168, 130, 0.20);
-    border-color: rgba(200, 168, 130, 0.65);
-    color: #C8A882;
+    background: var(--ws-topbar-bg);
+    color: #ffffff;
+    border-color: transparent;
 }
+
+.draw-btn.active:hover {
+    background: var(--ws-topbar-active);
+}
+
 
 .draw-btn i {
     font-size: 13px;
@@ -1083,6 +1137,117 @@
     display: block;
     margin-bottom: 8px;
     font-size: 13px;
+}
+
+/* ── LEAFLET DRAW TOOLTIPS (para arreglar el cuadrado blanco enorme) ── */
+.leaflet-draw-tooltip {
+    background: rgba(14, 26, 14, 0.95) !important;
+    color: #f4f7f1 !important;
+    border: 1px solid rgba(200, 168, 130, 0.5) !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+}
+
+.leaflet-draw-tooltip::before {
+    border-top-color: rgba(14, 26, 14, 0.95) !important;
+}
+
+.leaflet-draw-tooltip-single {
+    background: rgba(200, 168, 130, 0.9) !important;
+    color: #0e1a0e !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+/* ── EDIT MODE STYLES (para modo edición) ── */
+.leaflet-draw-edit-edit .leaflet-draw-tooltip {
+    background: rgba(200, 168, 130, 0.9) !important;
+}
+
+.leaflet-draw-edit-remove .leaflet-draw-tooltip {
+    background: rgba(220, 53, 69, 0.9) !important;
+}
+
+/* ── LOCATION LISTS ── */
+.location-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(244, 247, 241, 0.1);
+}
+
+.location-section h4 {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.location-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.location-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(244, 247, 241, 0.05);
+    border: 1px solid rgba(244, 247, 241, 0.1);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: rgba(244, 247, 241, 0.8);
+}
+
+.location-item:hover {
+    background: rgba(244, 247, 241, 0.08);
+}
+
+.location-info {
+    flex: 1;
+}
+
+.location-name {
+    font-weight: 500;
+    color: var(--white);
+}
+
+.location-coords {
+    font-size: 11px;
+    color: rgba(244, 247, 241, 0.6);
+}
+
+.location-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-small {
+    background: none;
+    border: none;
+    color: rgba(244, 247, 241, 0.6);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.btn-small:hover {
+    color: var(--accent);
+    background: rgba(200, 168, 130, 0.1);
+}
+
+.btn-small.danger:hover {
+    color: #dc3545;
 }
 
 .warning-box ul {

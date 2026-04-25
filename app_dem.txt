@@ -1,0 +1,615 @@
+/**
+ * ╔══════════════════════════════════════════════════╗
+ * ║          APP: MODELO DIGITAL DE ELEVACIÓN        ║
+ * ║       Copernicus GLO-30 · ALOS AW3D30 V3.2       ║
+ * ╚══════════════════════════════════════════════════╝
+ */
+
+// ═══════════════════════════════════════════
+// 0. CONFIGURACIÓN GLOBAL
+// ═══════════════════════════════════════════
+Map.setOptions('HYBRID');
+Map.setCenter(-73.2459, -39.8191, 12);
+
+var COLORES = {
+  primario:   '#1a237e',
+  acento:     '#42a5f5',
+  fondo:      '#f5f7fa',
+  fondoPanel: '#ffffff',
+  texto:      '#263238',
+  textoSuave: '#607d8b',
+  exito:      '#2e7d32',
+  error:      '#c62828',
+  borde:      '#cfd8dc',
+  perfil:     '#6a1b9a'
+};
+
+var PALETA_DSM = [
+  '#006837','#1a9850','#66bd63','#ffffbf',
+  '#fdae61','#f46d43','#d73027','#ffffff'
+];
+
+// ── Geometrías guardadas al confirmar ────────
+var roiGuardado   = null;
+var lineaGuardada = null;
+
+var separador = function(margen) {
+  return ui.Panel({
+    style: { height: '1px', backgroundColor: COLORES.borde, margin: margen || '10px 0' }
+  });
+};
+
+// ═══════════════════════════════════════════
+// 1. PANEL IZQUIERDO — CONTROLES
+// ═══════════════════════════════════════════
+var panel = ui.Panel({
+  style: {
+    width: '370px', padding: '0px',
+    backgroundColor: COLORES.fondo,
+    border: '1px solid ' + COLORES.borde
+  }
+});
+
+// ── Header ──────────────────────────────────
+var header = ui.Panel({
+  style: { backgroundColor: COLORES.primario, padding: '18px 20px 14px 20px', margin: '0px' }
+});
+header.add(ui.Label('🛰️  Modelo Digital de Elevación', {
+  fontWeight: 'bold', fontSize: '20px', color: '#ffffff',
+  backgroundColor: COLORES.primario, margin: '0 0 4px 0'
+}));
+header.add(ui.Label('Copernicus GLO-30 · ALOS AW3D30 V3.2', {
+  fontSize: '12px', color: '#90caf9', backgroundColor: COLORES.primario,
+  margin: '0px', textAlign: 'center', stretch: 'horizontal'
+}));
+
+// ── Body ────────────────────────────────────
+var body = ui.Panel({
+  style: { padding: '16px 18px', backgroundColor: COLORES.fondoPanel }
+});
+
+body.add(ui.Label(
+  '① Selecciona colección y modo\n② Dibuja y confirma cada geometría\n③ Genera el análisis',
+  { fontSize: '13px', color: COLORES.textoSuave, whiteSpace: 'pre', margin: '0 0 10px 0' }
+));
+
+body.add(ui.Label('🖂 c.mirandal1999@gmail.com', {
+  fontSize: '12px', color: COLORES.acento, margin: '0 0 14px 0', textDecoration: 'underline'
+}).setUrl('mailto:c.mirandal1999@gmail.com'));
+
+body.add(separador('0 0 14px 0'));
+
+body.add(ui.Label('⚠️  Límite máximo: 3.000 ha por consulta.', {
+  fontSize: '12px', color: '#b45309', backgroundColor: '#fefce8',
+  padding: '8px', margin: '0 0 14px 0'
+}));
+
+// Selector dataset
+body.add(ui.Label('🗂️  Seleccionar Colección', {
+  fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 6px 0'
+}));
+var selectorDEM = ui.Select({
+  items: [
+    {label: 'Copernicus GLO-30', value: 'copernicus'},
+    {label: 'ALOS AW3D30 V3.2', value: 'alos'}
+  ],
+  value: 'copernicus',
+  style: {stretch: 'horizontal', margin: '0 0 14px 0'}
+});
+body.add(selectorDEM);
+body.add(separador('0 0 14px 0'));
+
+// ── Modo de análisis ────────────────────────
+body.add(ui.Label('Modo de análisis', {
+  fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 8px 0'
+}));
+var checkModoArea = ui.Checkbox({
+  label: '🔷  Análisis de área (polígono)',
+  value: true,
+  style: {fontSize: '13px', color: COLORES.texto, margin: '0 0 4px 0'}
+});
+var checkModoPerfil = ui.Checkbox({
+  label: '📏 Perfil de elevación (línea)',
+  value: false,
+  style: {fontSize: '13px', color: COLORES.texto, margin: '0 0 12px 0'}
+});
+body.add(checkModoArea);
+body.add(checkModoPerfil);
+body.add(separador('0 0 14px 0'));
+
+// ── Opciones visualización ──────────────────
+body.add(ui.Label('Opciones de visualización', {
+  fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 8px 0'
+}));
+var checkContornos = ui.Checkbox({
+  label: 'Mostrar curvas de nivel (50 m)', value: false,
+  style: {fontSize: '13px', color: COLORES.texto, margin: '0 0 12px 0'}
+});
+body.add(checkContornos);
+body.add(separador('8px 0 14px 0'));
+
+// ── Botones área ─────────────────────────────
+var panelBotonesArea = ui.Panel({
+  layout: ui.Panel.Layout.Flow('horizontal'),
+  style: {stretch: 'horizontal', margin: '0 0 4px 0'}
+});
+var botonDibujoArea = ui.Button({
+  label: '🔷 Dibujar Polígono',
+  style: {stretch: 'horizontal', fontSize: '12px', padding: '8px', color: COLORES.primario},
+  onClick: function() {
+    if (roiGuardado) {
+      setEstado('⚠️  Ya hay un polígono. Usa Limpiar para redibujar.', COLORES.error);
+      return;
+    }
+    capaUnica.geometries().reset();
+    estadoRoi.setValue('');
+    Map.layers().reset();
+    limpiarTodo();
+    drawingTools.setShape('polygon');
+    drawingTools.setShown(true);
+    capaUnica.setShown(true);
+    drawingTools.draw();
+    setEstado('✏️  Dibujando polígono... doble clic para cerrar.', COLORES.acento);
+  }
+});
+var botonConfirmarArea = ui.Button({
+  label: 'Confirmar ROI',
+  style: {stretch: 'horizontal', fontSize: '12px', padding: '8px', color: COLORES.exito},
+  onClick: function() {
+    drawingTools.stop();
+    if (capaUnica.geometries().length() === 0) {
+      setEstado('⚠️  Dibuja un polígono primero.', COLORES.error); return;
+    }
+    var geom = capaUnica.getEeObject();
+    geom.area(30).divide(10000).evaluate(function(ha) {
+      var haR = Math.round(ha);
+      if (haR > 3000) {
+        roiGuardado = null; estadoRoi.setValue('');
+        setEstado('❌  ROI muy grande: ' + haR + ' ha. Máximo 3.000 ha.', COLORES.error);
+      } else {
+        roiGuardado = geom;
+        estadoRoi.setValue('✅ Polígono: ' + haR + ' ha confirmado');
+        estadoRoi.style().set('color', COLORES.exito);
+        setEstado('Ahora puedes dibujar la línea o generar el análisis.', COLORES.textoSuave);
+      }
+    });
+  }
+});
+panelBotonesArea.add(botonDibujoArea).add(botonConfirmarArea);
+body.add(panelBotonesArea);
+var estadoRoi = ui.Label('', { fontSize: '11px', color: COLORES.textoSuave, margin: '0 0 8px 0' });
+body.add(estadoRoi);
+
+// ── Botones perfil ────────────────────────────
+var panelBotonesPerfil = ui.Panel({
+  layout: ui.Panel.Layout.Flow('horizontal'),
+  style: {stretch: 'horizontal', margin: '0 0 4px 0', shown: false}
+});
+var botonDibujoPerfil = ui.Button({
+  label: '📏 Dibujar Línea',
+  style: {stretch: 'horizontal', fontSize: '12px', padding: '8px', color: COLORES.perfil},
+  onClick: function() {
+    if (lineaGuardada) {
+      setEstado('⚠️  Ya hay una línea. Usa Limpiar para redibujar.', COLORES.error);
+      return;
+    }
+    // No resetear capaUnica para mantener el polígono visible
+    estadoLinea.setValue('');
+    drawingTools.setShape('line');
+    drawingTools.setShown(true);
+    capaUnica.setShown(true);
+    drawingTools.draw();
+    setEstado('✏️  Dibujando línea... doble clic para terminar.', COLORES.acento);
+  }
+});
+var botonConfirmarPerfil = ui.Button({
+  label: 'Confirmar Línea',
+  style: {stretch: 'horizontal', fontSize: '12px', padding: '8px', color: COLORES.perfil},
+  onClick: function() {
+    drawingTools.stop();
+    if (capaUnica.geometries().length() === 0) {
+      setEstado('⚠️  Dibuja una línea primero.', COLORES.error); return;
+    }
+    var geomLinea = capaUnica.getEeObject();
+    lineaGuardada = ee.Geometry.LineString(geomLinea.coordinates());
+    estadoLinea.setValue('✅ Línea confirmada');
+    estadoLinea.style().set('color', COLORES.perfil);
+    setEstado('Línea guardada. Listo para generar.', COLORES.textoSuave);
+  }
+});
+panelBotonesPerfil.add(botonDibujoPerfil).add(botonConfirmarPerfil);
+body.add(panelBotonesPerfil);
+var estadoLinea = ui.Label('', { fontSize: '11px', color: COLORES.textoSuave, margin: '0 0 8px 0', shown: false });
+body.add(estadoLinea);
+
+// ── Reactividad checkboxes ──────────────────
+checkModoArea.onChange(function(val) {
+  panelBotonesArea.style().set('shown', val);
+  estadoRoi.style().set('shown', val);
+  if (!val) { roiGuardado = null; estadoRoi.setValue(''); }
+});
+checkModoPerfil.onChange(function(val) {
+  panelBotonesPerfil.style().set('shown', val);
+  estadoLinea.style().set('shown', val);
+  if (!val) { lineaGuardada = null; estadoLinea.setValue(''); }
+});
+
+// ── Botón limpiar ────────────────────────────
+var botonLimpiar = ui.Button({
+  label: 'Limpiar Geometrías',
+  style: { stretch: 'horizontal', fontSize: '13px', padding: '10px', color: COLORES.error, margin: '0 0 6px 0' },
+  onClick: function() {
+    drawingTools.stop();
+    capaUnica.geometries().reset();
+    roiGuardado   = null;
+    lineaGuardada = null;
+    estadoRoi.setValue('');
+    estadoLinea.setValue('');
+    Map.layers().reset();
+    limpiarTodo();
+    panelGraficos.style().set('shown', false);
+    setEstado('Geometrías eliminadas. Puedes empezar de nuevo.', COLORES.textoSuave);
+  }
+});
+body.add(botonLimpiar);
+
+// ── Botón generar ────────────────────────────
+var botonGenerar = ui.Button({
+  label: 'Generar Análisis',
+  style: { stretch: 'horizontal', fontSize: '13px', padding: '10px', fontWeight: 'bold', color: COLORES.primario },
+  onClick: generarAnalisis
+});
+body.add(botonGenerar);
+
+var estadoLabel = ui.Label('', { fontSize: '12px', margin: '8px 0 0 0', color: COLORES.textoSuave });
+body.add(estadoLabel);
+
+// ── Stats izquierdo (se llena al generar) ──────
+var panelStatsIzq = ui.Panel({
+  style: { margin: '0px', padding: '0 18px 16px 18px', backgroundColor: COLORES.fondoPanel }
+});
+
+// ── Leyenda ───────────────────────────────────
+var panelLeyenda = ui.Panel({
+  style: { margin: '0px', padding: '0 18px 16px 18px', backgroundColor: COLORES.fondoPanel }
+});
+
+// ── Footer ───────────────────────────────────
+var footerLabel = ui.Label('Servicio gratuito con límite de cuotas · Desarrollado por Camilo Miranda', {
+  fontSize: '11px', color: COLORES.textoSuave, textAlign: 'center', stretch: 'horizontal'
+});
+var footer = ui.Panel({ style: { backgroundColor: COLORES.fondo, padding: '10px 18px' } });
+footer.add(footerLabel);
+
+panel.add(header).add(body).add(panelStatsIzq).add(panelLeyenda).add(footer);
+ui.root.insert(0, panel);
+
+// ═══════════════════════════════════════════
+// 2. PANEL DERECHO — GRÁFICOS
+// ═══════════════════════════════════════════
+var panelGraficos = ui.Panel({
+  style: { width: '420px', padding: '16px 14px', backgroundColor: COLORES.fondoPanel,
+           border: '1px solid ' + COLORES.borde, shown: false }
+});
+panelGraficos.add(ui.Label('📊  Resultados del análisis', {
+  fontWeight: 'bold', fontSize: '15px', color: COLORES.texto, margin: '0 0 14px 0'
+}));
+var panelContenido = ui.Panel({ style: { margin: '0px' } });
+panelGraficos.add(panelContenido);
+ui.root.add(panelGraficos);
+
+// ═══════════════════════════════════════════
+// 3. HERRAMIENTA DE DIBUJO — UNA SOLA CAPA
+// ═══════════════════════════════════════════
+var drawingTools = Map.drawingTools();
+drawingTools.setShown(false);
+drawingTools.layers().reset();
+var capaUnica = ui.Map.GeometryLayer({ geometries: null, name: 'Dibujo', color: '#42a5f5' });
+drawingTools.layers().add(capaUnica);
+
+// ═══════════════════════════════════════════
+// 4. FUNCIÓN PRINCIPAL
+// ═══════════════════════════════════════════
+function generarAnalisis() {
+  var modoArea   = checkModoArea.getValue();
+  var modoPerfil = checkModoPerfil.getValue();
+
+  if (!modoArea && !modoPerfil) {
+    setEstado('⚠️  Selecciona al menos un modo de análisis.', COLORES.error); return;
+  }
+  if (modoArea && !roiGuardado) {
+    setEstado('⚠️  Dibuja y confirma el polígono primero.', COLORES.error); return;
+  }
+  if (modoPerfil && !lineaGuardada) {
+    setEstado('⚠️  Dibuja y confirma la línea de perfil primero.', COLORES.error); return;
+  }
+
+  setEstado('⏳  Procesando...', COLORES.acento);
+  limpiarTodo();
+  panelGraficos.style().set('shown', true);
+  capaUnica.setShown(false);
+
+  var dataset, banda, nombreCapa, nombreArchivo;
+  if (selectorDEM.getValue() === 'copernicus') {
+    dataset = 'COPERNICUS/DEM/GLO30'; banda = 'DEM';
+    nombreCapa = 'DEM Copernicus GLO-30 (m)'; nombreArchivo = 'DEM_Copernicus_30m';
+    footerLabel.setValue('Datos: Copernicus DEM GLO-30 · Resolución 30 m');
+  } else {
+    dataset = 'JAXA/ALOS/AW3D30/V3_2'; banda = 'DSM';
+    nombreCapa = 'DSM ALOS AW3D30 (m)'; nombreArchivo = 'DSM_ALOS_30m';
+    footerLabel.setValue('Datos: JAXA ALOS AW3D30 V3.2 · Resolución 30 m');
+  }
+
+  if (modoArea) {
+    var dsm = cargarDSM(dataset, banda, roiGuardado);
+    procesarArea(dsm, banda, roiGuardado, nombreCapa, nombreArchivo, modoPerfil, dataset);
+  } else {
+    // Solo perfil
+    var roiLin = lineaGuardada.buffer(2000).bounds();
+    procesarPerfil(cargarDSM(dataset, banda, roiLin), banda);
+  }
+}
+
+// ── Cargar DEM ───────────────────────────────
+function cargarDSM(dataset, banda, roi) {
+  var dsm = ee.ImageCollection(dataset)
+    .select(banda).filterBounds(roi).mosaic()
+    .clip(roi)
+    .updateMask(ee.Image.constant(1).clip(roi).mask());
+  if (selectorDEM.getValue() === 'alos') {
+    dsm = dsm.updateMask(dsm.gt(-100));
+  }
+  return dsm;
+}
+
+// ═══════════════════════════════════════════
+// 5. ANÁLISIS DE ÁREA
+// ═══════════════════════════════════════════
+function procesarArea(dsm, banda, roi, nombreCapa, nombreArchivo, tambiénPerfil, dataset) {
+  dsm.reduceRegion({
+    reducer: ee.Reducer.minMax()
+      .combine(ee.Reducer.mean(), '', true)
+      .combine(ee.Reducer.stdDev(), '', true),
+    geometry: roi, scale: 30, maxPixels: 1e9
+  }).evaluate(function(statsVal) {
+    if (!statsVal) { setEstado('❌  Error estadísticas.', COLORES.error); return; }
+
+    var minElev  = Math.floor(statsVal[banda + '_min']    || 0);
+    var maxElev  = Math.ceil( statsVal[banda + '_max']    || 500);
+    var meanElev = (statsVal[banda + '_mean']   || 0).toFixed(1);
+    var stdElev  = (statsVal[banda + '_stdDev'] || 0).toFixed(1);
+
+    Map.layers().reset();
+    Map.addLayer(dsm, {min: minElev, max: maxElev, palette: PALETA_DSM}, nombreCapa);
+    if (checkContornos.getValue()) {
+      var cont = dsm.subtract(dsm.mod(50));
+      Map.addLayer(cont.focal_min(1).neq(cont).updateMask(cont.focal_min(1).neq(cont)),
+        {palette: ['#37474f'], opacity: 0.6}, 'Curvas de nivel (50m)');
+    }
+    Map.centerObject(roi, 13);
+
+    // Si hay línea guardada, mostrarla como capa del mapa
+    if (lineaGuardada) {
+      Map.addLayer(lineaGuardada, {color: 'ab47bc', width: 2}, '📏 Perfil de elevación');
+    }
+
+    // Badge
+    var badge = selectorDEM.getValue() === 'copernicus' ? '🌍  Copernicus GLO-30' : '🛰️  ALOS AW3D30 V3.2';
+
+    // Estadísticas
+    var pStats = ui.Panel({
+      style: { backgroundColor: COLORES.fondo, padding: '10px',
+               border: '1px solid ' + COLORES.borde, margin: '0 0 14px 0' }
+    });
+    pStats.add(ui.Label(badge, { fontSize: '11px', color: COLORES.acento, fontWeight: 'bold', margin: '0 0 6px 0' }));
+    pStats.add(ui.Label('📊  Estadísticas de elevación', {
+      fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 6px 0'
+    }));
+    var fila = function(ic, nom, val, uni) {
+      var f = ui.Panel({ layout: ui.Panel.Layout.Flow('horizontal'), style: {margin: '2px 0'} });
+      f.add(ui.Label(ic + '  ' + nom + ':', { fontSize: '12px', color: COLORES.textoSuave, width: '130px' }));
+      f.add(ui.Label(val + ' ' + uni, { fontSize: '12px', fontWeight: 'bold', color: COLORES.texto }));
+      return f;
+    };
+    pStats.add(fila('','Mínimo',    minElev,           'm'));
+    pStats.add(fila('','Máximo',    maxElev,           'm'));
+    pStats.add(fila('️','Media',     meanElev,          'm'));
+    pStats.add(fila('','Desv. Est.',stdElev,           'm'));
+    pStats.add(fila('','Rango',     maxElev - minElev, 'm'));
+    panelStatsIzq.add(pStats);
+
+    // Histograma
+    panelContenido.add(ui.Label('Distribución de elevación', {
+      fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 4px 0'
+    }));
+    var chartH = ui.Chart.image.histogram({
+      image: dsm, region: roi, scale: 30, maxPixels: 1e9, maxBuckets: 40
+    }).setOptions({
+      title: '',
+      hAxis: {title: 'Elevación (m)', titleTextStyle: {color: COLORES.textoSuave, fontSize: 11}},
+      vAxis: {title: 'Frecuencia',    titleTextStyle: {color: COLORES.textoSuave, fontSize: 11}},
+      colors: [COLORES.primario], bar: {groupWidth: '90%'}, legend: {position: 'none'},
+      chartArea: {width: '85%', height: '65%'}, backgroundColor: COLORES.fondoPanel
+    });
+    chartH.style().set({margin: '0 0 16px 0', stretch: 'horizontal'});
+    panelContenido.add(chartH);
+
+    // Curva hipsométrica
+    panelContenido.add(ui.Label('Curva Hipsométrica', {
+      fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 2px 0'
+    }));
+    panelContenido.add(ui.Label('% del área acumulado por debajo de cada nivel de elevación.', {
+      fontSize: '11px', color: COLORES.textoSuave, margin: '0 0 6px 0'
+    }));
+
+    dsm.reduceRegion({
+      reducer: ee.Reducer.histogram({maxBuckets: 100, minBucketWidth: 1}),
+      geometry: roi, scale: 30, maxPixels: 1e9
+    }).evaluate(function(hVal) {
+      if (hVal && hVal[banda]) {
+        var buckets = hVal[banda].bucketMeans;
+        var counts  = hVal[banda].histogram;
+        var total = 0;
+        for (var k = 0; k < counts.length; k++) { total += counts[k]; }
+        var tabHips = [['Elevación (m)', '% Área acumulada']];
+        var acum = 0;
+        for (var j = 0; j < buckets.length; j++) {
+          acum += counts[j];
+          tabHips.push([Math.round(buckets[j]), parseFloat(((acum/total)*100).toFixed(2))]);
+        }
+        var chartHips = ui.Chart(tabHips).setChartType('LineChart').setOptions({
+          title: '',
+          hAxis: {title: 'Elevación (m)', titleTextStyle: {color: COLORES.textoSuave, fontSize: 11}},
+          vAxis: {title: '% Área acumulada', titleTextStyle: {color: COLORES.textoSuave, fontSize: 11},
+                  viewWindow: {min: 0, max: 100}},
+          colors: [COLORES.acento], lineWidth: 2, pointSize: 0, legend: {position: 'none'},
+          chartArea: {width: '85%', height: '65%'}, backgroundColor: COLORES.fondoPanel
+        });
+        chartHips.style().set({margin: '0 0 16px 0', stretch: 'horizontal'});
+        panelContenido.add(chartHips);
+      }
+
+      // Descarga (panel izquierdo)
+      var url = dsm.getDownloadURL({ name: nombreArchivo, scale: 30, region: roi, format: 'GEO_TIFF' });
+      panelStatsIzq.add(ui.Label('📥  Descargar DEM (.tif)', {
+        fontSize: '13px', fontWeight: 'bold', color: COLORES.exito,
+        margin: '4px 0 14px 0', textDecoration: 'underline'
+      }).setUrl(url));
+
+      construirLeyenda(minElev, maxElev);
+
+      // Si también hay perfil pendiente
+      if (tambiénPerfil && lineaGuardada) {
+        panelContenido.add(separador('4px 0 10px 0'));
+        var roiLin = lineaGuardada.buffer(2000).bounds();
+        procesarPerfil(cargarDSM(dataset, banda, roiLin), banda);
+      } else {
+        setEstado('✅  Análisis completado.', COLORES.exito);
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════
+// 6. PERFIL DE ELEVACIÓN
+// ═══════════════════════════════════════════
+function procesarPerfil(dsm, banda) {
+  lineaGuardada.evaluate(function(geojson) {
+    if (!geojson || !geojson.coordinates || geojson.coordinates.length < 2) {
+      setEstado('❌  Línea inválida.', COLORES.error); return;
+    }
+
+    var coords  = geojson.coordinates;
+    var nPuntos = 150;
+
+    var segmentos = [];
+    var longTotal = 0;
+    for (var s = 0; s < coords.length - 1; s++) {
+      var dx  = coords[s+1][0] - coords[s][0];
+      var dy  = coords[s+1][1] - coords[s][1];
+      var len = Math.sqrt(dx*dx + dy*dy);
+      segmentos.push({lon0: coords[s][0], lat0: coords[s][1],
+                      lon1: coords[s+1][0], lat1: coords[s+1][1], len: len});
+      longTotal += len;
+    }
+
+    var puntosList = [];
+    for (var i = 0; i <= nPuntos; i++) {
+      var objetivo = (i / nPuntos) * longTotal;
+      var acum     = 0;
+      var lon, lat;
+      for (var k = 0; k < segmentos.length; k++) {
+        var seg = segmentos[k];
+        if (acum + seg.len >= objetivo || k === segmentos.length - 1) {
+          var t   = seg.len > 0 ? (objetivo - acum) / seg.len : 0;
+          t       = Math.max(0, Math.min(1, t));
+          lon     = seg.lon0 + t * (seg.lon1 - seg.lon0);
+          lat     = seg.lat0 + t * (seg.lat1 - seg.lat0);
+          break;
+        }
+        acum += seg.len;
+      }
+      var distM = Math.round((i / nPuntos) * longTotal * 111320);
+      puntosList.push(ee.Feature(ee.Geometry.Point([lon, lat]), {distanciaM: distM}));
+    }
+
+    var puntos = ee.FeatureCollection(puntosList);
+
+    dsm.reduceRegions({
+      collection: puntos, reducer: ee.Reducer.first(), scale: 30
+    }).evaluate(function(fc) {
+      if (!fc || !fc.features) {
+        setEstado('❌  Error al generar el perfil.', COLORES.error); return;
+      }
+
+      var tabPerfil = [['Distancia (m)', 'Elevación (m)']];
+      for (var i = 0; i < fc.features.length; i++) {
+        var props = fc.features[i].properties;
+        var dist  = props['distanciaM'];
+        var elev  = props[banda] !== undefined ? props[banda] : props['first'];
+        if (elev !== null && elev !== undefined) {
+          tabPerfil.push([dist, Math.round(elev)]);
+        }
+      }
+
+      var header = tabPerfil[0];
+      var datos  = tabPerfil.slice(1).sort(function(a, b) { return a[0] - b[0]; });
+      tabPerfil  = [header].concat(datos);
+
+      if (tabPerfil.length < 2) {
+        panelContenido.add(ui.Label('⚠️  Sin datos de perfil en esta línea.', {color: COLORES.error})); return;
+      }
+
+      panelContenido.add(ui.Label('Perfil de Elevación', {
+        fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 2px 0'
+      }));
+      panelContenido.add(ui.Label('Variación de elevación a lo largo de la línea trazada.', {
+        fontSize: '11px', color: COLORES.textoSuave, margin: '0 0 6px 0'
+      }));
+      var chartP = ui.Chart(tabPerfil).setChartType('LineChart').setOptions({
+        title: '',
+        hAxis: {title: 'Distancia (m)', titleTextStyle: {color: COLORES.textoSuave, fontSize: 11}},
+        vAxis: {title: 'Elevación (m)',  titleTextStyle: {color: COLORES.textoSuave, fontSize: 11}},
+        colors: ['#e65100'], lineWidth: 2, pointSize: 0, legend: {position: 'none'},
+        chartArea: {width: '85%', height: '65%'}, backgroundColor: COLORES.fondoPanel
+      });
+      chartP.style().set({margin: '0 0 12px 0', stretch: 'horizontal'});
+      panelContenido.add(chartP);
+      setEstado('✅  Análisis completado.', COLORES.exito);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════
+// 7. LEYENDA
+// ═══════════════════════════════════════════
+function construirLeyenda(minVal, maxVal) {
+  panelLeyenda.clear();
+  panelLeyenda.add(separador('0 0 10px 0'));
+  panelLeyenda.add(ui.Label('Leyenda de elevación (m)', {
+    fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 6px 0'
+  }));
+  var paso = (maxVal - minVal) / PALETA_DSM.length;
+  for (var i = 0; i < PALETA_DSM.length; i++) {
+    var f = ui.Panel({ layout: ui.Panel.Layout.Flow('horizontal'), style: {margin: '2px 0'} });
+    f.add(ui.Label('', { backgroundColor: PALETA_DSM[i], padding: '8px',
+                         margin: '0 8px 0 0', border: '1px solid ' + COLORES.borde }));
+    f.add(ui.Label(Math.round(minVal + i * paso) + ' – ' + Math.round(minVal + (i+1) * paso) + ' m',
+                   {fontSize: '12px', color: COLORES.texto}));
+    panelLeyenda.add(f);
+  }
+}
+
+// ═══════════════════════════════════════════
+// 8. UTILIDADES
+// ═══════════════════════════════════════════
+function setEstado(msg, color) {
+  estadoLabel.setValue(msg);
+  estadoLabel.style().set('color', color);
+}
+
+function limpiarTodo() {
+  panelContenido.clear();
+  panelStatsIzq.clear();
+  panelLeyenda.clear();
+}

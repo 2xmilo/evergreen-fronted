@@ -1,0 +1,683 @@
+/**
+ * ╔══════════════════════════════════════════════════════╗
+ * ║   MONITOR ESPECTRAL VEGETAL · EVERGREEN v3.0         ║
+ * ║   Sentinel-2 L2A · 14 Índices · 4 Categorías        ║
+ * ╚══════════════════════════════════════════════════════╝
+ */
+
+Map.setOptions('SATELLITE');
+Map.setCenter(-73.2, -39.8, 10);
+
+var COLORES = {
+  primario:   '#1B3A0D',
+  acento:     '#6AAA35',
+  fondo:      '#f5f7fa',
+  fondoPanel: '#ffffff',
+  texto:      '#263238',
+  textoSuave: '#607d8b',
+  exito:      '#2e7d32',
+  error:      '#c62828',
+  borde:      '#cfd8dc'
+};
+
+var LIMITE_HA = 50000;
+
+var CATEGORIAS = [
+  { id: 'vegetacion', label: 'Vegetación y biomasa' },
+  { id: 'humedad',    label: 'Humedad y agua'        },
+  { id: 'fuego',      label: 'Fuego y estrés'        },
+  { id: 'suelo',      label: 'Suelo y cobertura'     }
+];
+
+var INDICES = [
+  {
+    id: 'NDVI', categoria: 'vegetacion',
+    label: 'NDVI — Vigor Vegetacional',
+    desc: 'Actividad fotosintética. Índice base para vegetación.',
+    min: 0.1, max: 0.9,
+    palette: ['#a50026','#fdae61','#ffffbf','#a6d96a','#1a9641','#006837'],
+    etqMin: 'Sin vegetación', etqMax: 'Alta densidad'
+  },
+  {
+    id: 'EVI', categoria: 'vegetacion',
+    label: 'EVI — Vegetación Mejorado',
+    desc: 'Corrige saturación en bosques densos. Más preciso que NDVI en alta biomasa.',
+    min: 0, max: 0.8,
+    palette: ['#f7fbff','#c6dbef','#9ecae1','#6baed6','#2171b5','#084594'],
+    etqMin: 'Sin biomasa', etqMax: 'Alta biomasa'
+  },
+  {
+    id: 'EVI2', categoria: 'vegetacion',
+    label: 'EVI2 — Vegetación Mejorado (2 bandas)',
+    desc: 'EVI sin banda azul. Útil cuando B2 tiene ruido atmosférico.',
+    min: 0, max: 0.8,
+    palette: ['#f7fbff','#c6dbef','#9ecae1','#6baed6','#2171b5','#084594'],
+    etqMin: 'Sin biomasa', etqMax: 'Alta biomasa'
+  },
+  {
+    id: 'SAVI', categoria: 'vegetacion',
+    label: 'SAVI — Índice Ajustado por Suelo',
+    desc: 'NDVI corregido por suelo expuesto. Clave en zonas con cobertura parcial.',
+    min: 0, max: 0.7,
+    palette: ['#a50026','#fdae61','#ffffbf','#a6d96a','#006837'],
+    etqMin: 'Suelo desnudo', etqMax: 'Cobertura densa'
+  },
+  {
+    id: 'LAI', categoria: 'vegetacion',
+    label: 'LAI — Índice de Área Foliar',
+    desc: 'Área foliar por m². Clave para estimación de biomasa y carbono.',
+    min: 0, max: 6,
+    palette: ['#ffffe5','#d9f0a3','#addd8e','#78c679','#238443','#004529'],
+    etqMin: 'Sin follaje', etqMax: 'Dosel denso'
+  },
+  {
+    id: 'VARI', categoria: 'vegetacion',
+    label: 'VARI — Verdor Visible',
+    desc: 'Solo bandas RGB. Robusto ante variaciones atmosféricas.',
+    min: -0.3, max: 0.5,
+    palette: ['#a50026','#fdae61','#ffffbf','#a6d96a','#1a9641'],
+    etqMin: 'Sin verdor', etqMax: 'Alta actividad'
+  },
+  {
+    id: 'NDMI', categoria: 'humedad',
+    label: 'NDMI — Humedad Foliar',
+    desc: 'Detecta contenido de agua en la hoja. Alto = vegetación bien hidratada.',
+    min: -0.5, max: 0.8,
+    palette: ['#a50026','#f46d43','#fee090','#abd9e9','#4393c3','#2166ac'],
+    etqMin: 'Seco', etqMax: 'Húmedo'
+  },
+  {
+    id: 'MSI', categoria: 'humedad',
+    label: 'MSI — Estrés Hídrico',
+    desc: 'Relación SWIR/NIR. Mayor valor = mayor estrés hídrico foliar.',
+    min: 0, max: 3,
+    palette: ['#2166ac','#abd9e9','#ffffbf','#fdae61','#d73027','#a50026'],
+    etqMin: 'Sin estrés', etqMax: 'Estrés severo'
+  },
+  {
+    id: 'NDWI', categoria: 'humedad',
+    label: 'NDWI — Agua Superficial',
+    desc: 'Detecta cuerpos de agua y humedad superficial.',
+    min: -0.5, max: 0.5,
+    palette: ['#d73027','#fee090','#e0f3f8','#4393c3','#2166ac'],
+    etqMin: 'Tierra seca', etqMax: 'Agua/húmedo'
+  },
+  {
+    id: 'MNDWI', categoria: 'humedad',
+    label: 'MNDWI — Agua Modificado',
+    desc: 'NDWI mejorado con SWIR. Menos confusión con vegetación densa.',
+    min: -0.5, max: 0.5,
+    palette: ['#d73027','#fee090','#e0f3f8','#4393c3','#2166ac'],
+    etqMin: 'Tierra seca', etqMax: 'Agua/húmedo'
+  },
+  {
+    id: 'NBR', categoria: 'fuego',
+    label: 'NBR — Área Quemada',
+    desc: 'Detecta área quemada y severidad post-incendio.',
+    min: -0.5, max: 0.9,
+    palette: ['#a50026','#f46d43','#fee090','#ffffbf','#a6d96a','#006837'],
+    etqMin: 'Quemado severo', etqMax: 'Vegetación sana'
+  },
+  {
+    id: 'NBR2', categoria: 'fuego',
+    label: 'NBR2 — Área Quemada (alt.)',
+    desc: 'Versión alternativa del NBR. Más sensible a vegetación quemada reciente.',
+    min: -0.5, max: 0.9,
+    palette: ['#a50026','#f46d43','#fee090','#ffffbf','#a6d96a','#006837'],
+    etqMin: 'Quemado severo', etqMax: 'Vegetación sana'
+  },
+  {
+    id: 'NDDI', categoria: 'fuego',
+    label: 'NDDI — Sequía Compuesta',
+    desc: 'Combina NDVI y NDWI. Detecta estrés hídrico integrado.',
+    min: -0.5, max: 0.8,
+    palette: ['#2166ac','#74add1','#e0f3f8','#ffffbf','#fdae61','#d73027','#a50026'],
+    etqMin: 'Bajo estrés', etqMax: 'Sequía extrema'
+  },
+  {
+    id: 'BSI', categoria: 'suelo',
+    label: 'BSI — Suelo Desnudo',
+    desc: 'Detecta suelo expuesto. Útil para erosión y monitoreo post-incendio.',
+    min: -0.5, max: 0.5,
+    palette: ['#1a9641','#ffffbf','#d73027'],
+    etqMin: 'Vegetación', etqMax: 'Suelo desnudo'
+  },
+  {
+    id: 'NDSI', categoria: 'suelo',
+    label: 'NDSI — Cobertura de Nieve',
+    desc: 'Detección de nieve y hielo. Relevante para cuencas andinas.',
+    min: -0.5, max: 0.8,
+    palette: ['#d73027','#ffffbf','#e0f3f8','#4393c3','#2166ac'],
+    etqMin: 'Sin nieve', etqMax: 'Nieve/hielo'
+  }
+];
+
+var roiGuardado = null;
+var areaHa      = null;
+
+var separador = function(margen) {
+  return ui.Panel({
+    style: { height: '1px', backgroundColor: COLORES.borde, margin: margen || '10px 0' }
+  });
+};
+
+function getLabelsByCategoria(catId) {
+  var resultado = [];
+  for (var i = 0; i < INDICES.length; i++) {
+    if (INDICES[i].categoria === catId) resultado.push(INDICES[i].label);
+  }
+  return resultado;
+}
+
+function getIndiceByLabel(lbl) {
+  for (var i = 0; i < INDICES.length; i++) {
+    if (INDICES[i].label === lbl) return INDICES[i];
+  }
+  return INDICES[0];
+}
+
+// ═══════════════════════════════════════════
+// PANEL
+// ═══════════════════════════════════════════
+var panel = ui.Panel({
+  style: {
+    width: '380px', padding: '0px',
+    backgroundColor: COLORES.fondo,
+    border: '1px solid ' + COLORES.borde
+  }
+});
+
+var header = ui.Panel({
+  style: { backgroundColor: COLORES.primario, padding: '18px 20px 14px 20px', margin: '0px' }
+});
+header.add(ui.Label('Monitor Espectral Vegetal', {
+  fontWeight: 'bold', fontSize: '20px', color: '#ffffff',
+  backgroundColor: COLORES.primario, margin: '0 0 4px 0'
+}));
+header.add(ui.Label('Sentinel-2 L2A · 14 Índices · Evergreen v3.0', {
+  fontSize: '12px', color: '#9FE1CB',
+  backgroundColor: COLORES.primario, margin: '0px'
+}));
+
+var body = ui.Panel({
+  style: { padding: '16px 18px', backgroundColor: COLORES.fondoPanel }
+});
+
+body.add(ui.Label(
+  '① Selecciona categoría e índice\n② Configura rango de fechas\n③ Dibuja y confirma el AOI\n④ Presiona Generar Análisis',
+  { fontSize: '13px', color: COLORES.textoSuave, whiteSpace: 'pre', margin: '0 0 10px 0' }
+));
+body.add(ui.Label('contacto@evergreen.cl', {
+  fontSize: '12px', color: COLORES.acento,
+  margin: '0 0 14px 0', textDecoration: 'underline'
+}).setUrl('mailto:contacto@evergreen.cl'));
+body.add(separador('0 0 14px 0'));
+body.add(ui.Label('Límite máximo: ' + LIMITE_HA + ' ha por consulta.', {
+  fontSize: '12px', color: '#b45309', backgroundColor: '#fefce8',
+  padding: '8px', margin: '0 0 14px 0'
+}));
+
+// Categoría
+body.add(ui.Label('Categoría', {
+  fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 6px 0'
+}));
+var itemsCat = [];
+for (var c = 0; c < CATEGORIAS.length; c++) { itemsCat.push(CATEGORIAS[c].label); }
+var selectCategoria = ui.Select({
+  items: itemsCat, value: itemsCat[0],
+  style: { stretch: 'horizontal', margin: '0 0 10px 0' }
+});
+body.add(selectCategoria);
+
+// Índice
+body.add(ui.Label('Índice', {
+  fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 6px 0'
+}));
+var selectIndice = ui.Select({
+  items: getLabelsByCategoria(CATEGORIAS[0].id),
+  value: getLabelsByCategoria(CATEGORIAS[0].id)[0],
+  style: { stretch: 'horizontal', margin: '0 0 6px 0' }
+});
+body.add(selectIndice);
+var labelDescIndice = ui.Label(INDICES[0].desc, {
+  fontSize: '11px', color: COLORES.textoSuave, margin: '0 0 14px 0'
+});
+body.add(labelDescIndice);
+
+selectCategoria.onChange(function(catLabel) {
+  var catId = '';
+  for (var i = 0; i < CATEGORIAS.length; i++) {
+    if (CATEGORIAS[i].label === catLabel) { catId = CATEGORIAS[i].id; break; }
+  }
+  var nuevosItems = getLabelsByCategoria(catId);
+  body.remove(selectIndice);
+  body.remove(labelDescIndice);
+  selectIndice = ui.Select({
+    items: nuevosItems, value: nuevosItems[0],
+    style: { stretch: 'horizontal', margin: '0 0 6px 0' }
+  });
+  selectIndice.onChange(function(val) {
+    if (val) labelDescIndice.setValue(getIndiceByLabel(val).desc);
+  });
+  labelDescIndice = ui.Label(getIndiceByLabel(nuevosItems[0]).desc, {
+    fontSize: '11px', color: COLORES.textoSuave, margin: '0 0 14px 0'
+  });
+  body.insert(7, selectIndice);
+  body.insert(8, labelDescIndice);
+});
+selectIndice.onChange(function(val) {
+  if (val) labelDescIndice.setValue(getIndiceByLabel(val).desc);
+});
+
+body.add(separador('0 0 14px 0'));
+
+// Fechas
+body.add(ui.Label('Rango temporal (Sentinel-2 L2A)', {
+  fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 6px 0'
+}));
+var txtFechaInicio = ui.Textbox({
+  placeholder: 'YYYY-MM-DD', value: '2024-01-01',
+  style: { stretch: 'horizontal', margin: '0 0 6px 0' }
+});
+var txtFechaFin = ui.Textbox({
+  placeholder: 'YYYY-MM-DD', value: '2024-03-31',
+  style: { stretch: 'horizontal', margin: '0 0 4px 0' }
+});
+body.add(txtFechaInicio);
+body.add(txtFechaFin);
+body.add(ui.Label('Mediana de imágenes con < 20% nubes. Máscara SCL aplicada.', {
+  fontSize: '11px', color: COLORES.textoSuave, margin: '2px 0 14px 0'
+}));
+body.add(separador('0 0 14px 0'));
+
+// AOI
+body.add(ui.Label('Área de Interés (AOI)', {
+  fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 8px 0'
+}));
+var panelBotonesAOI = ui.Panel({
+  layout: ui.Panel.Layout.Flow('horizontal'),
+  style: { stretch: 'horizontal', margin: '0 0 4px 0' }
+});
+var estadoAOI = ui.Label('', {
+  fontSize: '12px', color: COLORES.textoSuave, margin: '4px 0 0 0'
+});
+
+var drawingTools = Map.drawingTools();
+drawingTools.setShown(false);
+var capaUnica = ui.Map.GeometryLayer({
+  geometries: [], name: 'AOI', color: COLORES.acento
+});
+drawingTools.layers().add(capaUnica);
+
+var botonDibujar = ui.Button({
+  label: 'Dibujar AOI',
+  style: { stretch: 'horizontal', fontSize: '12px', padding: '8px', color: COLORES.primario },
+  onClick: function() {
+    roiGuardado = null;
+    estadoAOI.setValue('');
+    capaUnica.geometries().reset();
+    capaUnica.setShown(true);
+    drawingTools.setShape('polygon');
+    drawingTools.setShown(true);
+    drawingTools.draw();
+    setEstado('Dibuje el polígono — doble clic para cerrar.', COLORES.acento);
+  }
+});
+
+var botonConfirmar = ui.Button({
+  label: 'Confirmar AOI',
+  style: { stretch: 'horizontal', fontSize: '12px', padding: '8px', color: COLORES.exito },
+  onClick: function() {
+    if (capaUnica.geometries().length() === 0) {
+      setEstado('Dibuje un AOI primero.', COLORES.error); return;
+    }
+    var geom = capaUnica.getEeObject();
+    drawingTools.stop();
+    drawingTools.setShown(false);
+    // OCULTAR el polígono de dibujo para que no tape la capa de análisis
+    capaUnica.setShown(false);
+    geom.area(30).divide(10000).evaluate(function(ha) {
+      if (!ha) {
+        setEstado('Error al medir el AOI. Vuelva a dibujar.', COLORES.error); return;
+      }
+      var haR = Math.round(ha);
+      if (haR > LIMITE_HA) {
+        roiGuardado = null;
+        estadoAOI.setValue('');
+        setEstado('AOI supera ' + LIMITE_HA + ' ha (' + haR + ' ha). Redibuje.', COLORES.error);
+      } else {
+        areaHa = ha;
+        roiGuardado = geom;
+        estadoAOI.setValue('AOI confirmado: ' + haR + ' ha');
+        estadoAOI.style().set('color', COLORES.exito);
+        setEstado('AOI listo. Presione Generar Análisis.', COLORES.exito);
+      }
+    });
+  }
+});
+
+panelBotonesAOI.add(botonDibujar);
+panelBotonesAOI.add(botonConfirmar);
+body.add(panelBotonesAOI);
+body.add(estadoAOI);
+
+var botonAnalisis = ui.Button({
+  label: 'Generar Análisis',
+  style: {
+    stretch: 'horizontal', fontSize: '13px', padding: '10px',
+    color: COLORES.primario, margin: '10px 0 14px 0'
+  },
+  onClick: ejecutarAnalisis
+});
+body.add(botonAnalisis);
+
+var labelEstado = ui.Label('', {
+  fontSize: '12px', color: COLORES.textoSuave, margin: '4px 0 0 0'
+});
+body.add(labelEstado);
+
+function setEstado(msg, color) {
+  labelEstado.setValue(msg);
+  labelEstado.style().set('color', color || COLORES.textoSuave);
+}
+
+var panelStats   = ui.Panel({ style: { padding: '0 18px', backgroundColor: COLORES.fondoPanel } });
+var panelLeyenda = ui.Panel({ style: { padding: '14px 18px', backgroundColor: COLORES.fondoPanel } });
+
+function limpiarTodo() {
+  panelStats.clear();
+  panelLeyenda.clear();
+}
+
+var footer = ui.Panel({ style: { backgroundColor: COLORES.fondo, padding: '10px 18px' } });
+footer.add(ui.Label('Evergreen Servicios Ambientales · Los Ríos, Chile', {
+  fontSize: '11px', color: COLORES.textoSuave
+}));
+footer.add(ui.Label('Datos: Sentinel-2 L2A · 10–20 m · Copernicus', {
+  fontSize: '10px', color: COLORES.textoSuave
+}));
+
+panel.add(header);
+panel.add(body);
+panel.add(panelStats);
+panel.add(panelLeyenda);
+panel.add(footer);
+ui.root.insert(0, panel);
+
+// ═══════════════════════════════════════════
+// MÁSCARA SCL
+// ═══════════════════════════════════════════
+function maskSCL(image) {
+  var scl  = image.select('SCL');
+  var mask = scl.neq(3).and(scl.neq(8)).and(scl.neq(9)).and(scl.neq(10));
+  return image.updateMask(mask);
+}
+
+// ═══════════════════════════════════════════
+// CÁLCULO DE ÍNDICES
+// ═══════════════════════════════════════════
+function calcularIndice(img, id) {
+  var b2  = img.select('B2');
+  var b3  = img.select('B3');
+  var b4  = img.select('B4');
+  var b8  = img.select('B8');
+  var b11 = img.select('B11');
+  var b12 = img.select('B12');
+
+  if (id === 'NDVI')  return img.normalizedDifference(['B8','B4']).rename('NDVI');
+  if (id === 'EVI') {
+    var b2s = b2.divide(10000), b4s = b4.divide(10000), b8s = b8.divide(10000);
+    return b8s.subtract(b4s).multiply(2.5)
+      .divide(b8s.add(b4s.multiply(6)).subtract(b2s.multiply(7.5)).add(1))
+      .clamp(-1,1).rename('EVI');
+  }
+  if (id === 'EVI2') {
+    var b4e = b4.divide(10000), b8e = b8.divide(10000);
+    return b8e.subtract(b4e).multiply(2.5)
+      .divide(b8e.add(b4e.multiply(2.4)).add(1))
+      .clamp(-1,1).rename('EVI2');
+  }
+  if (id === 'SAVI') {
+    return b8.subtract(b4).multiply(1.5)
+      .divide(b8.add(b4).add(0.5)).rename('SAVI');
+  }
+  if (id === 'LAI') {
+    var b4l = b4.divide(10000), b8l = b8.divide(10000);
+    var evi_l = b8l.subtract(b4l).multiply(2.5)
+      .divide(b8l.add(b4l.multiply(6)).subtract(b4l.multiply(7.5)).add(1));
+    return evi_l.multiply(3.618).subtract(0.118).clamp(0,8).rename('LAI');
+  }
+  if (id === 'VARI') {
+    return b3.subtract(b4).divide(b3.add(b4).subtract(b2)).clamp(-1,1).rename('VARI');
+  }
+  if (id === 'NDMI')  return img.normalizedDifference(['B8','B11']).rename('NDMI');
+  if (id === 'MSI')   return b11.divide(b8).clamp(0,5).rename('MSI');
+  if (id === 'NDWI')  return img.normalizedDifference(['B3','B8']).rename('NDWI');
+  if (id === 'MNDWI') return img.normalizedDifference(['B3','B11']).rename('MNDWI');
+  if (id === 'NBR')   return img.normalizedDifference(['B8','B11']).rename('NBR');
+  if (id === 'NBR2')  return img.normalizedDifference(['B11','B12']).rename('NBR2');
+  if (id === 'NDDI') {
+    var ndvi_d = img.normalizedDifference(['B8','B4']);
+    var ndwi_d = img.normalizedDifference(['B3','B8']);
+    return ndvi_d.subtract(ndwi_d).divide(ndvi_d.add(ndwi_d)).clamp(-1,1).rename('NDDI');
+  }
+  if (id === 'BSI') {
+    return b11.add(b4).subtract(b8.add(b2))
+      .divide(b11.add(b4).add(b8).add(b2)).rename('BSI');
+  }
+  if (id === 'NDSI') return img.normalizedDifference(['B3','B11']).rename('NDSI');
+  return img.normalizedDifference(['B8','B4']).rename('NDVI');
+}
+
+// ═══════════════════════════════════════════
+// ANÁLISIS PRINCIPAL
+// ═══════════════════════════════════════════
+function ejecutarAnalisis() {
+  if (!roiGuardado) {
+    setEstado('Dibuje y confirme un AOI primero.', COLORES.error); return;
+  }
+
+  var cfg         = getIndiceByLabel(selectIndice.getValue());
+  var fechaInicio = txtFechaInicio.getValue();
+  var fechaFin    = txtFechaFin.getValue();
+
+  setEstado('Procesando imágenes Sentinel-2...', COLORES.acento);
+  limpiarTodo();
+
+  var lyrs = Map.layers();
+  for (var li = lyrs.length() - 1; li >= 0; li--) {
+    lyrs.remove(lyrs.get(li));
+  }
+
+  var col = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+    .filterBounds(roiGuardado)
+    .filterDate(fechaInicio, fechaFin)
+    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 40))
+    .map(maskSCL)
+    .select(['B2','B3','B4','B8','B11','B12']);
+
+  col.size().evaluate(function(n) {
+    if (!n || n === 0) {
+      setEstado('Sin imágenes para el período y AOI seleccionados.', COLORES.error);
+      return;
+    }
+
+    var img     = col.median().clip(roiGuardado);
+    var capaImg = calcularIndice(img, cfg.id);
+
+    // Visualización adaptativa p2-p98
+    capaImg.rename(cfg.id).reduceRegion({
+      reducer: ee.Reducer.percentile([2, 98]),
+      geometry: roiGuardado,
+      scale: 20,
+      maxPixels: 1e9,
+      bestEffort: true
+    }).evaluate(function(perc) {
+      var minViz = (perc[cfg.id + '_p2']  !== null) ? perc[cfg.id + '_p2']  : cfg.min;
+      var maxViz = (perc[cfg.id + '_p98'] !== null) ? perc[cfg.id + '_p98'] : cfg.max;
+
+      Map.addLayer(
+        capaImg,
+        { min: minViz, max: maxViz, palette: cfg.palette },
+        cfg.id + ' · ' + fechaInicio.slice(0,7) + ' → ' + fechaFin.slice(0,7)
+      );
+      // Contorno dorado del AOI — sin relleno
+      Map.addLayer(
+        ee.Image().paint(roiGuardado, 0, 2),
+        { palette: ['#C8A882'] },
+        'AOI'
+      );
+      Map.centerObject(roiGuardado, 12);
+    });
+
+    // Estadísticas absolutas
+    capaImg.rename(cfg.id).reduceRegion({
+      reducer: ee.Reducer.mean()
+        .combine({ reducer2: ee.Reducer.min(),    sharedInputs: true })
+        .combine({ reducer2: ee.Reducer.max(),    sharedInputs: true })
+        .combine({ reducer2: ee.Reducer.stdDev(), sharedInputs: true }),
+      geometry: roiGuardado,
+      scale: 20,
+      maxPixels: 1e9,
+      bestEffort: true
+    }).evaluate(function(s) {
+      if (!s) {
+        setEstado('No se pudieron calcular estadísticas.', COLORES.error); return;
+      }
+      construirResultados(capaImg, cfg, s, fechaInicio, fechaFin, n);
+      setEstado('Análisis completado · ' + n + ' imagen(es) usadas.', COLORES.exito);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════
+// RESULTADOS Y LEYENDA
+// ═══════════════════════════════════════════
+function construirResultados(capaImg, cfg, stats, fi, ff, nImgs) {
+  limpiarTodo();
+
+  var bn     = cfg.id;
+  var vMedia = stats[bn+'_mean']   != null ? Number(stats[bn+'_mean']).toFixed(3)   : 'N/D';
+  var vMin   = stats[bn+'_min']    != null ? Number(stats[bn+'_min']).toFixed(3)    : 'N/D';
+  var vMax   = stats[bn+'_max']    != null ? Number(stats[bn+'_max']).toFixed(3)    : 'N/D';
+  var vStd   = stats[bn+'_stdDev'] != null ? Number(stats[bn+'_stdDev']).toFixed(3) : 'N/D';
+
+  var pStats = ui.Panel({
+    style: { backgroundColor: COLORES.fondo, padding: '10px',
+             border: '1px solid ' + COLORES.borde, margin: '0 0 12px 0' }
+  });
+  pStats.add(ui.Label('Estadísticas — ' + bn, {
+    fontWeight: 'bold', fontSize: '13px', color: COLORES.texto,
+    backgroundColor: COLORES.fondo, margin: '0 0 4px 0'
+  }));
+  pStats.add(ui.Label('Período: ' + fi + ' → ' + ff + '   |   Imágenes: ' + nImgs, {
+    fontSize: '11px', color: COLORES.textoSuave,
+    backgroundColor: COLORES.fondo, margin: '0 0 8px 0'
+  }));
+
+  var fila = function(nom, val) {
+    var f = ui.Panel({
+      layout: ui.Panel.Layout.Flow('horizontal'),
+      style: { margin: '2px 0', backgroundColor: COLORES.fondo }
+    });
+    f.add(ui.Label(nom + ':', {
+      fontSize: '12px', color: COLORES.textoSuave,
+      width: '145px', backgroundColor: COLORES.fondo
+    }));
+    f.add(ui.Label(String(val), {
+      fontSize: '12px', fontWeight: 'bold',
+      color: COLORES.texto, backgroundColor: COLORES.fondo
+    }));
+    return f;
+  };
+
+  pStats.add(fila('Media',          vMedia));
+  pStats.add(fila('Mínimo',         vMin));
+  pStats.add(fila('Máximo',         vMax));
+  pStats.add(fila('Desv. Estándar', vStd));
+  panelStats.add(pStats);
+
+  panelStats.add(ui.Label('Distribución de píxeles', {
+    fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 6px 0'
+  }));
+
+  var colMid = cfg.palette[Math.floor(cfg.palette.length / 2)];
+  panelStats.add(
+    ui.Chart.image.histogram({
+      image: capaImg, region: roiGuardado, scale: 60,
+      maxBuckets: 40, maxPixels: 1e8
+    }).setChartType('ColumnChart').setOptions({
+      title: '',
+      hAxis: {
+        title: cfg.etqMin + '  →  ' + cfg.etqMax,
+        titleTextStyle: { color: COLORES.textoSuave, fontSize: 11 },
+        textStyle:      { color: COLORES.textoSuave, fontSize: 10 }
+      },
+      vAxis: { title: 'Píxeles', titleTextStyle: { color: COLORES.textoSuave, fontSize: 11 } },
+      colors: [colMid], bar: { groupWidth: '95%' }, legend: { position: 'none' },
+      backgroundColor: '#ffffff', chartArea: { width: '80%', height: '65%' }
+    })
+  );
+
+  // Leyenda con barra de color
+  panelLeyenda.add(separador('0 0 10px 0'));
+  panelLeyenda.add(ui.Label('Leyenda — ' + cfg.id, {
+    fontWeight: 'bold', fontSize: '13px', color: COLORES.texto, margin: '0 0 8px 0'
+  }));
+
+  function hexToRgb(hex) {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+  }
+  function rgbToHex(r,g,b) {
+    return '#'+('0'+Math.round(r).toString(16)).slice(-2)
+              +('0'+Math.round(g).toString(16)).slice(-2)
+              +('0'+Math.round(b).toString(16)).slice(-2);
+  }
+  function interpolar(palette, n) {
+    var res = [], m = palette.length;
+    for (var i = 0; i < n; i++) {
+      var t = i/(n-1)*(m-1), i0 = Math.floor(t), i1 = Math.min(i0+1,m-1), f = t-i0;
+      var c0 = hexToRgb(palette[i0]), c1 = hexToRgb(palette[i1]);
+      res.push(rgbToHex(c0[0]+(c1[0]-c0[0])*f, c0[1]+(c1[1]-c0[1])*f, c0[2]+(c1[2]-c0[2])*f));
+    }
+    return res;
+  }
+
+  var rampa = interpolar(cfg.palette, 24);
+  var barraGrad = ui.Panel({
+    layout: ui.Panel.Layout.Flow('horizontal'),
+    style: { margin: '0 0 4px 0', height: '20px', padding: '0px' }
+  });
+  var anchoSeg = (100 / rampa.length).toFixed(2) + '%';
+  for (var ci = 0; ci < rampa.length; ci++) {
+    barraGrad.add(ui.Label('', {
+      backgroundColor: rampa[ci], width: anchoSeg, height: '20px', padding: '0px', margin: '0px'
+    }));
+  }
+  panelLeyenda.add(barraGrad);
+
+  var filaExt = ui.Panel({
+    layout: ui.Panel.Layout.Flow('horizontal'),
+    style: { margin: '2px 0 8px 0', padding: '0px', backgroundColor: COLORES.fondoPanel }
+  });
+  filaExt.add(ui.Label(cfg.etqMin, {
+    fontSize: '11px', color: COLORES.textoSuave, backgroundColor: COLORES.fondoPanel
+  }));
+  filaExt.add(ui.Label(cfg.etqMax, {
+    fontSize: '11px', color: COLORES.textoSuave,
+    backgroundColor: COLORES.fondoPanel, margin: '0 0 0 160px'
+  }));
+  panelLeyenda.add(filaExt);
+
+  panelLeyenda.add(ui.Label(cfg.desc, {
+    fontSize: '11px', color: COLORES.textoSuave,
+    whiteSpace: 'pre', margin: '4px 0 0 0', width: '340px'
+  }));
+
+  panelLeyenda.add(ui.Label(
+    'Visualización adaptada al rango del AOI (p2–p98).\n' +
+    'Los valores absolutos se muestran en las estadísticas.',
+    { fontSize: '10px', color: COLORES.textoSuave,
+      fontStyle: 'italic', whiteSpace: 'pre', margin: '6px 0 0 0', width: '340px' }
+  ));
+}
