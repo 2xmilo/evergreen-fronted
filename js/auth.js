@@ -70,7 +70,18 @@ async function loadCloudWorkspace(userId) {
         if (activeZone) {
             if (activeZone.zone_name)       { WorkspaceState.zonaNombre = activeZone.zone_name;       changed = true; }
             if (activeZone.zona_ha)         { WorkspaceState.zonaHa     = activeZone.zona_ha;         changed = true; }
-            if (activeZone.polygon_geojson) { WorkspaceState.zona       = activeZone.polygon_geojson; changed = true; }
+            if (activeZone.polygon_geojson) {
+                WorkspaceState.zona    = activeZone.polygon_geojson;
+                // zonaGEE = versión simplificada para GEE (si turf disponible, si no usa zona directa)
+                try {
+                    WorkspaceState.zonaGEE = (typeof turf !== 'undefined')
+                        ? turf.simplify(activeZone.polygon_geojson, { tolerance: 0.001, highQuality: true })
+                        : activeZone.polygon_geojson;
+                } catch(e) {
+                    WorkspaceState.zonaGEE = activeZone.polygon_geojson;
+                }
+                changed = true;
+            }
             WorkspaceState.zonaId = activeZone.id;
 
             // Cargar resultados de esta zona

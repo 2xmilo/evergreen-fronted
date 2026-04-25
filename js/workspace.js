@@ -32,6 +32,14 @@ function loadWorkspaceState() {
                 var v = WorkspaceState.resultados[k];
                 if (v && !Array.isArray(v)) WorkspaceState.resultados[k] = [v];
             });
+            // Asegurar zonaGEE siempre disponible si hay zona
+            if (WorkspaceState.zona && !WorkspaceState.zonaGEE) {
+                try {
+                    WorkspaceState.zonaGEE = (typeof turf !== 'undefined')
+                        ? turf.simplify(WorkspaceState.zona, { tolerance: 0.001, highQuality: true })
+                        : WorkspaceState.zona;
+                } catch(e) { WorkspaceState.zonaGEE = WorkspaceState.zona; }
+            }
             updateZoneUI();
             renderIndicadorCards();
             refreshIndRows();
