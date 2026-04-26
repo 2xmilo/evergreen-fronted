@@ -104,6 +104,11 @@ async function loadCloudWorkspace(userId) {
             if (WorkspaceState.zona && typeof restoreZoneOnMap === 'function') {
                 try { restoreZoneOnMap(); } catch(e) {}
             }
+            // Restaurar URLs de tiles guardadas y reactivar última capa
+            if (typeof _restoreTilesCache     === 'function') _restoreTilesCache();
+            if (typeof restoreLastActiveLayer  === 'function') {
+                setTimeout(restoreLastActiveLayer, 700);
+            }
         }
 
         // Renderizar selector de zonas (siempre, incluso sin zona)
@@ -261,6 +266,8 @@ async function switchZoneCloud(userId, zoneId) {
         });
 
         localStorage.setItem('evergreen_workspace', JSON.stringify(WorkspaceState));
+        // Restaurar tiles de la zona cargada
+        if (typeof _restoreTilesCache === 'function') _restoreTilesCache();
         return zone;
     } catch (e) {
         console.warn('[Auth] switchZoneCloud:', e);

@@ -40,6 +40,8 @@ function loadWorkspaceState() {
                         : WorkspaceState.zona;
                 } catch(e) { WorkspaceState.zonaGEE = WorkspaceState.zona; }
             }
+            // Restaurar URLs de tiles guardadas en result_data
+            _restoreTilesCache();
             updateZoneUI();
             renderIndicadorCards();
             refreshIndRows();
@@ -97,6 +99,7 @@ function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin) {
 
     WorkspaceState.resultados[key].push({
         tipo: tipo, indice: indice, stats: stats,
+        tilesUrl: tilesUrl || null,   // guardada para reutilizar sin recalcular en GEE
         fechaInicio: fechaInicio, fechaFin: fechaFin, ts: ts
     });
 
@@ -2032,7 +2035,7 @@ function switchDemLayer(tipo) {
     if (!_demTiles[tipo]) return;
 
     // Actualizar pill activo
-    ['dem', 'slope', 'aspect'].forEach(function(t) {
+    ['dem', 'slope'].forEach(function(t) {
         var pill = document.getElementById('dem-pill-' + t);
         var panel = document.getElementById('dem-panel-' + t);
         if (pill)  pill.classList.toggle('active', t === tipo);
@@ -2072,10 +2075,20 @@ function requestElevacion() {
             return;
         }
 
-        // Guardar las 3 URLs
-        _demTiles.dem    = data.tiles_dem;
-        _demTiles.slope  = data.tiles_slope;
-        _demTiles.aspect = data.tiles_aspect;
+        // Guardar URLs
+        _demTiles.dem   = data.tiles_dem;
+        _demTiles.slope = data.tiles_slope;
+
+        // Botón descarga GeoTIFF
+        var dlBtn = document.getElementById('dem-download-btn');
+        if (dlBtn) {
+            if (data.download_url) {
+                dlBtn.href = data.download_url;
+                dlBtn.style.display = 'flex';
+            } else {
+                dlBtn.style.display = 'none';
+            }
+        }
 
         // Etiqueta de fuente
         var srcLabel = document.getElementById('dem-source-label');
@@ -2105,10 +2118,9 @@ function requestElevacion() {
 
         // Registrar capas DEM en el panel de capas (instancias independientes para el registro)
         registerLayer('dem_Elevacion', L.tileLayer(data.tiles_dem, { pane: 'overlayPane', zIndex: 390 }));
-        if (data.tiles_slope)  registerLayer('dem_Pendiente', L.tileLayer(data.tiles_slope,  { pane: 'overlayPane', zIndex: 390 }));
-        if (data.tiles_aspect) registerLayer('dem_Aspecto',   L.tileLayer(data.tiles_aspect, { pane: 'overlayPane', zIndex: 390 }));
+        if (data.tiles_slope) registerLayer('dem_Pendiente', L.tileLayer(data.tiles_slope, { pane: 'overlayPane', zIndex: 390 }));
 
-        // Guardar en dashboard de Resumen (3 capas)
+        // Guardar en dashboard de Resumen
         saveResultado('dem', 'Elevacion',
             { mean: data.stats.elev_mean, min: data.stats.elev_min, max: data.stats.elev_max },
             data.tiles_dem, null, null);
@@ -2116,11 +2128,6 @@ function requestElevacion() {
             saveResultado('dem', 'Pendiente',
                 { mean: data.stats.slope_mean },
                 data.tiles_slope, null, null);
-        }
-        if (data.tiles_aspect) {
-            saveResultado('dem', 'Aspecto',
-                { mean: null },
-                data.tiles_aspect, null, null);
         }
     })
     .catch(function() {
@@ -2278,6 +2285,59 @@ function restoreZoneOnMap() {
 }
 
 // ==========================================================================
+//  TILES CACHE — Restaurar URLs guardadas en result_data
+// ==========================================================================
+
+/**
+ * Reconstruye _tilesCache a partir de las URLs guardadas en WorkspaceState.resultados.
+ * Las URLs de GEE duran ~24-48h — si expiraron el tile simplemente no carga
+ * y el usuario puede recalcular.
+ */
+function _restoreTilesCache() {
+    var resultados = WorkspaceState.resultados || {};
+    Object.keys(resultados).forEach(function(key) {
+        var arr = resultados[key];
+        if (!Array.isArray(arr)) return;
+        arr.forEach(function(entry) {
+            if (entry.tilesUrl && entry.ts) {
+                _tilesCache[key + '_' + entry.ts] = entry.tilesUrl;
+            }
+        });
+    });
+}
+
+/**
+ * Activa automáticamente la capa del indicador más reciente en el mapa.
+ * Se llama tras restoreZoneOnMap() cuando hay resultados guardados.
+ */
+function restoreLastActiveLayer() {
+    var resultados = WorkspaceState.resultados || {};
+    var keys = Object.keys(resultados).filter(function(k) {
+        return Array.isArray(resultados[k]) && resultados[k].length > 0;
+    });
+    if (keys.length === 0) return;
+
+    // Ordenar por ts más reciente
+    keys.sort(function(a, b) {
+        var aLast = resultados[a][resultados[a].length - 1];
+        var bLast = resultados[b][resultados[b].length - 1];
+        return bLast.ts - aLast.ts;
+    });
+
+    // Intentar activar el más reciente que tenga URL en caché
+    for (var i = 0; i < keys.length; i++) {
+        var key    = keys[i];
+        var arr    = resultados[key];
+        var latest = arr[arr.length - 1];
+        var cacheKey = key + '_' + latest.ts;
+        if (_tilesCache[cacheKey]) {
+            activarIndicador(key);
+            return;
+        }
+    }
+}
+
+// ==========================================================================
 //  ZONE SELECTOR — Multi-zona (pro/admin)
 // ==========================================================================
 
@@ -2370,6 +2430,10 @@ function switchToZone(zoneId) {
         if (WorkspaceState.zona) {
             try { restoreZoneOnMap(); } catch(e) {}
         }
+
+        // Restaurar tiles y última capa activa
+        _restoreTilesCache();
+        setTimeout(restoreLastActiveLayer, 400);
 
         // Actualizar lista local con nuevo is_active
         (window._sbUserZones || []).forEach(function(z) { z.is_active = z.id === zoneId; });
