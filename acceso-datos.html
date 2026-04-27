@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=12">
+    <link rel="stylesheet" href="css/workspace.css?v=13">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -888,32 +888,65 @@
 
     </aside>
 
-    <!-- ── MINI PANEL (bottom-right · Pérdida de Bosque) ── -->
+    <!-- ── MINI PANEL (bottom-right · Leyenda + Bosque) ── -->
     <div class="mini-panel hidden" id="mini-panel">
         <div class="mini-header">
-            <span class="mini-header-dot"></span>
-            <span class="mini-title">Pérdida de Bosque · Ha/año</span>
+            <span class="mini-header-dot" id="mini-header-dot"></span>
+            <span class="mini-title" id="mini-panel-title">Leyenda</span>
             <button class="mini-close" onclick="toggleMiniPanel()">✕</button>
         </div>
-        <div class="mini-hero">
-            <span class="mini-year-big" id="mini-year-big">—</span>
-            <div class="mini-val-group">
-                <span class="mini-val-num" id="mini-val-num">—</span>
-                <span class="mini-val-unit">Ha pérdida</span>
+
+        <!-- ── VISTA A: Leyenda de índice (gradient bar) ── -->
+        <div id="mini-legend-view" style="display:none;">
+            <div class="mini-ind-header">
+                <span class="mini-ind-name" id="mini-ind-name">NDVI</span>
+                <span class="mini-ind-desc" id="mini-ind-desc">Índice de Vegetación Normalizado</span>
+            </div>
+            <div class="mini-gradient-wrap">
+                <div class="mini-gradient-bar" id="mini-gradient-bar"></div>
+                <div class="mini-gradient-labels">
+                    <span id="mini-grad-min">Bajo</span>
+                    <span id="mini-grad-max">Alto</span>
+                </div>
+            </div>
+            <div class="mini-stat-row">
+                <div class="mini-stat-cell">
+                    <span class="mini-stat-val" id="mini-stat-mean">—</span>
+                    <span class="mini-stat-lbl">Media</span>
+                </div>
+                <div class="mini-stat-cell">
+                    <span class="mini-stat-val" id="mini-stat-min">—</span>
+                    <span class="mini-stat-lbl">Mínimo</span>
+                </div>
+                <div class="mini-stat-cell">
+                    <span class="mini-stat-val" id="mini-stat-max">—</span>
+                    <span class="mini-stat-lbl">Máximo</span>
+                </div>
             </div>
         </div>
-        <div class="mini-years-strip" id="mini-years-strip">
-            <!-- pills insertadas por JS -->
-        </div>
-        <div class="mini-chart-wrap">
-            <canvas id="mini-chart"></canvas>
-        </div>
-        <div class="mini-legend">
-            <div class="legend-item">
-                <span class="legend-dot" style="background:#6aaa35;"></span> Zona
+
+        <!-- ── VISTA B: Bosque (chart de pérdida) ── -->
+        <div id="mini-bosque-view" style="display:none;">
+            <div class="mini-hero">
+                <span class="mini-year-big" id="mini-year-big">—</span>
+                <div class="mini-val-group">
+                    <span class="mini-val-num" id="mini-val-num">—</span>
+                    <span class="mini-val-unit">Ha pérdida</span>
+                </div>
             </div>
-            <div class="legend-item">
-                <span class="legend-dot" style="background:rgba(106,170,53,0.35);"></span> Buffer
+            <div class="mini-years-strip" id="mini-years-strip">
+                <!-- pills insertadas por JS -->
+            </div>
+            <div class="mini-chart-wrap">
+                <canvas id="mini-chart"></canvas>
+            </div>
+            <div class="mini-legend">
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#6aaa35;"></span> Zona
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:rgba(106,170,53,0.35);"></span> Buffer
+                </div>
             </div>
         </div>
     </div>

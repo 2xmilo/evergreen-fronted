@@ -71,6 +71,41 @@ var IND_CONFIG = {
     'biodiversidad':{ icon: 'fas fa-leaf',        iconClass: 'rs-ind-icon--bio',  cat: 'Biodiversidad' }
 };
 
+/**
+ * Configuración de paletas y etiquetas para la leyenda del mini-panel.
+ * colors: colores del gradiente (igual que VIZ_PALETTES en backend).
+ * minLbl / maxLbl: etiquetas del extremo bajo/alto de la escala.
+ * desc: descripción corta del índice.
+ * dotColor: color del puntito en el header del mini-panel.
+ */
+var IND_PALETTES = {
+    // ── Vegetación ──────────────────────────────────────────────
+    'vegetacion_NDVI':  { colors:['#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'], minLbl:'Sin vegetación', maxLbl:'Densa',      desc:'Índice de Vegetación de Diferencia Normalizada', dotColor:'#6aaa35' },
+    'vegetacion_EVI':   { colors:['#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'], minLbl:'Sin vegetación', maxLbl:'Densa',      desc:'Índice de Vegetación Mejorado',                  dotColor:'#6aaa35' },
+    'vegetacion_EVI2':  { colors:['#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'], minLbl:'Sin vegetación', maxLbl:'Densa',      desc:'EVI de Dos Bandas',                              dotColor:'#6aaa35' },
+    'vegetacion_SAVI':  { colors:['#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'], minLbl:'Suelo desnudo',  maxLbl:'Vegetación', desc:'Índice de Vegetación Ajustado al Suelo',         dotColor:'#6aaa35' },
+    'vegetacion_LAI':   { colors:['#fff7bc','#fec44f','#fe9929','#ec7014','#cc4c02','#8c2d04'],                                         minLbl:'0',              maxLbl:'8 m²/m²',   desc:'Índice de Área Foliar',                          dotColor:'#fe9929' },
+    'vegetacion_VARI':  { colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],                               minLbl:'Sin follaje',    maxLbl:'Verde vivo', desc:'Índice de Resistencia Atmosférica Visible',      dotColor:'#6aaa35' },
+    'vegetacion_NDMI':  { colors:['#d7191c','#fdae61','#ffffbf','#abd9e9','#2c7bb6'],                                                   minLbl:'Estrés hídrico', maxLbl:'Húmedo',     desc:'Índice de Humedad de la Vegetación',             dotColor:'#2c7bb6' },
+    'vegetacion_MSI':   { colors:['#2c7bb6','#abd9e9','#ffffbf','#fdae61','#d7191c'],                                                   minLbl:'Húmedo',         maxLbl:'Estrés',     desc:'Índice de Estrés de Humedad',                    dotColor:'#fd8d3c' },
+    'vegetacion_NDWI':  { colors:['#d4a96a','#f5f5dc','#9ecae1','#2166ac','#084081'],                                                   minLbl:'Tierra',         maxLbl:'Agua',       desc:'Índice de Agua de Vegetación (Gao)',             dotColor:'#2166ac' },
+    'vegetacion_MNDWI': { colors:['#c7a46b','#faf0dc','#74b9d4','#1a6aaa','#053061'],                                                   minLbl:'Tierra',         maxLbl:'Agua',       desc:'NDWI Modificado (Xu)',                            dotColor:'#1a6aaa' },
+    'vegetacion_NBR':   { colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],                               minLbl:'Quemado',        maxLbl:'Vegetación', desc:'Índice de Área Quemada Normalizado',             dotColor:'#6aaa35' },
+    'vegetacion_NBR2':  { colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],                               minLbl:'Afectado',       maxLbl:'Recuperado', desc:'NBR de Segunda Banda SWIR',                      dotColor:'#6aaa35' },
+    'vegetacion_NDDI':  { colors:['#2c7bb6','#abd9e9','#ffffbf','#fdae61','#d7191c'],                                                   minLbl:'Sin déficit',    maxLbl:'Déficit',    desc:'Índice de Déficit Hídrico Normalizado',          dotColor:'#d7191c' },
+    'vegetacion_BSI':   { colors:['#1a9850','#ffffbf','#d73027'],                                                                       minLbl:'Vegetado',       maxLbl:'Suelo',      desc:'Índice de Suelo Desnudo',                        dotColor:'#d73027' },
+    'vegetacion_NDSI':  { colors:['#f7fbff','#c6dbef','#6baed6','#2171b5','#084594'],                                                   minLbl:'Sin nieve',      maxLbl:'Nieve/Hielo',desc:'Índice de Nieve Normalizado',                    dotColor:'#6baed6' },
+    // ── Agua ─────────────────────────────────────────────────────
+    'agua_NDWI':        { colors:['#d4a96a','#f5f5dc','#9ecae1','#2166ac','#084081'],                                                   minLbl:'Tierra',         maxLbl:'Agua',       desc:'Índice de Agua Normalizado',                     dotColor:'#2166ac' },
+    'agua_MNDWI':       { colors:['#c7a46b','#faf0dc','#74b9d4','#1a6aaa','#053061'],                                                   minLbl:'Tierra',         maxLbl:'Agua',       desc:'NDWI Modificado',                                dotColor:'#1a6aaa' },
+    'agua_NDMI':        { colors:['#d7191c','#fdae61','#ffffbf','#abd9e9','#2c7bb6'],                                                   minLbl:'Seco',           maxLbl:'Húmedo',     desc:'Índice de Humedad Normalizado',                  dotColor:'#2c7bb6' },
+    // ── Elevación ────────────────────────────────────────────────
+    'dem_Elevacion':    { colors:['#440154','#3b528b','#21918c','#5ec962','#fde725'],                                                   minLbl:'Bajo',           maxLbl:'Alto (m)',   desc:'Modelo Digital de Elevación · 30 m',             dotColor:'#21918c' },
+    'dem_Pendiente':    { colors:['#ffffcc','#c7e9b4','#7fcdbb','#1d91c0','#225ea8','#253494'],                                         minLbl:'0°',             maxLbl:'60°',        desc:'Pendiente del terreno',                          dotColor:'#1d91c0' },
+    // ── Bosque ───────────────────────────────────────────────────
+    'bosque':           { colors:['#ffffcc','#ffeda0','#fed976','#feb24c','#fd8d3c','#fc4e2a','#e31a1c','#bd0026','#800026'],           minLbl:'2001',           maxLbl:'2023',       desc:'Pérdida de bosque · Hansen GFC 2023',            dotColor:'#fc4e2a' },
+};
+
 var _indicadorActivo = null;
 var _indicadorLayer  = null;
 
@@ -1139,6 +1174,9 @@ function toggleIndDetail(key) {
     // Activar capa GEE en el mapa (silencioso — no bloquea el detalle)
     try { _activateMapLayer(key); } catch(e) { console.warn('activateMapLayer:', e); }
 
+    // Mostrar leyenda del índice en el mini-panel bottom-right
+    try { showMiniLegend(key); } catch(e) { console.warn('showMiniLegend:', e); }
+
     if (key === 'bosque') {
         document.getElementById('ind-detail-bosque-content').style.display = 'block';
         setTimeout(initDetailBosqueChart, 60);
@@ -1738,17 +1776,109 @@ function setCuencasOpacity(val) {
 }
 
 // ---------------------------------------------------------
-// MINI PANEL — Bosque bottom-right widget
+// MINI PANEL — leyenda dinámica + bosque
 // ---------------------------------------------------------
 var _miniChartInstance = null;
 var _miniPanelData     = null;
 var _miniSelectedYear  = null;
+
+/**
+ * Muestra en el mini-panel la leyenda de color del índice activo.
+ * Para bosque → activa la vista de gráfico de pérdida.
+ * Para todos los demás → activa la vista de gradiente + stats.
+ */
+function showMiniLegend(key) {
+    var mp = document.getElementById('mini-panel');
+    if (!mp) return;
+
+    var bosqueView  = document.getElementById('mini-bosque-view');
+    var legendView  = document.getElementById('mini-legend-view');
+    var titleEl     = document.getElementById('mini-panel-title');
+    var dotEl       = document.getElementById('mini-header-dot');
+    var cfg         = IND_PALETTES[key];
+
+    if (key === 'bosque') {
+        // Activar vista de bosque
+        if (legendView) legendView.style.display = 'none';
+        if (bosqueView) bosqueView.style.display = 'block';
+        if (titleEl)    titleEl.textContent = 'Pérdida de Bosque · Ha/año';
+        if (dotEl)      dotEl.style.background = '#fc4e2a';
+        mp.classList.remove('hidden');
+        // El gráfico lo llena renderMiniPanel() cuando llegan los datos
+        return;
+    }
+
+    if (!cfg) return; // índice sin paleta definida (ej. biodiversidad)
+
+    // Activar vista de leyenda
+    if (bosqueView) bosqueView.style.display = 'none';
+    if (legendView) legendView.style.display = 'block';
+
+    // Obtener el nombre del índice (segunda parte del key: 'vegetacion_NDVI' → 'NDVI')
+    var indNombre = key.indexOf('_') >= 0 ? key.split('_').slice(1).join('_') : key;
+
+    if (titleEl) titleEl.textContent = 'Leyenda · ' + indNombre;
+    if (dotEl)   dotEl.style.background = cfg.dotColor || 'var(--accent)';
+
+    // Nombre e descripción
+    var nameEl = document.getElementById('mini-ind-name');
+    var descEl = document.getElementById('mini-ind-desc');
+    if (nameEl) nameEl.textContent = indNombre;
+    if (descEl) descEl.textContent = cfg.desc || '';
+
+    // Gradiente
+    var barEl = document.getElementById('mini-gradient-bar');
+    if (barEl) barEl.style.background = 'linear-gradient(to right, ' + cfg.colors.join(', ') + ')';
+
+    // Etiquetas min / max
+    var minLblEl = document.getElementById('mini-grad-min');
+    var maxLblEl = document.getElementById('mini-grad-max');
+    if (minLblEl) minLblEl.textContent = cfg.minLbl || 'Bajo';
+    if (maxLblEl) maxLblEl.textContent = cfg.maxLbl || 'Alto';
+
+    // Stats del último resultado guardado
+    var arr  = (WorkspaceState.resultados || {})[key];
+    var last = arr && arr.length ? arr[arr.length - 1] : null;
+    var meanEl = document.getElementById('mini-stat-mean');
+    var minEl  = document.getElementById('mini-stat-min');
+    var maxEl  = document.getElementById('mini-stat-max');
+
+    function _fmt(v) {
+        if (v === null || v === undefined) return '—';
+        var n = parseFloat(v);
+        if (isNaN(n)) return '—';
+        return Math.abs(n) >= 10 ? n.toFixed(1) : n.toFixed(3);
+    }
+
+    if (last && last.stats) {
+        if (meanEl) meanEl.textContent = _fmt(last.stats.mean);
+        if (minEl)  minEl.textContent  = _fmt(last.stats.min);
+        if (maxEl)  maxEl.textContent  = _fmt(last.stats.max);
+    } else {
+        if (meanEl) meanEl.textContent = '—';
+        if (minEl)  minEl.textContent  = '—';
+        if (maxEl)  maxEl.textContent  = '—';
+    }
+
+    mp.classList.remove('hidden');
+}
 
 function renderMiniPanel(perdida) {
     if (!perdida || perdida.length === 0) return;
     _miniPanelData = perdida;
     var mp = document.getElementById('mini-panel');
     if (!mp) return;
+
+    // Asegurarse de que esté en vista bosque
+    var bosqueView = document.getElementById('mini-bosque-view');
+    var legendView = document.getElementById('mini-legend-view');
+    var titleEl    = document.getElementById('mini-panel-title');
+    var dotEl      = document.getElementById('mini-header-dot');
+    if (legendView) legendView.style.display = 'none';
+    if (bosqueView) bosqueView.style.display = 'block';
+    if (titleEl)    titleEl.textContent = 'Pérdida de Bosque · Ha/año';
+    if (dotEl)      dotEl.style.background = '#fc4e2a';
+
     mp.classList.remove('hidden');
 
     // Año más reciente por defecto
