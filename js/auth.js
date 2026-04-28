@@ -232,6 +232,10 @@ async function clearCloudData(userId, workspaceId) {
     var wid = workspaceId || (WorkspaceState && WorkspaceState.zonaId);
     if (!wid) return;
     try {
+        // Eliminar imágenes de preview del Storage antes de borrar el workspace
+        if (typeof deletePreviewsFromStorage === 'function') {
+            await deletePreviewsFromStorage(userId, wid);
+        }
         await _sb.from('workspaces').delete().eq('id', wid).eq('user_id', userId);
         // results se borran por CASCADE
         window._sbUserZones = (window._sbUserZones || []).filter(function(z) { return z.id !== wid; });

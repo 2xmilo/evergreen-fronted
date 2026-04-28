@@ -152,6 +152,12 @@ function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin) {
     }
     renderIndicadorCards();
     refreshIndRows();
+
+    // Capturar preview visual para el repositorio (async — no bloquea el flujo)
+    // Solo para indicadores con capa de mosaico (excluye biodiversidad)
+    if (tipo !== 'biodiversidad' && tilesUrl) {
+        (function(_k, _t) { captureAndSavePreview(_k, _t); })(key, ts);
+    }
 }
 
 /** Formatea el valor principal a mostrar en la tarjeta */
@@ -450,7 +456,13 @@ function activarIndicador(key, ts) {
     if (_demLayerActual)   { map.removeLayer(_demLayerActual);  _demLayerActual = null; }
     if (_indicadorLayer)   { map.removeLayer(_indicadorLayer);  _indicadorLayer = null; }
 
-    // Toggle
+    // Limpiar overlays de preview anteriores
+    Object.keys(_previewOverlays).forEach(function(k) {
+        try { map.removeLayer(_previewOverlays[k]); } catch(e) {}
+    });
+    _previewOverlays = {};
+
+    // Toggle: si ya estaba activo, desactivar
     if (_indicadorActivo === activeKey) {
         _indicadorActivo = null;
         renderIndicadorCards();
@@ -459,13 +471,21 @@ function activarIndicador(key, ts) {
 
     var url = _tilesCache[activeKey];
     if (!url) {
-        mostrarNotificacion('⏱️ Capa expirada. Recalcula en el tab correspondiente.');
-        _indicadorActivo = null;
-        renderIndicadorCards();
+        // Tile GEE expirado — intentar mostrar preview guardada en Storage
+        if (entry.previewPath) {
+            _restorePreviewOnMap(key, entry.previewPath);
+            _indicadorActivo = activeKey;
+            renderIndicadorCards();
+            mostrarNotificacion('🖼️ Mostrando vista guardada — el tile GEE expiró');
+        } else {
+            mostrarNotificacion('⏱️ Capa expirada. Recalcula en el tab correspondiente.');
+            _indicadorActivo = null;
+            renderIndicadorCards();
+        }
         return;
     }
 
-    _indicadorLayer = L.tileLayer(url, { pane: 'overlayPane', zIndex: 400 });
+    _indicadorLayer = L.tileLayer(url, { pane: 'overlayPane', zIndex: 400, crossOrigin: 'anonymous' });
     _indicadorLayer.addTo(map);
     _indicadorActivo = activeKey;
     renderIndicadorCards();
@@ -524,8 +544,23 @@ function updateZoneUI() {
         if (verticesEl) verticesEl.textContent = '—';
     }
 
+    // Botón zoom a zona — visible solo cuando hay zona activa
+    var btnZoom = document.getElementById('btn-zoom-zona');
+    if (btnZoom) btnZoom.style.display = zonaActiva ? 'inline-flex' : 'none';
+
     // Cargar clima de la zona si hay zona y aún no se cargó
     if (zonaActiva) fetchClimaWidget();
+}
+
+/**
+ * Centra y ajusta el mapa exactamente a los límites de la zona de estudio.
+ */
+function zoomToZone() {
+    if (!WorkspaceState.zona || typeof map === 'undefined') return;
+    try {
+        var bounds = L.geoJSON(WorkspaceState.zona).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], animate: true });
+    } catch(e) { console.warn('zoomToZone:', e); }
 }
 
 // Al cambiar el input del nombre
@@ -958,7 +993,7 @@ function requestBosque() {
         updateDetailBosqueStats(data);
 
         // ── Registrar capa de pérdida en el panel de capas ──────
-        if (data.tiles_perdida) registerLayer('bosque', L.tileLayer(data.tiles_perdida, { pane: 'overlayPane', zIndex: 380 }));
+        if (data.tiles_perdida) registerLayer('bosque', L.tileLayer(data.tiles_perdida, { pane: 'overlayPane', zIndex: 380, crossOrigin: 'anonymous' }));
 
         _fitToZone();
     })
@@ -1829,6 +1864,122 @@ function setCuencasOpacity(val) {
 }
 
 // ---------------------------------------------------------
+// PREVIEW ESTÁTICO — captura, almacenamiento y restauración
+// ---------------------------------------------------------
+
+// Overlays de preview activos (imageOverlay por key)
+var _previewOverlays = {};
+
+/**
+ * Captura el estado visual actual del mapa para un indicador y lo sube a Supabase Storage.
+ * Se llama ~2s después de que el tile se agrega al mapa.
+ * @param {string} key   - ej: 'vegetacion_NDVI'
+ * @param {number} ts    - timestamp de la medición (para identificar la entrada)
+ */
+function captureAndSavePreview(key, ts) {
+    if (!window._sbUserId || !WorkspaceState.zonaId) return;
+    if (typeof leafletImage === 'undefined')           return;
+    if (!WorkspaceState.zona || typeof map === 'undefined') return;
+
+    // Ajustar mapa exactamente a la zona antes de capturar
+    try {
+        var bounds = L.geoJSON(WorkspaceState.zona).getBounds();
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [20, 20], animate: false });
+        }
+    } catch(e) {}
+
+    // Esperar que los tiles terminen de renderizar tras el fitBounds
+    setTimeout(function() {
+        leafletImage(map, function(err, canvas) {
+            if (err) { console.warn('[Preview] leafletImage error:', err); return; }
+
+            // Convertir a JPEG (más liviano que PNG)
+            var dataURL = canvas.toDataURL('image/jpeg', 0.80);
+            var base64  = dataURL.split(',')[1];
+
+            // Convertir base64 a Uint8Array para Supabase Storage
+            var binary  = atob(base64);
+            var bytes   = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            var filePath = window._sbUserId + '/' +
+                           WorkspaceState.zonaId + '/' +
+                           key + '_' + ts + '.jpg';
+
+            _sb.storage
+                .from('result-previews')
+                .upload(filePath, bytes, { contentType: 'image/jpeg', upsert: true })
+                .then(function(res) {
+                    if (res.error) { console.warn('[Preview] upload error:', res.error); return; }
+
+                    // Guardar la ruta del archivo en el resultado (para recuperarla luego)
+                    var arr = (WorkspaceState.resultados || {})[key];
+                    if (arr) {
+                        var entry = arr.find(function(e) { return e.ts === ts; });
+                        if (entry) {
+                            entry.previewPath = filePath;
+                            saveWorkspaceState();
+                            console.log('[Preview] ✅ guardado:', filePath);
+                        }
+                    }
+                });
+        });
+    }, 2000);
+}
+
+/**
+ * Restaura la preview guardada como imageOverlay sobre la zona.
+ * Se usa cuando el tile GEE ya expiró pero hay imagen guardada en Storage.
+ * @param {string} key      - ej: 'vegetacion_NDVI'
+ * @param {string} filePath - ruta en Storage
+ */
+function _restorePreviewOnMap(key, filePath) {
+    if (!_sb || !WorkspaceState.zona || typeof map === 'undefined') return;
+
+    // Quitar overlay anterior si existía
+    if (_previewOverlays[key]) {
+        try { map.removeLayer(_previewOverlays[key]); } catch(e) {}
+        delete _previewOverlays[key];
+    }
+
+    _sb.storage
+        .from('result-previews')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365) // URL firmada por 1 año
+        .then(function(res) {
+            if (res.error || !res.data) { console.warn('[Preview] signed URL error:', res.error); return; }
+
+            var url    = res.data.signedUrl;
+            var bounds = L.geoJSON(WorkspaceState.zona).getBounds();
+            var overlay = L.imageOverlay(url, bounds, { opacity: 0.9, zIndex: 400 });
+            overlay.addTo(map);
+            _previewOverlays[key] = overlay;
+            console.log('[Preview] 🖼️ overlay restaurado para', key);
+        });
+}
+
+/**
+ * Elimina todas las imágenes de preview de un workspace en Supabase Storage.
+ * Se llama desde clearCloudData() al borrar una zona.
+ */
+async function deletePreviewsFromStorage(userId, workspaceId) {
+    if (!_sb || !userId || !workspaceId) return;
+    try {
+        var folder   = userId + '/' + workspaceId + '/';
+        var listRes  = await _sb.storage.from('result-previews').list(userId + '/' + workspaceId);
+        if (listRes.error || !listRes.data || listRes.data.length === 0) return;
+
+        var paths = listRes.data.map(function(f) { return folder + f.name; });
+        await _sb.storage.from('result-previews').remove(paths);
+        console.log('[Preview] 🗑️ eliminadas', paths.length, 'imágenes de', workspaceId);
+    } catch(e) {
+        console.warn('[Preview] deletePreviewsFromStorage:', e);
+    }
+}
+
+// ---------------------------------------------------------
 // MINI PANEL — leyenda dinámica + bosque
 // ---------------------------------------------------------
 var _miniChartInstance = null;
@@ -2072,7 +2223,7 @@ function requestVegetacion() {
         }
 
         if (vegLayer) map.removeLayer(vegLayer);
-        vegLayer = L.tileLayer(data.tiles, { pane: 'overlayPane', zIndex: 400 });
+        vegLayer = L.tileLayer(data.tiles, { pane: 'overlayPane', zIndex: 400, crossOrigin: 'anonymous' });
         vegLayer.addTo(map);
 
         // Stats
@@ -2177,7 +2328,7 @@ function requestAgua() {
 
         // Capa en el mapa
         if (aguaLayer) map.removeLayer(aguaLayer);
-        aguaLayer = L.tileLayer(data.tiles, { pane: 'overlayPane', zIndex: 400 });
+        aguaLayer = L.tileLayer(data.tiles, { pane: 'overlayPane', zIndex: 400, crossOrigin: 'anonymous' });
         aguaLayer.addTo(map);
 
         // Actualizar stats (null-safe)
@@ -2227,7 +2378,7 @@ function switchDemLayer(tipo) {
 
     // Cambiar capa en el mapa
     if (_demLayerActual) map.removeLayer(_demLayerActual);
-    _demLayerActual = L.tileLayer(_demTiles[tipo], { pane: 'overlayPane', zIndex: 390 });
+    _demLayerActual = L.tileLayer(_demTiles[tipo], { pane: 'overlayPane', zIndex: 390, crossOrigin: 'anonymous' });
     _demLayerActual.addTo(map);
 }
 
@@ -2300,8 +2451,8 @@ function requestElevacion() {
         _fitToZone();
 
         // Registrar capas DEM en el panel de capas (instancias independientes para el registro)
-        registerLayer('dem_Elevacion', L.tileLayer(data.tiles_dem, { pane: 'overlayPane', zIndex: 390 }));
-        if (data.tiles_slope) registerLayer('dem_Pendiente', L.tileLayer(data.tiles_slope, { pane: 'overlayPane', zIndex: 390 }));
+        registerLayer('dem_Elevacion', L.tileLayer(data.tiles_dem, { pane: 'overlayPane', zIndex: 390, crossOrigin: 'anonymous' }));
+        if (data.tiles_slope) registerLayer('dem_Pendiente', L.tileLayer(data.tiles_slope, { pane: 'overlayPane', zIndex: 390, crossOrigin: 'anonymous' }));
 
         // Guardar en dashboard de Resumen
         saveResultado('dem', 'Elevacion',
@@ -2514,7 +2665,7 @@ function restoreLastActiveLayer() {
         return bLast.ts - aLast.ts;
     });
 
-    // Intentar activar el más reciente que tenga URL en caché
+    // 1ª prioridad: activar el más reciente con tile en caché (URL viva)
     for (var i = 0; i < keys.length; i++) {
         var key    = keys[i];
         var arr    = resultados[key];
@@ -2522,6 +2673,17 @@ function restoreLastActiveLayer() {
         var cacheKey = key + '_' + latest.ts;
         if (_tilesCache[cacheKey]) {
             activarIndicador(key);
+            return;
+        }
+    }
+
+    // 2ª prioridad: activar el más reciente con preview guardada en Storage
+    for (var j = 0; j < keys.length; j++) {
+        var k2     = keys[j];
+        var arr2   = resultados[k2];
+        var latest2 = arr2[arr2.length - 1];
+        if (latest2.previewPath) {
+            activarIndicador(k2); // activarIndicador detectará previewPath y restaurará la imagen
             return;
         }
     }
