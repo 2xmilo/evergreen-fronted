@@ -767,15 +767,19 @@ function startDrawingZone() {
         _enableDrawing();
         return;
     }
-    // Primera zona: verificar cuota según plan
-    if (window._sbUserId && typeof checkZoneQuota === 'function') {
-        checkZoneQuota(window._sbUserId).then(function(result) {
-            if (!result.ok) { mostrarModalLimite(result); return; }
-            _enableDrawing();
-        });
-    } else {
-        _enableDrawing();
+    // Primera zona: verificar cuota usando _sbUserZones local (evita race condition
+    // cuando el delete async aún no confirmó en Supabase)
+    if (window._sbUserId) {
+        var _LIMITS  = { 'free': 1, 'pro': 3, 'admin': Infinity };
+        var plan     = window._sbUserPlan || 'free';
+        var maxZones = _LIMITS[plan] !== undefined ? _LIMITS[plan] : 1;
+        var count    = (window._sbUserZones || []).length;
+        if (maxZones !== Infinity && count >= maxZones) {
+            mostrarModalLimite({ ok: false, reason: 'LIMIT_REACHED', plan: plan, used: count, max: maxZones });
+            return;
+        }
     }
+    _enableDrawing();
 }
 
 // Crear una zona NUEVA (workspace adicional) — llamada desde el selector de zonas
@@ -804,7 +808,7 @@ function startNewZone() {
 // ---------------------------------------------------------
 // CUENCAS — Toggle de visibilidad en el mapa
 // ---------------------------------------------------------
-var _cuencasVisible = true;
+var _cuencasVisible = false;
 
 function toggleCapasCuencas() {
     if (typeof cuencasLayer === 'undefined' || !cuencasLayer) return;
@@ -2353,6 +2357,10 @@ function clearZone() {
 
     var deletedId = WorkspaceState.zonaId;
 
+    // Actualizar lista local INMEDIATAMENTE (optimistic update antes del delete async)
+    // Esto evita que checkZoneQuota cuente la zona que se está eliminando
+    window._sbUserZones = (window._sbUserZones || []).filter(function(z) { return z.id !== deletedId; });
+
     // Borrar datos en Supabase (cascade borra también los results)
     if (window._sbUserId && typeof clearCloudData === 'function') {
         clearCloudData(window._sbUserId, deletedId);
@@ -2362,7 +2370,7 @@ function clearZone() {
     clearZoneState();
 
     // Si queda otra zona en la lista, cambiar a ella automáticamente
-    var remaining = (window._sbUserZones || []).filter(function(z) { return z.id !== deletedId; });
+    var remaining = window._sbUserZones; // ya filtrada arriba
     if (remaining.length > 0 && window._sbUserId) {
         switchToZone(remaining[0].id);
         return;
@@ -2429,15 +2437,18 @@ function usarCuencaEnWorkspace() {
         return;
     }
 
-    // Primera zona: verificar cuota según plan
-    if (window._sbUserId && typeof checkZoneQuota === 'function') {
-        checkZoneQuota(window._sbUserId).then(function(result) {
-            if (!result.ok) { mostrarModalLimite(result); return; }
-            _aplicarCuenca();
-        });
-    } else {
-        _aplicarCuenca();
+    // Primera zona: verificar cuota usando _sbUserZones local (evita race condition)
+    if (window._sbUserId) {
+        var _LIMITS2  = { 'free': 1, 'pro': 3, 'admin': Infinity };
+        var plan2     = window._sbUserPlan || 'free';
+        var maxZones2 = _LIMITS2[plan2] !== undefined ? _LIMITS2[plan2] : 1;
+        var count2    = (window._sbUserZones || []).length;
+        if (maxZones2 !== Infinity && count2 >= maxZones2) {
+            mostrarModalLimite({ ok: false, reason: 'LIMIT_REACHED', plan: plan2, used: count2, max: maxZones2 });
+            return;
+        }
     }
+    _aplicarCuenca();
 }
 
 /**

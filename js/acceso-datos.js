@@ -268,8 +268,8 @@ async function cargarCuencasDGA() {
             }
         });
 
-        // Agregar al mapa por defecto
-        cuencasLayer.addTo(map);
+        // Capa cargada pero oculta por defecto — el usuario la activa desde el panel de capas
+        // cuencasLayer.addTo(map);  ← desactivado intencionalmente
 
         console.log('✅ Capa de cuencas DGA renderizada');
 
