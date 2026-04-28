@@ -585,6 +585,55 @@ function switchWorkspaceTab(tabId) {
             setTimeout(function() { enviarZonaABiodiversidad(); }, 800);
         }
     }
+
+    // 7. Auto-activar la capa más reciente del módulo en el mapa
+    _autoActivateTabLayer(tabId);
+}
+
+/**
+ * Al cambiar de tab, activa automáticamente la última capa calculada
+ * de ese módulo y actualiza el mini-panel con su leyenda.
+ */
+function _autoActivateTabLayer(tabId) {
+    // Mapeo tab → prefijo de key en _layerRegistry / resultados
+    var prefijoPorTab = {
+        'vegetacion': 'vegetacion_',
+        'agua':       'agua_',
+        'elevacion':  'dem_',
+        'bosque':     'bosque'
+    };
+
+    var prefijo = prefijoPorTab[tabId];
+    if (!prefijo) return; // resumen, clima, biodiversidad → sin capa automática
+
+    // Buscar todas las keys del registro que coincidan con el prefijo
+    var keysDisponibles = Object.keys(_layerRegistry).filter(function(k) {
+        return k === prefijo || k.indexOf(prefijo) === 0;
+    });
+    if (keysDisponibles.length === 0) return; // No hay capas calculadas aún
+
+    // Encontrar la key con el timestamp más reciente en resultados
+    var mejorKey = null;
+    var mejorTs  = -1;
+
+    keysDisponibles.forEach(function(k) {
+        if (k === 'bosque') {
+            // Bosque no tiene timestamp de resultado estándar — priorizar siempre
+            mejorKey = 'bosque';
+            mejorTs  = Infinity;
+            return;
+        }
+        var arr  = (WorkspaceState.resultados || {})[k];
+        var last = arr && arr.length ? arr[arr.length - 1] : null;
+        var ts   = last ? (last.ts || 0) : 0;
+        if (ts > mejorTs) { mejorTs = ts; mejorKey = k; }
+    });
+
+    if (!mejorKey) return;
+
+    // Activar la capa en el mapa y mostrar su leyenda
+    try { _activateMapLayer(mejorKey); } catch(e) {}
+    try { showMiniLegend(mejorKey); }    catch(e) {}
 }
 
 // Toggle Left Panel
