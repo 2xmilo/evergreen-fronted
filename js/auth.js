@@ -120,6 +120,9 @@ async function loadCloudWorkspace(userId) {
 }
 
 /* ── Guardar workspace en cloud ───────────────────────────────────────── */
+// Mutex para evitar INSERTs concurrentes cuando zonaId aún no fue asignado (race condition async)
+var _workspaceInsertPending = false;
+
 async function saveWorkspaceToCloud(userId, state) {
     if (!_sb || !userId) return;
     try {
@@ -144,23 +147,36 @@ async function saveWorkspaceToCloud(userId, state) {
             if (typeof renderZoneSelector === 'function') renderZoneSelector(window._sbUserZones);
 
         } else {
-            // Crear nuevo workspace
-            data.is_active = true;
-            var r = await _sb.from('workspaces').insert(data).select().single();
-            if (r.data) {
-                WorkspaceState.zonaId = r.data.id;
-                // Marcar el resto como inactivas
-                await _sb.from('workspaces')
-                    .update({ is_active: false })
-                    .eq('user_id', userId)
-                    .neq('id', r.data.id);
-                // Agregar a lista local
-                window._sbUserZones = [r.data].concat(window._sbUserZones || []);
-                if (typeof renderZoneSelector === 'function') renderZoneSelector(window._sbUserZones);
-                localStorage.setItem('evergreen_workspace', JSON.stringify(WorkspaceState));
+            // Crear nuevo workspace — prevenir doble INSERT si ya hay uno en curso
+            if (_workspaceInsertPending) {
+                console.warn('[Auth] saveWorkspaceToCloud: INSERT ya en curso, ignorando llamada concurrente');
+                return;
+            }
+            _workspaceInsertPending = true;
+            try {
+                data.is_active = true;
+                var r = await _sb.from('workspaces').insert(data).select().single();
+                if (r.data) {
+                    WorkspaceState.zonaId = r.data.id;
+                    // Marcar el resto como inactivas
+                    await _sb.from('workspaces')
+                        .update({ is_active: false })
+                        .eq('user_id', userId)
+                        .neq('id', r.data.id);
+                    // Agregar a lista local solo si no está ya
+                    var alreadyIn = (window._sbUserZones || []).some(function(z) { return z.id === r.data.id; });
+                    if (!alreadyIn) {
+                        window._sbUserZones = [r.data].concat(window._sbUserZones || []);
+                        if (typeof renderZoneSelector === 'function') renderZoneSelector(window._sbUserZones);
+                    }
+                    localStorage.setItem('evergreen_workspace', JSON.stringify(WorkspaceState));
+                }
+            } finally {
+                _workspaceInsertPending = false;
             }
         }
     } catch (e) {
+        _workspaceInsertPending = false;
         console.warn('[Auth] saveWorkspaceToCloud:', e);
     }
 }
@@ -237,10 +253,24 @@ async function clearCloudData(userId, workspaceId) {
             await deletePreviewsFromStorage(userId, wid);
         }
         await _sb.from('workspaces').delete().eq('id', wid).eq('user_id', userId);
-        // results se borran por CASCADE
-        window._sbUserZones = (window._sbUserZones || []).filter(function(z) { return z.id !== wid; });
+
+        // Re-sincronizar _sbUserZones con Supabase para garantizar consistencia
+        // (evita que doble-INSERTs o zonas fantasma bloqueen la cuota)
+        var freshRes = await _sb.from('workspaces')
+            .select('id, zone_name, is_active, created_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+        if (!freshRes.error && freshRes.data) {
+            window._sbUserZones = freshRes.data;
+            if (typeof renderZoneSelector === 'function') renderZoneSelector(window._sbUserZones);
+        } else {
+            // Fallback: filtro local
+            window._sbUserZones = (window._sbUserZones || []).filter(function(z) { return z.id !== wid; });
+        }
     } catch (e) {
         console.warn('[Auth] clearCloudData:', e);
+        // Fallback local si hay error de red
+        window._sbUserZones = (window._sbUserZones || []).filter(function(z) { return z.id !== wid; });
     }
 }
 
