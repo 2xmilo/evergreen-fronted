@@ -10,6 +10,29 @@ window._sbUserZones = [];
 
 var PLAN_LIMITS = { 'free': 1, 'pro': 3, 'admin': Infinity };
 
+function isValidStoredZone(z) {
+    return !!(z && z.id && z.polygon_geojson);
+}
+
+function getValidStoredZones(zones) {
+    return (zones || []).filter(isValidStoredZone);
+}
+
+function notifyCloudSaveError(error) {
+    var msg = (error && (error.message || error.details || error.hint)) || '';
+    if (msg.indexOf('Zone quota exceeded') >= 0) {
+        var plan = window._sbUserPlan || 'free';
+        var maxZones = PLAN_LIMITS[plan] !== undefined ? PLAN_LIMITS[plan] : 1;
+        if (typeof mostrarModalLimite === 'function') {
+            mostrarModalLimite({ ok: false, reason: 'LIMIT_REACHED', plan: plan, used: maxZones, max: maxZones });
+            return;
+        }
+    }
+    if (typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion('No se pudo sincronizar con Supabase. Revisa tu conexion o vuelve a intentar.');
+    }
+}
+
 /* ── Verificar sesión activa ───────────────────────────────────────────── */
 async function initAuth() {
     if (!_sb) {
@@ -59,7 +82,7 @@ async function loadCloudWorkspace(userId) {
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
 
-        var zones = wsResult.data || [];
+        var zones = getValidStoredZones(wsResult.data || []);
         window._sbUserZones = zones;
 
         // Zona activa: marcada is_active=true, o la más reciente
@@ -125,6 +148,7 @@ var _workspaceInsertPending = false;
 
 async function saveWorkspaceToCloud(userId, state) {
     if (!_sb || !userId) return;
+    if (!state || (!state.zona && !state.zonaId)) return;
     try {
         var data = {
             user_id:         userId,
@@ -136,10 +160,11 @@ async function saveWorkspaceToCloud(userId, state) {
 
         if (state.zonaId) {
             // Actualizar workspace existente
-            await _sb.from('workspaces')
+            var updateRes = await _sb.from('workspaces')
                 .update(data)
                 .eq('id', state.zonaId)
                 .eq('user_id', userId);
+            if (updateRes.error) throw updateRes.error;
 
             // Actualizar nombre en lista local
             var idx = (window._sbUserZones || []).findIndex(function(z) { return z.id === state.zonaId; });
@@ -156,13 +181,15 @@ async function saveWorkspaceToCloud(userId, state) {
             try {
                 data.is_active = true;
                 var r = await _sb.from('workspaces').insert(data).select().single();
+                if (r.error) throw r.error;
                 if (r.data) {
                     WorkspaceState.zonaId = r.data.id;
                     // Marcar el resto como inactivas
-                    await _sb.from('workspaces')
+                    var inactiveRes = await _sb.from('workspaces')
                         .update({ is_active: false })
                         .eq('user_id', userId)
                         .neq('id', r.data.id);
+                    if (inactiveRes.error) throw inactiveRes.error;
                     // Agregar a lista local solo si no está ya
                     var alreadyIn = (window._sbUserZones || []).some(function(z) { return z.id === r.data.id; });
                     if (!alreadyIn) {
@@ -178,6 +205,7 @@ async function saveWorkspaceToCloud(userId, state) {
     } catch (e) {
         _workspaceInsertPending = false;
         console.warn('[Auth] saveWorkspaceToCloud:', e);
+        notifyCloudSaveError(e);
     }
 }
 
@@ -187,13 +215,14 @@ async function saveResultsToCloud(userId, tipoIndice, arr) {
     var workspaceId = WorkspaceState && WorkspaceState.zonaId;
     if (!workspaceId) return;
     try {
-        await _sb.from('results').upsert({
+        var res = await _sb.from('results').upsert({
             workspace_id: workspaceId,
             user_id:      userId,
             tipo_indice:  tipoIndice,
             result_data:  arr,
             updated_at:   new Date().toISOString()
         }, { onConflict: 'workspace_id,tipo_indice' });
+        if (res.error) throw res.error;
     } catch (e) {
         console.warn('[Auth] saveResultsToCloud:', e);
     }
@@ -231,7 +260,8 @@ async function checkZoneQuota(userId) {
         var r = await _sb
             .from('workspaces')
             .select('id', { count: 'exact', head: true })
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .not('polygon_geojson', 'is', null);
         var count = r.count || 0;
         if (count >= maxZones) {
             return { ok: false, reason: 'LIMIT_REACHED', plan: plan, used: count, max: maxZones };
@@ -257,11 +287,11 @@ async function clearCloudData(userId, workspaceId) {
         // Re-sincronizar _sbUserZones con Supabase para garantizar consistencia
         // (evita que doble-INSERTs o zonas fantasma bloqueen la cuota)
         var freshRes = await _sb.from('workspaces')
-            .select('id, zone_name, is_active, created_at')
+            .select('id, zone_name, zona_ha, polygon_geojson, is_active, created_at')
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
         if (!freshRes.error && freshRes.data) {
-            window._sbUserZones = freshRes.data;
+            window._sbUserZones = getValidStoredZones(freshRes.data);
             if (typeof renderZoneSelector === 'function') renderZoneSelector(window._sbUserZones);
         } else {
             // Fallback: filtro local

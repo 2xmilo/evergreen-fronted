@@ -63,6 +63,30 @@ body {
   font-size: 12.5px; font-weight: 600; transition: background .2s !important;
 }
 .nav-cta:hover { background: var(--accent-d) !important; }
+.mobile-nav-actions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+.mobile-nav-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(244,247,241,0.14);
+  background: rgba(10,18,10,0.72);
+  color: var(--white);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.mobile-nav-actions a:last-child {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
 
 /* ── HERO ──────────────────────────────────────── */
 .hero {
@@ -70,25 +94,23 @@ body {
   display: flex; align-items: center;
   position: relative; overflow: hidden;
   padding: 120px 64px 80px;
+  background: #061006;
 }
-.hero-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.hero-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
 .hero-bg::before {
   content: '';
-  position: absolute; top: -10%; left: 40%;
-  width: 900px; height: 900px;
-  background: radial-gradient(circle, rgba(61,122,46,0.12) 0%, transparent 60%);
-  animation: breathe 8s ease-in-out infinite;
+  position: absolute; inset: -6%;
+  background:
+    linear-gradient(90deg, rgba(3, 10, 5, 0.72) 0%, rgba(3, 10, 5, 0.46) 42%, rgba(3, 10, 5, 0.22) 100%),
+    linear-gradient(180deg, rgba(3, 10, 5, 0.24) 0%, rgba(3, 10, 5, 0.08) 46%, rgba(3, 10, 5, 0.46) 100%),
+    url('img/cielo2.jpg') center / cover no-repeat;
+  filter: saturate(.82) contrast(.92) brightness(.9) blur(.2px);
+  transform: scale(1.02);
+  animation: scenicDrift 24s ease-in-out infinite alternate;
 }
-.hero-bg::after {
-  content: '';
-  position: absolute; bottom: -10%; right: -5%;
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(200,168,130,0.05) 0%, transparent 60%);
-  animation: breathe 10s ease-in-out infinite reverse;
-}
-@keyframes breathe {
-  0%,100% { transform: scale(1) translateY(0); opacity: .8; }
-  50%      { transform: scale(1.08) translateY(-20px); opacity: 1; }
+@keyframes scenicDrift {
+  0%   { transform: scale(1.02) translate3d(0, 0, 0); }
+  100% { transform: scale(1.08) translate3d(-1.8%, -1.2%, 0); }
 }
 .hero-inner {
   position: relative; z-index: 2;
@@ -149,15 +171,10 @@ body {
 .hero-stat-label { font-size: 11px; color: var(--muted2); font-family: var(--mono); text-transform: uppercase; letter-spacing: .08em; }
 
 /* ── SCREENSHOT FRAME (hero right) ─────────────── */
-.hero-visual { position: relative; }
-.screenshot-glow {
-  position: absolute; inset: -40px;
-  background: radial-gradient(circle at 50% 50%, rgba(61,122,46,0.18) 0%, transparent 65%);
-  pointer-events: none; z-index: 0;
-}
+.hero-visual { position: relative; min-height: 560px; display: flex; align-items: center; }
 .screenshot-frame {
   position: relative; z-index: 1;
-  border-radius: 14px; overflow: hidden;
+  border-radius: 16px; overflow: hidden;
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow:
     0 0 0 1px rgba(106,170,53,0.12),
@@ -165,6 +182,17 @@ body {
     0 0 60px rgba(61,122,46,0.10);
   background: rgba(12,22,12,0.85);
   backdrop-filter: blur(2px);
+  transform: perspective(1200px) rotateY(-7deg) rotateX(4deg);
+  animation: consoleFloat 7s ease-in-out infinite;
+}
+.screenshot-frame::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(115deg, transparent 0%, transparent 42%, rgba(255,255,255,0.12) 48%, transparent 54%, transparent 100%);
+  transform: translateX(-120%);
+  animation: glassSweep 8s ease-in-out infinite;
+  pointer-events: none;
 }
 .screenshot-chrome {
   display: flex; align-items: center; gap: 6px;
@@ -185,6 +213,78 @@ body {
 .screenshot-img {
   display: block; width: 100%; height: auto;
   max-height: 500px; object-fit: cover; object-position: top left;
+}
+.signal-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.layer-stack {
+  position: absolute;
+  right: -10px;
+  bottom: 34px;
+  width: 190px;
+  display: grid;
+  gap: 8px;
+}
+.layer-pill {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(244,247,241,0.10);
+  background: rgba(6,16,6,0.76);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.28);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: rgba(244,247,241,0.70);
+  transform-origin: right center;
+  animation: layerBreathe 6s ease-in-out infinite;
+}
+.layer-pill:nth-child(2) { animation-delay: -1.2s; }
+.layer-pill:nth-child(3) { animation-delay: -2.4s; }
+.layer-pill i { color: var(--green-l); font-size: 11px; }
+.layer-pill b {
+  color: var(--accent);
+  font-weight: 400;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.map-trace {
+  position: absolute; right: 12%; bottom: 20%;
+  width: 31%; height: 23%;
+  border: 2px solid rgba(106,170,53,0.54);
+  background: rgba(106,170,53,0.065);
+  clip-path: polygon(9% 40%, 22% 12%, 48% 21%, 67% 6%, 91% 35%, 79% 76%, 43% 88%, 17% 70%);
+  animation: tracePulse 4.8s ease-in-out infinite;
+}
+.map-trace::before,
+.map-trace::after {
+  content: '';
+  position: absolute;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 14px rgba(200,168,130,0.8);
+}
+.map-trace::before { left: 18%; top: 12%; }
+.map-trace::after { right: 8%; bottom: 20%; }
+@keyframes fieldFloat {
+  0%,100% { transform: translateY(0) rotate(3deg); }
+  50%     { transform: translateY(-14px) rotate(2deg); }
+}
+@keyframes consoleFloat {
+  0%,100% { transform: perspective(1200px) rotateY(-7deg) rotateX(4deg) translateY(0); }
+  50%     { transform: perspective(1200px) rotateY(-5deg) rotateX(3deg) translateY(-10px); }
+}
+@keyframes glassSweep {
+  0%, 46% { transform: translateX(-125%); opacity: 0; }
+  55%     { opacity: .8; }
+  70%,100% { transform: translateX(125%); opacity: 0; }
+}
+@keyframes layerBreathe {
+  0%,100% { transform: translateX(0) scale(1); border-color: rgba(244,247,241,0.10); }
+  50%     { transform: translateX(-8px) scale(1.02); border-color: rgba(106,170,53,0.28); }
+}
+@keyframes tracePulse {
+  0%,100% { opacity: .34; transform: scale(1); }
+  50%     { opacity: .78; transform: scale(1.025); }
 }
 
 /* ── ORIGIN STRIP ─────────────────────────────── */
@@ -210,12 +310,12 @@ body {
 .section-sub { font-size: 15px; color: var(--muted); line-height: 1.7; max-width: 520px; font-weight: 300; margin-bottom: 52px; }
 
 .features-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px;
   background: var(--border); border-radius: 18px; overflow: hidden;
   border: 1px solid var(--border);
 }
 .feature-card {
-  background: var(--bg-3); padding: 32px 28px;
+  background: var(--bg-3); padding: 28px 28px 30px;
   transition: background .25s; position: relative; overflow: hidden;
 }
 .feature-card:hover { background: rgba(20,32,20,0.95); }
@@ -225,11 +325,34 @@ body {
   opacity: 0; transition: opacity .3s;
 }
 .feature-card:hover::after { opacity: 1; }
-.feature-icon {
-  width: 44px; height: 44px; border-radius: 11px;
-  background: rgba(200,168,130,0.07); border: 1px solid rgba(200,168,130,0.14);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--accent); font-size: 17px; margin-bottom: 20px;
+.feature-media {
+  position: relative;
+  width: calc(100% + 56px);
+  height: 176px;
+  margin: -28px -28px 26px;
+  overflow: hidden;
+  background: #071108;
+}
+.feature-media img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center center;
+  background: #030805;
+  filter: saturate(.92) contrast(1.04);
+  transform: scale(1.001);
+  transition: transform .55s ease, filter .55s ease;
+}
+.feature-media::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(8,15,8,0.00) 0%, rgba(17,26,17,0.22) 100%);
+  pointer-events: none;
+}
+.feature-card:hover .feature-media img {
+  transform: scale(1.025);
+  filter: saturate(1) contrast(1.08);
 }
 .feature-name { font-family: var(--serif); font-size: 18px; font-weight: 500; color: var(--white); margin-bottom: 10px; line-height: 1.25; }
 .feature-desc { font-size: 13px; color: var(--muted); line-height: 1.7; font-weight: 300; }
@@ -242,18 +365,13 @@ body {
 
 /* ── CÓMO FUNCIONA ────────────────────────────── */
 .product-section {
-  background: var(--bg-2);
+  background:
+    linear-gradient(90deg, rgba(5, 12, 7, 0.92) 0%, rgba(5, 12, 7, 0.255) 46%, rgba(5, 12, 7, 0.227) 100%),
+    linear-gradient(180deg, rgba(5, 12, 7, 0.72) 0%, rgba(5, 12, 7, 0.045) 45%, rgba(5, 12, 7, 0.379) 100%),
+    url('img/delfin-horizontal.jpg') center center / cover no-repeat;
   border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
   padding: 96px 0;
   position: relative; overflow: hidden;
-}
-.product-section::before {
-  content: '';
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 900px; height: 900px;
-  background: radial-gradient(circle, rgba(61,122,46,0.07) 0%, transparent 60%);
-  pointer-events: none;
 }
 .product-inner {
   max-width: 1280px; margin: 0 auto; padding: 0 64px;
@@ -268,7 +386,6 @@ body {
   font-size: 14px; line-height: 1.8; color: rgba(244,247,241,0.65);
   font-weight: 300; padding-bottom: 4px;
 }
-
 /* Step cards grid (2×2) */
 .step-cards-grid {
   display: grid; grid-template-columns: 1fr 1fr;
@@ -368,7 +485,7 @@ footer {
 /* ── RESPONSIVE ────────────────────────────────── */
 @media (max-width: 1100px) {
   .hero-inner { grid-template-columns: 1fr; gap: 48px; }
-  .hero-visual { max-width: 520px; margin: 0 auto; }
+  .hero-visual { max-width: 640px; min-height: 510px; margin: 0 auto; }
   .features-grid { grid-template-columns: repeat(2,1fr); }
   .product-head { grid-template-columns: 1fr; gap: 24px; margin-bottom: 36px; }
   .step-cards-grid { grid-template-columns: 1fr; }
@@ -376,13 +493,29 @@ footer {
 @media (max-width: 768px) {
   .nav { padding: 0 24px; }
   .nav-links { display: none; }
+  .mobile-nav-actions { display: flex; }
   .hero, .section, .cta-section { padding-left: 24px; padding-right: 24px; }
   .product-inner { padding-left: 24px; padding-right: 24px; }
   .origin-strip { flex-wrap: wrap; gap: 10px; padding: 12px 24px; }
+  .feature-media { height: 168px; }
   .features-grid { grid-template-columns: 1fr; }
   footer { flex-direction: column; gap: 16px; text-align: center; padding: 20px 24px; }
   .beta-form, .cta-form { flex-direction: column; }
   .hero-stats { flex-wrap: wrap; gap: 16px; }
+  .hero-visual { min-height: 430px; }
+  .screenshot-frame { transform: none; animation: consoleFloatMobile 7s ease-in-out infinite; }
+  .layer-stack { right: 0; bottom: 20px; width: 168px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+@keyframes consoleFloatMobile {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-8px); }
 }
 </style>
 </head>
@@ -399,6 +532,10 @@ footer {
     <li><a href="index.html#contacto">Contacto</a></li>
     <li><a href="login.html" class="nav-cta"><i class="fas fa-arrow-right" style="font-size:10px;"></i> Abrir Workspace</a></li>
   </ul>
+  <div class="mobile-nav-actions">
+    <a href="index.html">Inicio</a>
+    <a href="login.html">Workspace</a>
+  </div>
 </nav>
 
 <!-- HERO -->
@@ -437,7 +574,6 @@ footer {
 
     <!-- Screenshot frame -->
     <div class="hero-visual">
-      <div class="screenshot-glow"></div>
       <div class="screenshot-frame">
         <div class="screenshot-chrome">
           <div class="chrome-dot chrome-dot--red"></div>
@@ -449,6 +585,14 @@ footer {
           </div>
         </div>
         <img src="img/workspace-preview.png" alt="Monitor Pro Workspace" class="screenshot-img">
+      </div>
+      <div class="signal-layer" aria-hidden="true">
+        <div class="map-trace"></div>
+        <div class="layer-stack">
+          <div class="layer-pill"><span><i class="fas fa-layer-group"></i> Vegetación</span><b>NDVI</b></div>
+          <div class="layer-pill"><span><i class="fas fa-droplet"></i> Hidrología</span><b>NDWI</b></div>
+          <div class="layer-pill"><span><i class="fas fa-tree"></i> Bosque</span><b>GFC</b></div>
+        </div>
       </div>
     </div>
 
@@ -478,7 +622,9 @@ footer {
     <div class="features-grid">
 
       <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-seedling"></i></div>
+        <div class="feature-media">
+          <img src="img/feature-monitor-vegetacion.jpg" alt="">
+        </div>
         <div class="feature-name">Vegetación Satelital</div>
         <div class="feature-desc">Índices NDVI, EVI, NBR y NDMI calculados sobre imágenes Sentinel-2. Mediana de imágenes para tu zona y período de análisis seleccionado.</div>
         <div class="feature-tags">
@@ -489,7 +635,9 @@ footer {
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-leaf"></i></div>
+        <div class="feature-media">
+          <img src="img/feature-monitor-biodiversidad.jpg" alt="">
+        </div>
         <div class="feature-name">Biodiversidad GBIF</div>
         <div class="feature-desc">Flora, fauna y hongos cruzados con el Reglamento de Clasificación de Especies (RCE) de Chile e IUCN. IVC e intersección con áreas protegidas SNASPE.</div>
         <div class="feature-tags">
@@ -500,7 +648,9 @@ footer {
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-cloud-rain"></i></div>
+        <div class="feature-media">
+          <img src="img/feature-monitor-clima.jpg" alt="">
+        </div>
         <div class="feature-name">Clima e Hidrología</div>
         <div class="feature-desc">Series temporales de precipitación y temperatura desde múltiples productos satelitales. Estadísticas anuales y descarga directa en CSV.</div>
         <div class="feature-tags">
@@ -511,7 +661,9 @@ footer {
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-mountain"></i></div>
+        <div class="feature-media">
+          <img src="img/feature-monitor-elevacion.jpg" alt="">
+        </div>
         <div class="feature-name">Elevación y Relieve</div>
         <div class="feature-desc">DEM de alta resolución, pendiente y aspecto de ladera. Identifica flujo superficial, zonas de acumulación hídrica y microclimas altitudinales.</div>
         <div class="feature-tags">
@@ -522,7 +674,9 @@ footer {
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-water"></i></div>
+        <div class="feature-media">
+          <img src="img/feature-monitor-agua.jpg" alt="">
+        </div>
         <div class="feature-name">Agua Superficial</div>
         <div class="feature-desc">Índices NDWI y MNDWI para detectar ríos, lagos y humedales. Monitoreo de estrés hídrico en vegetación con NDMI sobre imágenes Sentinel-2.</div>
         <div class="feature-tags">
@@ -533,7 +687,9 @@ footer {
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon"><i class="fas fa-tree"></i></div>
+        <div class="feature-media">
+          <img src="img/feature-monitor-bosque.jpg" alt="">
+        </div>
         <div class="feature-name">Pérdida de Bosque</div>
         <div class="feature-desc">Análisis de deforestación histórica 2000–2023 con Hansen GFC. Stock de carbono biomásico estimado por año, zona de estudio y buffer de 5 km.</div>
         <div class="feature-tags">

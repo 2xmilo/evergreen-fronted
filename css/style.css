@@ -320,6 +320,33 @@ nav.scrolled {
     transform: rotate(45deg) scale(1.1);
 }
 
+.mobile-nav-actions {
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+.mobile-nav-actions a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(244, 247, 241, 0.16);
+    background: rgba(12, 24, 12, 0.72);
+    color: var(--white);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.mobile-nav-actions a:last-child {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+}
+
 .nav-pill {
     font-size: 12px;
     letter-spacing: 0.06em;
@@ -835,7 +862,7 @@ h2.title em {
     background: var(--green-800);
     background-image:
         linear-gradient(rgba(20, 32, 20, 0.85), rgba(20, 32, 20, 0.237)),
-        url('../img/monja.jpg');
+        url('../img/ballena.jpeg');
     /* Placeholder, user can change later */
     background-size: cover;
     background-position: center;
@@ -1305,7 +1332,10 @@ footer {
         display: none;
     }
 
-    /* Could add a hamburger menu logic later */
+    .mobile-nav-actions {
+        display: flex;
+    }
+
     section {
         padding: 80px 0;
     }

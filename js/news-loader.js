@@ -1,16 +1,16 @@
 /**
- * Evergreen - Cargador de Noticias Ambientales
- * Fuente: Mongabay Latam (es.mongabay.com)
- * Proxy: allorigins.win (gratuito, sin límites, sin cuenta)
- * Caché: localStorage 24h — las visitas del mismo día son instantáneas
+ * Evergreen - cargador de noticias ambientales.
+ * Fuente principal: Mongabay Latam RSS, consultado via proxy publico.
+ * Si el proxy falla o demora demasiado, se muestran tarjetas locales de respaldo.
  */
 
 const CACHE_KEY = 'evergreen_news_cache';
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+const CACHE_TTL = 24 * 60 * 60 * 1000;
 const TOTAL_CARDS = 3;
 const FEED_URL = 'https://es.mongabay.com/feed/';
 const PROXY_URL = `https://api.allorigins.win/get?url=${encodeURIComponent(FEED_URL)}`;
-const FALLBACK_IMG = 'img/fondo_musgo.jpg';
+const FALLBACK_IMG = 'img/patagonia.jpeg';
+const FETCH_TIMEOUT = 7000;
 
 document.addEventListener('DOMContentLoaded', () => loadNews());
 
@@ -18,27 +18,28 @@ async function loadNews() {
     const container = document.getElementById('nasa-news-container');
     if (!container) return;
 
-    // ─── 1. Caché válido → render inmediato ───────────────────
     const cached = getCache();
     if (cached) {
         renderCards(container, cached);
         return;
     }
 
-    // ─── 2. Fetch + parse RSS ─────────────────────────────────
     try {
-        const res = await fetch(PROXY_URL);
+        const res = await fetchWithTimeout(PROXY_URL, FETCH_TIMEOUT);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
         const data = await res.json();
+        if (!data.contents) throw new Error('Respuesta RSS vacia');
 
         const parser = new DOMParser();
         const xml = parser.parseFromString(data.contents, 'text/xml');
         const items = Array.from(xml.querySelectorAll('item'));
-
-        if (!items.length) throw new Error('Sin artículos');
+        if (!items.length) throw new Error('Sin articulos');
 
         const articles = items.slice(0, TOTAL_CARDS).map(item => {
             const enclosure = item.querySelector('enclosure');
-            const imageUrl = enclosure ? enclosure.getAttribute('url') : FALLBACK_IMG;
+            const media = item.querySelector('media\\:content, content');
+            const imageUrl = enclosure?.getAttribute('url') || media?.getAttribute('url') || FALLBACK_IMG;
 
             return {
                 title: cleanText(item.querySelector('title')?.textContent || '', 90),
@@ -51,16 +52,11 @@ async function loadNews() {
 
         setCache(articles);
         renderCards(container, articles);
-
     } catch (err) {
         console.warn('[Evergreen] News load error:', err);
         showFallback(container);
     }
 }
-
-// ─────────────────────────────────────────────────────────────
-// CACHÉ
-// ─────────────────────────────────────────────────────────────
 
 function getCache() {
     try {
@@ -68,18 +64,28 @@ function getCache() {
         if (!raw) return null;
         const { timestamp, articles } = JSON.parse(raw);
         return (Date.now() - timestamp < CACHE_TTL) ? articles : null;
-    } catch { return null; }
+    } catch {
+        return null;
+    }
 }
 
 function setCache(articles) {
     try {
         localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), articles }));
-    } catch { /* localStorage lleno o bloqueado — sin problema */ }
+    } catch {
+        // Cache is optional.
+    }
 }
 
-// ─────────────────────────────────────────────────────────────
-// RENDER
-// ─────────────────────────────────────────────────────────────
+async function fetchWithTimeout(url, timeout) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+        return await fetch(url, { signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
 
 function renderCards(container, articles) {
     container.innerHTML = articles.map(a => {
@@ -112,24 +118,25 @@ function showFallback(container) {
             <i class="fas fa-rss" style="font-size:2.5rem; color:var(--accent); margin-bottom:1rem; display:block;"></i>
             <p style="font-size:1.05rem; line-height:1.7;">
                 No se pudieron cargar las noticias en este momento.<br>
-                Visita <a href="https://es.mongabay.com" target="_blank"
-                    style="color:var(--accent); font-weight:600; text-decoration: none;">Mongabay Latinoamérica</a>
-                para las últimas noticias ambientales.
+                Puedes revisar la fuente directamente en
+                <a href="https://es.mongabay.com" target="_blank" rel="noopener noreferrer"
+                    style="color:var(--accent); font-weight:600; text-decoration: none;">Mongabay Latinoamerica</a>.
             </p>
         </div>`;
 }
-
-// ─────────────────────────────────────────────────────────────
-// UTILIDAD
-// ─────────────────────────────────────────────────────────────
 
 function cleanText(text, maxLen) {
     const clean = text
         .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
         .replace(/<[^>]*>/gm, '')
-        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"').replace(/&#8230;/g, '...')
-        .replace(/\s+/g, ' ').trim();
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#8230;/g, '...')
+        .replace(/\s+/g, ' ')
+        .trim();
+
     return clean.length > maxLen ? clean.substring(0, maxLen) + '...' : clean;
 }

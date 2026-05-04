@@ -54,8 +54,11 @@ function loadWorkspaceState() {
 
 function saveWorkspaceState() {
     localStorage.setItem('evergreen_workspace', JSON.stringify(WorkspaceState));
-    // Cloud sync (no bloquea — async en segundo plano)
-    if (window._sbUserId && typeof saveWorkspaceToCloud === 'function') {
+    // Cloud sync (no bloquea — async en segundo plano).
+    // Solo sincroniza si existe una zona real o un workspace ya creado.
+    // Evita crear workspaces vacíos que bloquean la cuota free.
+    if (window._sbUserId && typeof saveWorkspaceToCloud === 'function' &&
+        (WorkspaceState.zona || WorkspaceState.zonaId)) {
         saveWorkspaceToCloud(window._sbUserId, WorkspaceState);
     }
 }
@@ -639,13 +642,24 @@ function _autoActivateTabLayer(tabId) {
     };
 
     var prefijo = prefijoPorTab[tabId];
-    if (!prefijo) return; // resumen, clima, biodiversidad → sin capa automática
+    if (!prefijo) {
+        try { hideMiniPanelForTab(tabId); } catch(e) {}
+        return; // resumen, clima, biodiversidad → sin capa automática
+    }
 
-    // Buscar todas las keys del registro que coincidan con el prefijo
-    var keysDisponibles = Object.keys(_layerRegistry).filter(function(k) {
+    // Buscar keys del registro en memoria y de resultados persistidos.
+    // Esto mantiene la leyenda correcta después de recargar desde Supabase/localStorage,
+    // incluso cuando la capa GEE todavía no se ha vuelto a registrar en memoria.
+    var registryKeys = (typeof _layerRegistry !== 'undefined') ? Object.keys(_layerRegistry) : [];
+    var resultKeys = Object.keys(WorkspaceState.resultados || {});
+    var keysDisponibles = registryKeys.concat(resultKeys).filter(function(k, idx, arr) {
+        if (arr.indexOf(k) !== idx) return false;
         return k === prefijo || k.indexOf(prefijo) === 0;
     });
-    if (keysDisponibles.length === 0) return; // No hay capas calculadas aún
+    if (keysDisponibles.length === 0) {
+        try { hideMiniPanelForTab(tabId); } catch(e) {}
+        return; // No hay capas calculadas aún
+    }
 
     // Encontrar la key con el timestamp más reciente en resultados
     var mejorKey = null;
@@ -669,6 +683,13 @@ function _autoActivateTabLayer(tabId) {
     // Activar la capa en el mapa y mostrar su leyenda
     try { _activateMapLayer(mejorKey); } catch(e) {}
     try { showMiniLegend(mejorKey); }    catch(e) {}
+}
+
+function hideMiniPanelForTab(tabId) {
+    var tabsSinLeyenda = { resumen: true, clima: true, biodiversidad: true };
+    if (!tabsSinLeyenda[tabId]) return;
+    var mp = document.getElementById('mini-panel');
+    if (mp) mp.classList.add('hidden');
 }
 
 // Toggle Left Panel
@@ -1922,6 +1943,9 @@ function captureAndSavePreview(key, ts) {
                         if (entry) {
                             entry.previewPath = filePath;
                             saveWorkspaceState();
+                            if (window._sbUserId && typeof saveResultsToCloud === 'function') {
+                                saveResultsToCloud(window._sbUserId, key, WorkspaceState.resultados[key]);
+                            }
                             console.log('[Preview] ✅ guardado:', filePath);
                         }
                     }
