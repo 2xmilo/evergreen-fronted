@@ -90,8 +90,11 @@ function requestVegetacion() {
         registerLayer('vegetacion_' + payload.indice, vegLayer);
 
         // Guardar en dashboard Resumen
-        saveResultado('vegetacion', payload.indice, data.stats, data.tiles,
+        var vegTs = saveResultado('vegetacion', payload.indice, data.stats, data.tiles,
                       payload.fecha_inicio, payload.fecha_fin);
+        if (typeof uploadAnalysisPreviewFromPayload === 'function') {
+            uploadAnalysisPreviewFromPayload('vegetacion_' + payload.indice, vegTs, data);
+        }
 
         // Actualizar panel detalle 1 en Resumen con datos reales
         updateDetailVegStats(payload.indice, data.stats, payload.fecha_inicio, payload.fecha_fin);
@@ -185,8 +188,11 @@ function requestAgua() {
         registerLayer('agua_' + indice, aguaLayer);
 
         // Guardar en dashboard de Resumen
-        saveResultado('agua', indice, data.stats, data.tiles,
+        var aguaTs = saveResultado('agua', indice, data.stats, data.tiles,
                       payload.fecha_inicio, payload.fecha_fin);
+        if (typeof uploadAnalysisPreviewFromPayload === 'function') {
+            uploadAnalysisPreviewFromPayload('agua_' + indice, aguaTs, data);
+        }
 
         // Gráfico de evolución temporal
         renderAguaHistoryChart(indice);
@@ -292,13 +298,27 @@ function requestElevacion() {
         if (data.tiles_slope) registerLayer('dem_Pendiente', L.tileLayer(data.tiles_slope, { pane: 'overlayPane', zIndex: 390, crossOrigin: 'anonymous' }));
 
         // Guardar en dashboard de Resumen
-        saveResultado('dem', 'Elevacion',
+        var demTs = saveResultado('dem', 'Elevacion',
             { mean: data.stats.elev_mean, min: data.stats.elev_min, max: data.stats.elev_max },
             data.tiles_dem, null, null);
+        if (typeof uploadAnalysisPreviewFromPayload === 'function') {
+            uploadAnalysisPreviewFromPayload('dem_Elevacion', demTs, {
+                preview_data_url: data.preview_dem_data_url,
+                preview_url: data.preview_dem_url,
+                preview_bounds: data.preview_dem_bounds
+            });
+        }
         if (data.stats.slope_mean !== undefined && data.stats.slope_mean !== null) {
-            saveResultado('dem', 'Pendiente',
+            var slopeTs = saveResultado('dem', 'Pendiente',
                 { mean: data.stats.slope_mean },
                 data.tiles_slope, null, null);
+            if (typeof uploadAnalysisPreviewFromPayload === 'function') {
+                uploadAnalysisPreviewFromPayload('dem_Pendiente', slopeTs, {
+                    preview_data_url: data.preview_slope_data_url,
+                    preview_url: data.preview_slope_url,
+                    preview_bounds: data.preview_slope_bounds
+                });
+            }
         }
     })
     .catch(function() {
@@ -480,6 +500,7 @@ function _restoreTilesCache() {
         var arr = resultados[key];
         if (!Array.isArray(arr)) return;
         arr.forEach(function(entry) {
+            if (entry.previewPath && (typeof _isLegacyPreviewPath !== 'function' || !_isLegacyPreviewPath(entry.previewPath))) return;
             if (entry.tilesUrl && entry.ts) {
                 _tilesCache[key + '_' + entry.ts] = entry.tilesUrl;
             }
@@ -522,7 +543,7 @@ function restoreLastActiveLayer() {
         var k2     = keys[j];
         var arr2   = resultados[k2];
         var latest2 = arr2[arr2.length - 1];
-        if (latest2.previewPath) {
+        if (latest2.previewPath && (typeof _isLegacyPreviewPath !== 'function' || !_isLegacyPreviewPath(latest2.previewPath))) {
             activarIndicador(k2); // activarIndicador detectará previewPath y restaurará la imagen
             return;
         }

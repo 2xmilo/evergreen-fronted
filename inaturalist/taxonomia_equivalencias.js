@@ -1,56 +1,58 @@
 export const SYNONYMS = {
     // Flora
-    "Drimys winteri": "Drimys winteri var. winteri",
-    "Archidasyphyllum excelsum": "Dasyphyllum excelsum",
+    "drimys winteri": "drimys winteri var. winteri",
+    "archidasyphyllum excelsum": "dasyphyllum excelsum",
 
     // Fauna
-    "Puma concolor": "Puma concolor",
-    "Lycalopex culpaeus": "Pseudalopex culpaeus", // Zorro culpeo en RCE
-    "Lycalopex griseus": "Pseudalopex griseus",
-    "Lontra felina": "Lontra felina",
-    "Leopardus guigna": "Leopardus guigna"
+    "puma concolor": "puma concolor",
+    "lycalopex culpaeus": "pseudalopex culpaeus", // Zorro culpeo en RCE
+    "lycalopex griseus": "pseudalopex griseus",
+    "lontra felina": "lontra felina",
+    "leopardus guigna": "leopardus guigna"
 };
 
 export const CITES_GENERA = [
-    "Alstroemeria", "Araucaria", "Fitzroya", "Pilgerodendron", "Guaiacum"
+    "alstroemeria", "araucaria", "fitzroya", "pilgerodendron", "guaiacum"
 ];
 
 export const SPECIAL_CASES = {
-    "Araucaria araucana": "Monumento Natural",
-    "Fitzroya cupressoides": "Monumento Natural",
-    "Gomortega keule": "Monumento Natural",
-    "Pitavia punctata": "Monumento Natural",
-    "Ruil": "Monumento Natural",
-    "Nothofagus alessandrii": "Monumento Natural"
+    "araucaria araucana": "Monumento Natural",
+    "fitzroya cupressoides": "Monumento Natural",
+    "gomortega keule": "Monumento Natural",
+    "pitavia punctata": "Monumento Natural",
+    "ruil": "Monumento Natural",
+    "nothofagus alessandrii": "Monumento Natural"
 };
 
 export function getOfficialName(inatName) {
-    // Primero limpieza básica
-    let name = inatName.trim();
-    // Revisa si es un sinónimo directo
-    if (SYNONYMS[name]) {
-        return SYNONYMS[name];
-    }
-    return name;
+    const name = normalizeScientificName(inatName);
+    return SYNONYMS[name] || name;
 }
 
 export function checkSpecialProtection(sciName) {
-    let result = { status: null, type: null };
+    const normalizedName = normalizeScientificName(sciName);
 
-    // 1. Revisar si es Monumento Natural
-    if (SPECIAL_CASES[sciName]) {
-        result.status = SPECIAL_CASES[sciName];
-        result.type = "Monumento Natural";
-        return result;
+    if (SPECIAL_CASES[normalizedName]) {
+        return {
+            status: SPECIAL_CASES[normalizedName],
+            type: "Monumento Natural"
+        };
     }
 
-    // 2. Revisar CITES por género
-    let genus = sciName.split(" ")[0];
+    const genus = normalizedName.split(" ")[0];
     if (CITES_GENERA.includes(genus)) {
-        result.status = "CITES Apéndice II (Género)";
-        result.type = "CITES";
-        return result;
+        return {
+            status: "CITES Apéndice II (Género)",
+            type: "CITES"
+        };
     }
 
     return null;
+}
+
+function normalizeScientificName(name) {
+    return String(name || '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
 }

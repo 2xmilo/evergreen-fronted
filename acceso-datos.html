@@ -376,10 +376,6 @@
                             <span class="detail-stat-label">VU</span>
                         </div>
                     </div>
-                    <div style="padding:6px 14px 4px;display:flex;gap:16px;align-items:center;">
-                        <div style="font-size:11px;color:#6b7280;">IVC: <strong id="db-ivc" style="color:#6aaa35;">—</strong></div>
-                        <div style="font-size:10.5px;color:#9ca3af;" id="db-ivc-interp"></div>
-                    </div>
                     <div style="padding:2px 14px 10px;font-size:10.5px;color:#9ca3af;">
                         <i class="fas fa-tree" style="margin-right:4px;"></i><span id="db-piso">—</span>
                     </div>
@@ -724,6 +720,10 @@
             <button class="bio-run-btn secondary" onclick="addBioExtended()">
               <i class="fas fa-plus"></i> Agregar Chromista + Protozoa
             </button>
+            <button class="bio-run-btn secondary" id="bio-evidence-btn" onclick="runBioEvidence()" disabled>
+              <i class="fas fa-calendar-days"></i> Analizar evidencia temporal
+              <span class="bio-btn-sub">Facets GBIF + muestra georreferenciada controlada</span>
+            </button>
             <div class="bio-progress" id="bio-progress">
               <div class="bio-progress-text" id="bio-progress-text">Consultando GBIF...</div>
               <div class="bio-progress-bar"><div class="bio-progress-fill" id="bio-progress-fill" style="width:0%;"></div></div>
@@ -749,17 +749,6 @@
                   <span class="bio-stat-val vu" id="bio-stat-vu">0</span><span class="bio-stat-label">VU</span>
                 </div>
                 <span class="bio-stat-label" style="margin-top:2px;">Amenazadas</span>
-              </div>
-            </div>
-
-            <div class="bio-ivc-box">
-              <div class="bio-ivc-row">
-                <div>
-                  <div class="bio-ivc-label">Índice de Valor de Conservación (IVC)</div>
-                  <div class="bio-ivc-interp" id="bio-ivc-interp">—</div>
-                  <div class="bio-ivc-detail" id="bio-ivc-detail"></div>
-                </div>
-                <span class="bio-ivc-score" id="bio-ivc-score">—</span>
               </div>
             </div>
 
@@ -821,8 +810,31 @@
 
             <div class="bio-chart-block">
               <div class="bio-chart-title"><i class="fas fa-timeline" style="margin-right:5px;font-size:10px;"></i>Cobertura temporal GBIF por década</div>
-              <div class="bio-chart-sub">Indica si el conocimiento es reciente o histórico</div>
+              <div class="bio-chart-sub" id="bio-decada-sub">Indica si el conocimiento es reciente o historico</div>
               <div style="height:90px;position:relative;"><canvas id="bio-decada-chart"></canvas></div>
+            </div>
+
+            <div class="bio-evidence-card" id="bio-evidence-card">
+              <div class="bio-evidence-head">
+                <div>
+                  <div class="bio-section-title">Evidencia GBIF</div>
+                  <div class="bio-evidence-status" id="bio-evidence-status">Ejecuta el analisis temporal para estimar fechas y registros georreferenciados.</div>
+                </div>
+                <span class="bio-evidence-pill" id="bio-evidence-budget">0 llamadas</span>
+              </div>
+              <div class="bio-evidence-grid">
+                <div><span>Total ocurrencias</span><strong id="bio-ev-total">-</strong></div>
+                <div><span>Con anio</span><strong id="bio-ev-year">-</strong></div>
+                <div><span>Post 2010</span><strong id="bio-ev-recent">-</strong></div>
+                <div><span>Muestra coords.</span><strong id="bio-ev-sample">-</strong></div>
+              </div>
+              <div class="bio-evidence-mini" id="bio-evidence-mini"></div>
+              <button class="bio-evidence-export" id="bio-export-evidence-btn" onclick="exportBioEvidenceCSV()" disabled>
+                <i class="fas fa-file-csv"></i> Exportar muestra de evidencia
+              </button>
+              <button class="bio-evidence-export map" id="bio-toggle-evidence-map-btn" onclick="toggleBioEvidencePoints()" disabled>
+                <i class="fas fa-location-dot"></i> Mostrar puntos en mapa
+              </button>
             </div>
 
             <div class="bio-chart-block">
@@ -1087,11 +1099,11 @@
 <script src="js/acceso-datos.js"></script>
 
 <!-- WORKSPACE LOGIC -->
-<script src="js/workspace-core.js?v=5"></script>
+<script src="js/workspace-core.js?v=6"></script>
 <script src="js/workspace-map.js?v=4"></script>
 <script src="js/workspace-bosque.js?v=4"></script>
-<script src="js/workspace-summary.js?v=5"></script>
-<script src="js/workspace-gee-modules.js?v=4"></script>
+<script src="js/workspace-summary.js?v=7"></script>
+<script src="js/workspace-gee-modules.js?v=6"></script>
 <script src="js/workspace-zones.js?v=4"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 

@@ -410,16 +410,6 @@ function populateBioDetail(entry) {
     set('db-en',  s.n_en);
     set('db-vu',  s.n_vu);
 
-    var ivc = s.ivc != null ? Number(s.ivc).toFixed(2) : null;
-    set('db-ivc', ivc);
-
-    var interp = '';
-    if (s.ivc != null) {
-        if (s.ivc > 1.5)      interp = '— Alta sensibilidad';
-        else if (s.ivc > 0.5) interp = '— Sensibilidad moderada';
-        else                   interp = '— Baja sensibilidad';
-    }
-    set('db-ivc-interp', interp);
     set('db-piso', s.piso);
 }
 
@@ -589,6 +579,11 @@ function _activateMapLayer(key) {
     });
     _indicadorLayer = null;
 
+    Object.keys(_previewOverlays).forEach(function(id) {
+        try { map.removeLayer(_previewOverlays[id]); } catch(e) {}
+    });
+    _previewOverlays = {};
+
     // Quitar capas del registro que estén en el mapa y resetear filas
     Object.keys(_layerRegistry).forEach(function(id) {
         var l = _layerRegistry[id];
@@ -599,7 +594,10 @@ function _activateMapLayer(key) {
 
     // Activar la capa solicitada
     var layer = _layerRegistry[key];
-    if (!layer) return; // Sin capa registrada — silencioso (el detalle igual se muestra)
+    if (!layer) {
+        _activatePersistedResultLayer(key);
+        return;
+    }
 
     layer.addTo(map);
 
@@ -611,6 +609,38 @@ function _activateMapLayer(key) {
     // Marcar fila de capas como activa
     var rowEl = document.getElementById('glayer-' + key.replace(/_/g, '-'));
     if (rowEl) { rowEl.classList.add('on'); rowEl.classList.remove('off'); }
+}
+
+function _activatePersistedResultLayer(key) {
+    var arr = WorkspaceState.resultados && WorkspaceState.resultados[key];
+    if (!arr || !arr.length) return false;
+
+    var entry = arr[arr.length - 1];
+    if (!entry || !entry.ts) return false;
+
+    var activeKey = key + '_' + entry.ts;
+    var url = _tilesCache && _tilesCache[activeKey];
+
+    if (url) {
+        _indicadorLayer = L.tileLayer(url, {
+            pane: 'overlayPane',
+            zIndex: 400,
+            crossOrigin: 'anonymous'
+        });
+        _indicadorLayer.addTo(map);
+        _indicadorActivo = activeKey;
+        if (typeof renderIndicadorCards === 'function') renderIndicadorCards();
+        return true;
+    }
+
+    if (entry.previewPath && !_isLegacyPreviewPath(entry.previewPath) && typeof _restorePreviewOnMap === 'function') {
+        _restorePreviewOnMap(key, entry.previewPath, entry.previewBounds);
+        _indicadorActivo = activeKey;
+        if (typeof renderIndicadorCards === 'function') renderIndicadorCards();
+        return true;
+    }
+
+    return false;
 }
 
 function setLayerOpacity(id, val) {
@@ -655,7 +685,9 @@ var _previewOverlays = {};
  * @param {string} key   - ej: 'vegetacion_NDVI'
  * @param {number} ts    - timestamp de la medición (para identificar la entrada)
  */
-function captureAndSavePreview(key, ts) {
+function legacyCaptureAndSavePreview(key, ts) {
+    console.warn('[Preview] captura legacy desactivada; usar PNG AOI del backend.');
+    return;
     if (!window._sbUserId || !WorkspaceState.zonaId) return;
     if (typeof leafletImage === 'undefined')           return;
     if (!WorkspaceState.zona || typeof map === 'undefined') return;
@@ -730,8 +762,58 @@ function captureAndSavePreview(key, ts) {
  * @param {string} key      - ej: 'vegetacion_NDVI'
  * @param {string} filePath - ruta en Storage
  */
+async function uploadAnalysisPreviewFromPayload(key, ts, payload) {
+    if (!_sb || !window._sbUserId || !WorkspaceState.zonaId || !payload) return;
+
+    var source = payload.preview_data_url || payload.preview_url;
+    if (!source) return;
+
+    try {
+        var response = await fetch(source);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        var blob = await response.blob();
+
+        var filePath = window._sbUserId + '/' +
+                       WorkspaceState.zonaId + '/' +
+                       key + '_' + ts + '.png';
+
+        var uploadRes = await _sb.storage
+            .from('result-previews')
+            .upload(filePath, blob, { contentType: 'image/png', upsert: false });
+
+        if (uploadRes.error) {
+            console.warn('[Preview] upload error:', uploadRes.error);
+            return;
+        }
+
+        var arr = (WorkspaceState.resultados || {})[key];
+        if (!arr) return;
+        var entry = arr.find(function(e) { return e.ts === ts; });
+        if (!entry) return;
+
+        entry.previewPath = filePath;
+        entry.previewBounds = payload.preview_bounds || payload.previewBounds || entry.previewBounds;
+        entry.previewContentType = 'image/png';
+        saveWorkspaceState();
+        if (window._sbUserId && typeof saveResultsToCloud === 'function') {
+            saveResultsToCloud(window._sbUserId, key, WorkspaceState.resultados[key]);
+        }
+        console.log('[Preview] PNG AOI guardado:', filePath);
+    } catch (e) {
+        console.warn('[Preview] no se pudo guardar PNG AOI:', e);
+    }
+}
+
+function _isLegacyPreviewPath(filePath) {
+    return /\.jpe?g$/i.test(String(filePath || ''));
+}
+
 function _restorePreviewOnMap(key, filePath, storedBounds) {
     if (!_sb || !WorkspaceState.zona || typeof map === 'undefined') return;
+    if (_isLegacyPreviewPath(filePath)) {
+        console.warn('[Preview] preview legacy JPG ignorado:', filePath);
+        return;
+    }
 
     // Quitar overlay anterior si existía
     if (_previewOverlays[key]) {

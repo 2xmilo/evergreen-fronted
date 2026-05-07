@@ -117,6 +117,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             addGBIFExtended();
             return;
         }
+
+        // Analisis opcional: evidencia temporal/georreferenciada con presupuesto de llamadas
+        if (event.data.tipo === 'analizar_evidencia') {
+            runGBIFEvidenceAnalysis(event.data.modo || 'balanceado');
+            return;
+        }
     });
 });
 
@@ -600,9 +606,12 @@ async function ejecutarRequestGBIF(reinos, label) {
  */
 async function fetchGBIFSpecies(reinos, wkt, progressCallback) {
     const currentYear = new Date().getFullYear();
-    const facetLimit = appState.modoContextoRegional ? 5000 : 1500;
+    const facetPageSize = 1000;
+    const maxFacetTotal = appState.modoContextoRegional ? 10000 : 5000;
+    const allCounts = [];
+    let facetOffset = 0;
 
-    const baseParams = [
+    const commonParams = [
         `geometry=${encodeURIComponent(wkt)}`,
         `country=CL`,
         `year=2000,${currentYear}`,
@@ -614,21 +623,271 @@ async function fetchGBIFSpecies(reinos, wkt, progressCallback) {
         `basisOfRecord=LITERATURE`,
         ...reinos.map(k => `kingdom=${encodeURIComponent(k)}`),
         `facet=speciesKey`,
-        `facetLimit=${facetLimit}`,
-        `facetOffset=0`,
         `limit=0`
     ].join('&');
 
-    const url = `https://api.gbif.org/v1/occurrence/search?${baseParams}`;
-    const data = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-        headers: { 'Accept': 'application/json' }
-    }).then(r => r.json());
+    while (facetOffset < maxFacetTotal) {
+        const pageParams = `${commonParams}&facetLimit=${facetPageSize}&facetOffset=${facetOffset}`;
+        const url = `https://api.gbif.org/v1/occurrence/search?${pageParams}`;
+        const res = await fetch(url, {
+            method: 'GET',
+            mode: 'cors',
+            headers: { 'Accept': 'application/json' }
+        });
+        if (res.status === 429) throw new Error('GBIF rate limit (429). Intenta nuevamente en unos segundos.');
+        if (!res.ok) throw new Error(`GBIF facets HTTP ${res.status}`);
 
-    // facetCounts = array de { name: "taxonKey", count: N }
-    const facetCounts = data.facets?.[0]?.counts || [];
-    return facetCounts;
+        const data = await res.json();
+        const pageCounts = data.facets?.[0]?.counts || [];
+        allCounts.push(...pageCounts);
+
+        if (progressCallback) {
+            const pct = Math.min(35, Math.round((allCounts.length / maxFacetTotal) * 35));
+            progressCallback(pct);
+        }
+
+        if (pageCounts.length < facetPageSize) break;
+        facetOffset += facetPageSize;
+        await new Promise(r => setTimeout(r, 180));
+    }
+
+    return allCounts;
+}
+
+/**
+ * Optional evidence layer: keeps richness from speciesKey facets, but adds
+ * temporal and georeferenced occurrence evidence with a fixed request budget.
+ */
+async function runGBIFEvidenceAnalysis(modo = 'balanceado') {
+    if (!appState.polygon) return;
+
+    let calls = 0;
+    const budget = modo === 'profundo'
+        ? { maxPagesTotal: 24, maxPagesPerKingdom: 4, pageSize: 300, delayMs: 300 }
+        : { maxPagesTotal: 12, maxPagesPerKingdom: 2, pageSize: 250, delayMs: 350 };
+
+    const notify = (status) => {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({
+                tipo: 'biodiversidad_evidencia_estado',
+                data: { status, calls }
+            }, '*');
+        }
+    };
+
+    try {
+        notify('Preparando geometria GBIF...');
+        const wkt = buildGBIFWktFromCurrentPolygon();
+
+        notify('Consultando facets agregados de GBIF...');
+        const facets = await fetchGBIFEvidenceFacets(wkt);
+        calls += 1;
+
+        const kingdoms = getEvidenceKingdoms();
+        notify(`Descargando muestra georreferenciada (${kingdoms.length} grupos, presupuesto ${budget.maxPagesTotal} paginas)...`);
+        const sampleResult = await fetchGBIFEvidenceSample(wkt, kingdoms, budget, (usedCalls) => {
+            calls = 1 + usedCalls;
+            notify('Muestreando registros georreferenciados...');
+        });
+        calls = 1 + sampleResult.calls;
+
+        const summary = buildEvidenceSummary(facets, sampleResult.records, calls, budget);
+        appState.evidenceSummary = summary;
+        appState.evidenceSample = sampleResult.records;
+
+        if (decadaChart && summary.decada_data) {
+            decadaChart.data.labels = summary.decada_data.labels;
+            decadaChart.data.datasets[0].data = summary.decada_data.values;
+            decadaChart.update();
+        }
+
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({
+                tipo: 'biodiversidad_evidencia_resultado',
+                data: summary
+            }, '*');
+        }
+    } catch (err) {
+        console.error('GBIF evidence failed:', err);
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({
+                tipo: 'biodiversidad_evidencia_resultado',
+                data: { error: err.message || String(err), calls }
+            }, '*');
+        }
+    }
+}
+
+function buildGBIFWktFromCurrentPolygon() {
+    let polyForGBIF;
+    if (appState.modoContextoRegional && appState.global_piso_feature) {
+        polyForGBIF = simplificarPisoParaGBIF(appState.global_piso_feature);
+    } else if (appState.polygon && appState.polygon.properties && appState.polygon.properties.piso) {
+        polyForGBIF = simplificarPisoParaGBIF(appState.polygon);
+    } else {
+        polyForGBIF = turf.simplify(
+            appState.polygon.type === 'Feature'
+                ? appState.polygon
+                : { type: 'Feature', geometry: appState.polygon, properties: {} },
+            { tolerance: 0.001, highQuality: false }
+        );
+    }
+    polyForGBIF = turf.rewind(polyForGBIF, { reverse: false });
+    return geojsonToWkt(polyForGBIF.geometry || polyForGBIF);
+}
+
+async function fetchGBIFEvidenceFacets(wkt) {
+    const currentYear = new Date().getFullYear();
+    const params = [
+        `geometry=${encodeURIComponent(wkt)}`,
+        `country=CL`,
+        `year=2000,${currentYear}`,
+        `hasCoordinate=true`,
+        `hasGeospatialIssue=false`,
+        `taxonRank=SPECIES`,
+        `basisOfRecord=HUMAN_OBSERVATION`,
+        `basisOfRecord=PRESERVED_SPECIMEN`,
+        `basisOfRecord=LITERATURE`,
+        `facet=year`,
+        `facet=basisOfRecord`,
+        `facet=kingdom`,
+        `facet=datasetKey`,
+        `facetLimit=220`,
+        `limit=0`
+    ].join('&');
+
+    const url = `https://api.gbif.org/v1/occurrence/search?${params}`;
+    const res = await fetch(url, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`GBIF facets HTTP ${res.status}`);
+    return res.json();
+}
+
+function getEvidenceKingdoms() {
+    const fromList = Array.from(new Set((appState.finalList || [])
+        .map(s => s.group)
+        .filter(Boolean)));
+    const preferred = ['Plantae', 'Animalia', 'Fungi', 'Chromista', 'Protozoa'];
+    const ordered = preferred.filter(k => fromList.includes(k));
+    fromList.forEach(k => { if (!ordered.includes(k)) ordered.push(k); });
+    return ordered.length ? ordered : ['Plantae', 'Animalia', 'Fungi'];
+}
+
+async function fetchGBIFEvidenceSample(wkt, kingdoms, budget, onProgress) {
+    const currentYear = new Date().getFullYear();
+    const records = [];
+    let calls = 0;
+
+    for (const kingdom of kingdoms) {
+        for (let page = 0; page < budget.maxPagesPerKingdom; page++) {
+            if (calls >= budget.maxPagesTotal) return { records, calls };
+
+            const params = [
+                `geometry=${encodeURIComponent(wkt)}`,
+                `country=CL`,
+                `year=2000,${currentYear}`,
+                `hasCoordinate=true`,
+                `hasGeospatialIssue=false`,
+                `taxonRank=SPECIES`,
+                `kingdom=${encodeURIComponent(kingdom)}`,
+                `limit=${budget.pageSize}`,
+                `offset=${page * budget.pageSize}`
+            ].join('&');
+
+            const url = `https://api.gbif.org/v1/occurrence/search?${params}`;
+            const res = await fetch(url, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
+            calls += 1;
+            if (onProgress) onProgress(calls);
+            if (res.status === 429) throw new Error('GBIF rate limit (429). Intenta nuevamente con menos carga.');
+            if (!res.ok) break;
+
+            const data = await res.json();
+            const rows = (data.results || []).map(r => ({
+                key: r.key,
+                speciesKey: r.speciesKey,
+                scientificName: r.species || r.scientificName || '',
+                kingdom: r.kingdom || kingdom,
+                decimalLatitude: r.decimalLatitude,
+                decimalLongitude: r.decimalLongitude,
+                year: r.year || null,
+                month: r.month || null,
+                eventDate: r.eventDate || '',
+                basisOfRecord: r.basisOfRecord || '',
+                datasetKey: r.datasetKey || '',
+                datasetName: r.datasetName || '',
+                institutionCode: r.institutionCode || '',
+                coordinateUncertaintyInMeters: r.coordinateUncertaintyInMeters || null
+            }));
+            records.push(...rows);
+
+            if (data.endOfRecords || rows.length < budget.pageSize) break;
+            await new Promise(r => setTimeout(r, budget.delayMs));
+        }
+    }
+
+    return { records, calls };
+}
+
+function buildEvidenceSummary(facetResponse, sampleRecords, calls, budget) {
+    const yearCounts = getFacetCounts(facetResponse, 'year');
+    const basisCounts = getFacetCounts(facetResponse, 'basisOfRecord');
+    const kingdomCounts = getFacetCounts(facetResponse, 'kingdom');
+
+    const decadeMap = {};
+    let withYear = 0;
+    let recent = 0;
+    Object.keys(yearCounts).forEach(yearStr => {
+        const year = parseInt(yearStr, 10);
+        const count = yearCounts[yearStr] || 0;
+        if (!Number.isFinite(year)) return;
+        withYear += count;
+        if (year >= 2010) recent += count;
+        const decade = Math.floor(year / 10) * 10;
+        decadeMap[decade] = (decadeMap[decade] || 0) + count;
+    });
+
+    const decades = Object.keys(decadeMap).sort();
+    return {
+        total_records: facetResponse.count || 0,
+        with_year: withYear,
+        recent_records: recent,
+        recent_pct: withYear > 0 ? (recent / withYear) * 100 : null,
+        sample_size: sampleRecords.length,
+        map_points: sampleRecords
+            .filter(r => r.decimalLatitude != null && r.decimalLongitude != null)
+            .map(r => ({
+                lat: r.decimalLatitude,
+                lon: r.decimalLongitude,
+                year: r.year,
+                month: r.month,
+                species: r.scientificName,
+                kingdom: r.kingdom,
+                basisOfRecord: r.basisOfRecord,
+                datasetKey: r.datasetKey,
+                datasetName: r.datasetName,
+                institutionCode: r.institutionCode,
+                uncertainty: r.coordinateUncertaintyInMeters
+            })),
+        calls,
+        budget,
+        basis_counts: basisCounts,
+        kingdom_counts: kingdomCounts,
+        decada_data: {
+            labels: decades.map(d => `${d}s`),
+            values: decades.map(d => decadeMap[d])
+        }
+    };
+}
+
+function getFacetCounts(response, fieldName) {
+    const facets = response.facets || [];
+    const normalize = (v) => String(v || '').toLowerCase().replace(/_/g, '');
+    const target = normalize(fieldName);
+    const facet = facets.find(f => normalize(f.field) === target);
+    const counts = {};
+    (facet?.counts || []).forEach(c => {
+        if (c.name != null) counts[c.name] = c.count || 0;
+    });
+    return counts;
 }
 
 /**
@@ -1069,26 +1328,6 @@ function updatePanels() {
     document.getElementById('idxChao1').innerText = chao1 > sObs ? Math.round(chao1) : sObs;
     document.getElementById('idxCompletitud').innerText = (sObs / (chao1 > 0 ? chao1 : 1) * 100).toFixed(1) + '%';
 
-    // IVC Evergreen
-    const pesosIVC = { CR: 5, EN: 4, VU: 3, NT: 2, LC: 1 };
-    let sumaIVC = 0;
-    let countsIVC = { CR: 0, EN: 0, VU: 0, NT: 0, LC: 0 };
-    list.forEach(s => {
-        if (s.rceCategory && pesosIVC[s.rceCategory]) {
-            sumaIVC += pesosIVC[s.rceCategory];
-            countsIVC[s.rceCategory]++;
-        }
-    });
-    const ivc = S > 0 ? parseFloat((sumaIVC / S).toFixed(2)) : 0;
-    document.getElementById('ivcScore').innerText = ivc.toFixed(2);
-    const ivcScore2El = document.getElementById('ivcScore2');
-    if (ivcScore2El) ivcScore2El.innerText = ivc.toFixed(2);
-    let ivcText = 'Baja sensibilidad ambiental';
-    if (ivc > 1.5) ivcText = '<strong>Alta sensibilidad</strong>, relevante para SEIA';
-    else if (ivc > 0.5) ivcText = 'Sensibilidad moderada';
-    document.getElementById('ivcInterp').innerHTML =
-        `${ivcText} <br><span style="font-size:0.75rem;color:var(--text-secondary)">CR:${countsIVC.CR}×5 | EN:${countsIVC.EN}×4 | VU:${countsIVC.VU}×3 | NT:${countsIVC.NT}×2 | LC:${countsIVC.LC}×1</span>`;
-
     // Proporciones
     const amenazadas = counts.CR + counts.EN + counts.VU;
     document.getElementById('idxRcePct').innerText = S > 0 ? `${((rceCount / S) * 100).toFixed(1)}%` : '-';
@@ -1104,14 +1343,14 @@ function updatePanels() {
     const centroid = turf.centroid(appState.polygon);
     const regKey = getRegionMma(centroid.geometry.coordinates[1]);
     document.getElementById('regionalName').innerText = regKey.toUpperCase();
-    const rceRegional = [];
+    const regionalRceList = [];
     for (let key in rceData) {
         if (rceData[key].regiones && rceData[key].regiones[regKey] === 1) {
-            rceRegional.push({ nombre: key, categoria: rceData[key].categoria, grupo: rceData[key].grupo || 'S/G', comun: rceData[key].nombre_comun });
+            regionalRceList.push({ nombre: key, categoria: rceData[key].categoria, grupo: rceData[key].grupo || 'S/G', comun: rceData[key].nombre_comun });
         }
     }
     const grps = {};
-    rceRegional.forEach(r => {
+    regionalRceList.forEach(r => {
         const g = r.grupo.split('-')[1] || r.grupo.split('-')[0] || 'Otro';
         if (!grps[g]) grps[g] = { pot: 0, obs: 0, ausentes: [] };
         grps[g].pot++;
@@ -1224,7 +1463,6 @@ function updatePanels() {
                 n_cr:            counts.CR,
                 n_en:            counts.EN,
                 n_vu:            counts.VU,
-                ivc:             ivc,
                 piso:            appState.global_piso_vegetacional || null,
 
                 // Áreas protegidas
@@ -1320,6 +1558,12 @@ function renderSpeciesTable(fullList) {
 function exportCSVToFile() {
     if (!appState.finalList || appState.finalList.length === 0) return;
 
+    const escapeCSV = (value) => {
+        if (value == null) return "";
+        const text = String(value);
+        return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+
     const headers = [
         "nombre_cientifico",
         "nombre_comun",
@@ -1338,29 +1582,85 @@ function exportCSVToFile() {
     let csvContent = headers.join(",") + "\n";
 
     appState.finalList.forEach(item => {
-        // Prepare fields, escaping commas and quotes
         const row = [
             item.officialName,
-            item.commonName ? `"${item.commonName.replace(/"/g, '""')}"` : "",
+            item.commonName || "",
             item.group,
             item.count,
             item.rceCategory || "",
             item.iucnCategory || "",
-            item.specialProtection ? `"${item.specialProtection.status}"` : "",
-            `"${item.piso_vegetacional}"`,
+            item.specialProtection ? item.specialProtection.status : "",
+            item.piso_vegetacional || "",
             item.intersecta_snaspe,
             item.intersecta_19300,
             item.intersecta_erb,
             item.dist_km_snaspe
         ];
-        csvContent += row.join(",") + "\n";
+        csvContent += row.map(escapeCSV).join(",") + "\n";
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = "evergreen_biodiversidad_export.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function exportEvidenceCSVToFile() {
+    const rows = appState.evidenceSample || [];
+    if (!rows.length) return;
+
+    const headers = [
+        "nombre_cientifico",
+        "reino",
+        "anio",
+        "mes",
+        "fecha_evento",
+        "latitud",
+        "longitud",
+        "tipo_registro_gbif",
+        "incertidumbre_coordenada_m",
+        "institucion",
+        "dataset_nombre",
+        "dataset_key",
+        "gbif_occurrence_key",
+        "gbif_species_key"
+    ];
+
+    const escapeCSV = (value) => {
+        if (value == null) return "";
+        const text = String(value);
+        return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+
+    let csvContent = headers.join(",") + "\n";
+    rows.forEach(item => {
+        csvContent += [
+            item.scientificName,
+            item.kingdom,
+            item.year,
+            item.month,
+            item.eventDate,
+            item.decimalLatitude,
+            item.decimalLongitude,
+            item.basisOfRecord,
+            item.coordinateUncertaintyInMeters,
+            item.institutionCode,
+            item.datasetName,
+            item.datasetKey,
+            item.key,
+            item.speciesKey
+        ].map(escapeCSV).join(",") + "\n";
+    });
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "evergreen_biodiversidad_evidencia_gbif.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1536,13 +1836,6 @@ function generateSEIAParagraph() {
     if (f2 > 0) chao1 = Math.round(S + (f1 * f1) / (2 * f2));
     const completitud = S > 0 ? ((S / chao1) * 100).toFixed(0) : 0;
 
-    // IVC
-    const pesosIVC = { CR: 5, EN: 4, VU: 3, NT: 2, LC: 1 };
-    let sumaIVC = 0;
-    list.forEach(s => { if (s.rceCategory && pesosIVC[s.rceCategory]) sumaIVC += pesosIVC[s.rceCategory]; });
-    const ivc = S > 0 ? (sumaIVC / S).toFixed(2) : 0;
-    const ivcLabel = ivc > 1.5 ? 'alta' : ivc > 0.5 ? 'moderada' : 'baja';
-
     // ── 3. Grupos taxonómicos con RCE ─────────────────────────────────
     const groupMap = {};
     rceList.forEach(s => {
@@ -1607,8 +1900,6 @@ function generateSEIAParagraph() {
     }
     parrafo += `\n\n`;
 
-    parrafo += `El Índice de Valor de Conservación (IVC) Evergreen calculado para el área es de ${ivc}, lo que refleja una sensibilidad ambiental ${ivcLabel} en términos de biodiversidad de interés para el Sistema de Evaluación de Impacto Ambiental (SEIA).\n\n`;
-
     parrafo += geoFrase + `\n\n`;
 
     if (simbioFrase) {
@@ -1645,6 +1936,8 @@ function copySEIAText() {
 window.generateSEIAParagraph = generateSEIAParagraph;
 window.copySEIAText = copySEIAText;
 window.exportCSV = exportCSVToFile;
+window.exportCSVToFile = exportCSVToFile;
+window.exportEvidenceCSVToFile = exportEvidenceCSVToFile;
 
 // ═══════════════════════════════════════════════════════════════════════
 // MODAL DE DISTRIBUCIÓN POR ESPECIE (GBIF Occurrence Density Map)

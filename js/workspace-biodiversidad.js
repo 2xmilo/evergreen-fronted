@@ -11,6 +11,16 @@
 var _biodonutChart = null, _bioRegionalChart = null, _bioDecadaChart = null, _bioRceIucnChart = null;
 var _bioTableFilter = null;
 var _bioFinalList = [];  // cache de la lista de especies
+var _bioEvidencePoints = [];
+var _bioEvidenceLayer = null;
+var _bioEvidenceLegend = null;
+var _bioEvidenceColors = {
+    Plantae: '#6aaa35',
+    Animalia: '#3b82f6',
+    Fungi: '#a855f7',
+    Chromista: '#f59e0b',
+    Protozoa: '#ef4444'
+};
 
 // ── Actualizar zona en el badge del panel bio ────────────────────────
 function updateBioZoneBadge() {
@@ -87,10 +97,61 @@ function addBioExtended() {
     } catch(e) { console.warn('addBioExtended:', e); }
 }
 
+function runBioEvidence() {
+    var iframe = document.getElementById('iframe-biodiversidad');
+    if (!iframe || !_bioFinalList.length) {
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('Ejecuta primero el analisis GBIF base.');
+        }
+        return;
+    }
+
+    _setBioEl('bio-evidence-status', 'Consultando facets temporales y muestra georreferenciada...');
+    _setBioEl('bio-evidence-budget', 'estimando');
+    _setBioEl('bio-ev-total', '-');
+    _setBioEl('bio-ev-year', '-');
+    _setBioEl('bio-ev-recent', '-');
+    _setBioEl('bio-ev-sample', '-');
+    _setBioEl('bio-evidence-mini', '');
+    var exportBtn = document.getElementById('bio-export-evidence-btn');
+    if (exportBtn) exportBtn.disabled = true;
+    var mapBtn = document.getElementById('bio-toggle-evidence-map-btn');
+    if (mapBtn) mapBtn.disabled = true;
+    clearBioEvidencePoints();
+
+    var btn = document.getElementById('bio-evidence-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+        iframe.contentWindow.postMessage({ tipo: 'analizar_evidencia', modo: 'balanceado' }, '*');
+    } catch(e) {
+        console.warn('runBioEvidence:', e);
+        if (btn) btn.disabled = false;
+    }
+}
+
 // ── Escuchar resultados del iframe de biodiversidad ──────────────────
 window.addEventListener('message', function(event) {
-    if (!event.data || event.data.tipo !== 'biodiversidad_resultado') return;
+    if (!event.data) return;
+
+    if (event.data.tipo === 'biodiversidad_evidencia_estado') {
+        _handleBioEvidenceState(event.data.data || {});
+        return;
+    }
+
+    if (event.data.tipo === 'biodiversidad_evidencia_resultado') {
+        _handleBioEvidenceResult(event.data.data || {});
+        return;
+    }
+
+    if (event.data.tipo !== 'biodiversidad_resultado') return;
     var d = event.data.data;
+    clearBioEvidencePoints();
+    _bioEvidencePoints = [];
+    var staleMapBtn = document.getElementById('bio-toggle-evidence-map-btn');
+    if (staleMapBtn) staleMapBtn.disabled = true;
+    var staleExportBtn = document.getElementById('bio-export-evidence-btn');
+    if (staleExportBtn) staleExportBtn.disabled = true;
 
     // Ocultar barra de progreso
     var progress = document.getElementById('bio-progress');
@@ -106,14 +167,6 @@ window.addEventListener('message', function(event) {
     _setBioEl('bio-stat-cr',  d.n_cr);
     _setBioEl('bio-stat-en',  d.n_en);
     _setBioEl('bio-stat-vu',  d.n_vu);
-
-    // IVC
-    var ivc = d.ivc != null ? d.ivc.toFixed(2) : '—';
-    _setBioEl('bio-ivc-score', ivc);
-    var interp = 'Baja sensibilidad ambiental';
-    if (d.ivc > 1.5) interp = 'Alta sensibilidad ambiental';
-    else if (d.ivc > 0.5) interp = 'Sensibilidad moderada';
-    _setBioEl('bio-ivc-interp', interp);
 
     // Áreas protegidas
     _setBioAlert('bio-alert-snaspe', d.snaspe_int, d.snaspe_dist);
@@ -149,13 +202,15 @@ window.addEventListener('message', function(event) {
         _setBioEl('bio-table-subtitle', (WorkspaceState.zonaNombre || '') + ' · ' + d.n_especies + ' registros únicos');
         var csvBtn = document.getElementById('bio-export-csv-btn');
         if (csvBtn) csvBtn.disabled = false;
+        var evidenceBtn = document.getElementById('bio-evidence-btn');
+        if (evidenceBtn) evidenceBtn.disabled = false;
     }
 
     // Guardar en dashboard Resumen
     saveResultado('biodiversidad', 'Biodiversidad', {
         n_especies: d.n_especies, n_rce: d.n_rce,
         n_cr: d.n_cr, n_en: d.n_en, n_vu: d.n_vu,
-        ivc: d.ivc, mean: d.n_especies,
+        mean: d.n_especies,
         piso: d.piso, snaspe_int: d.snaspe_int,
         top_amenazadas: d.top_amenazadas
     }, null, null, null);
@@ -164,6 +219,57 @@ window.addEventListener('message', function(event) {
         mostrarNotificacion('🌿 Análisis GBIF completo: ' + d.n_especies + ' especies.');
     }
 });
+
+function _handleBioEvidenceState(data) {
+    if (data.status) _setBioEl('bio-evidence-status', data.status);
+    if (data.calls != null) _setBioEl('bio-evidence-budget', data.calls + ' llamadas');
+}
+
+function _handleBioEvidenceResult(data) {
+    var btn = document.getElementById('bio-evidence-btn');
+    if (btn) btn.disabled = false;
+
+    if (data.error) {
+        _setBioEl('bio-evidence-status', 'No se pudo completar evidencia GBIF: ' + data.error);
+        return;
+    }
+
+    _setBioEl('bio-evidence-status', 'Evidencia temporal actualizada sin alterar la riqueza base.');
+    _setBioEl('bio-evidence-budget', (data.calls || 0) + ' llamadas');
+    _setBioEl('bio-ev-total', _formatBioNumber(data.total_records));
+    _setBioEl('bio-ev-year', _formatBioNumber(data.with_year));
+    _setBioEl('bio-ev-recent', data.recent_pct != null ? data.recent_pct.toFixed(1) + '%' : '-');
+    _setBioEl('bio-ev-sample', _formatBioNumber(data.sample_size));
+    var exportBtn = document.getElementById('bio-export-evidence-btn');
+    if (exportBtn) exportBtn.disabled = !(data.sample_size > 0);
+    _bioEvidencePoints = data.map_points || [];
+    var mapBtn = document.getElementById('bio-toggle-evidence-map-btn');
+    if (mapBtn) {
+        mapBtn.disabled = !_bioEvidencePoints.length;
+        mapBtn.innerHTML = '<i class="fas fa-location-dot"></i> Mostrar puntos en mapa';
+    }
+
+    if (data.decada_data) {
+        _updateBioDecada(data.decada_data);
+        _setBioEl('bio-decada-sub', 'Basado en facet=year de GBIF; no cambia la lista de especies base.');
+    }
+
+    var basis = data.basis_counts || {};
+    var topBasis = Object.keys(basis)
+        .sort(function(a, b) { return basis[b] - basis[a]; })
+        .slice(0, 3)
+        .map(function(k) { return k + ': ' + _formatBioNumber(basis[k]); })
+        .join(' | ');
+    var sampleNote = data.sample_size
+        ? 'Muestra acotada de ' + _formatBioNumber(data.sample_size) + ' registros con coordenadas para auditoria.'
+        : 'Solo se usaron facets agregados; no se descargo muestra de ocurrencias.';
+    _setBioEl('bio-evidence-mini', [topBasis, sampleNote].filter(Boolean).join(' - '));
+}
+
+function _formatBioNumber(n) {
+    if (n == null || n === '') return '-';
+    return Number(n).toLocaleString('es-CL');
+}
 
 function _setBioEl(id, val) {
     var el = document.getElementById(id);
@@ -384,11 +490,123 @@ function exportBioCSV() {
         var iframe = document.getElementById('iframe-biodiversidad');
         if (iframe && iframe.contentWindow && typeof iframe.contentWindow.exportCSVToFile === 'function') {
             iframe.contentWindow.exportCSVToFile();
+        } else if (iframe && iframe.contentWindow && typeof iframe.contentWindow.exportCSV === 'function') {
+            iframe.contentWindow.exportCSV();
         }
     } catch(e) { console.warn('exportBioCSV:', e); }
 }
 
 // ── Inicializar charts cuando se activa el tab biodiversidad ─────────
+function exportBioEvidenceCSV() {
+    try {
+        var iframe = document.getElementById('iframe-biodiversidad');
+        if (iframe && iframe.contentWindow && typeof iframe.contentWindow.exportEvidenceCSVToFile === 'function') {
+            iframe.contentWindow.exportEvidenceCSVToFile();
+        }
+    } catch(e) { console.warn('exportBioEvidenceCSV:', e); }
+}
+
+function toggleBioEvidencePoints() {
+    if (typeof map === 'undefined' || typeof L === 'undefined') return;
+    if (_bioEvidenceLayer && map.hasLayer(_bioEvidenceLayer)) {
+        clearBioEvidencePoints();
+        var offBtn = document.getElementById('bio-toggle-evidence-map-btn');
+        if (offBtn) offBtn.innerHTML = '<i class="fas fa-location-dot"></i> Mostrar puntos en mapa';
+        return;
+    }
+    renderBioEvidencePoints();
+}
+
+function clearBioEvidencePoints() {
+    if (typeof map !== 'undefined' && _bioEvidenceLayer) {
+        try { map.removeLayer(_bioEvidenceLayer); } catch(e) {}
+    }
+    _bioEvidenceLayer = null;
+    if (_bioEvidenceLegend && _bioEvidenceLegend.parentNode) {
+        _bioEvidenceLegend.parentNode.removeChild(_bioEvidenceLegend);
+    }
+    _bioEvidenceLegend = null;
+}
+
+function renderBioEvidencePoints() {
+    if (!_bioEvidencePoints.length || typeof map === 'undefined' || typeof L === 'undefined') return;
+
+    var renderer = L.canvas ? L.canvas({ padding: 0.35 }) : null;
+    var group = L.layerGroup();
+
+    _bioEvidencePoints.forEach(function(p) {
+        if (p.lat == null || p.lon == null) return;
+        var color = _bioEvidenceColors[p.kingdom] || '#14b8a6';
+        var marker = L.circleMarker([p.lat, p.lon], {
+            radius: 4,
+            renderer: renderer,
+            color: color,
+            weight: 1,
+            fillColor: color,
+            fillOpacity: 0.55,
+            opacity: 0.9
+        });
+        var year = p.year || 'sin anio';
+        var uncertainty = p.uncertainty ? '<br>Incertidumbre: ' + Number(p.uncertainty).toLocaleString('es-CL') + ' m' : '';
+        var speciesName = p.species || 'Especie sin nombre';
+        marker.bindTooltip(_escapeBioHtml(speciesName), {
+            direction: 'top',
+            sticky: true,
+            opacity: 0.92
+        });
+        marker.bindPopup(
+            '<strong><i>' + _escapeBioHtml(speciesName) + '</i></strong>' +
+            '<br>Reino: ' + _escapeBioHtml(p.kingdom || '-') +
+            '<br>Anio: ' + _escapeBioHtml(year) +
+            '<br>Registro: ' + _escapeBioHtml(p.basisOfRecord || '-') +
+            uncertainty
+        );
+        group.addLayer(marker);
+    });
+
+    _bioEvidenceLayer = group.addTo(map);
+    addBioEvidenceLegend(_bioEvidencePoints);
+    var onBtn = document.getElementById('bio-toggle-evidence-map-btn');
+    if (onBtn) onBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar puntos del mapa';
+}
+
+function addBioEvidenceLegend(points) {
+    var mapContainer = document.getElementById('map');
+    if (!mapContainer) return;
+    var counts = {};
+    (points || []).forEach(function(p) {
+        var k = p.kingdom || 'Otro';
+        counts[k] = (counts[k] || 0) + 1;
+    });
+    var rows = Object.keys(counts)
+        .sort(function(a, b) { return counts[b] - counts[a]; })
+        .map(function(k) {
+            var color = _bioEvidenceColors[k] || '#14b8a6';
+            return '<div class="bio-map-legend-row">' +
+                '<span class="bio-map-legend-dot" style="background:' + color + ';"></span>' +
+                '<span>' + _escapeBioHtml(k) + '</span>' +
+                '<b>' + Number(counts[k]).toLocaleString('es-CL') + '</b>' +
+            '</div>';
+        }).join('');
+    var legend = document.createElement('div');
+    legend.className = 'bio-map-point-legend';
+    legend.innerHTML =
+        '<strong>Registros GBIF</strong>' +
+        '<div class="bio-map-legend-total">' + Number((points || []).length).toLocaleString('es-CL') + ' puntos muestreados</div>' +
+        rows;
+    mapContainer.appendChild(legend);
+    _bioEvidenceLegend = legend;
+}
+
+function _escapeBioHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 var _origSwitchTab = switchWorkspaceTab;
 switchWorkspaceTab = function(tabId) {
     _origSwitchTab(tabId);
@@ -397,4 +615,3 @@ switchWorkspaceTab = function(tabId) {
         setTimeout(initBioCharts, 80);
     }
 };
-

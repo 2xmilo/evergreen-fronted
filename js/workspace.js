@@ -1652,16 +1652,6 @@ function populateBioDetail(entry) {
     set('db-en',  s.n_en);
     set('db-vu',  s.n_vu);
 
-    var ivc = s.ivc != null ? Number(s.ivc).toFixed(2) : null;
-    set('db-ivc', ivc);
-
-    var interp = '';
-    if (s.ivc != null) {
-        if (s.ivc > 1.5)      interp = '— Alta sensibilidad';
-        else if (s.ivc > 0.5) interp = '— Sensibilidad moderada';
-        else                   interp = '— Baja sensibilidad';
-    }
-    set('db-ivc-interp', interp);
     set('db-piso', s.piso);
 }
 
@@ -3012,14 +3002,6 @@ window.addEventListener('message', function(event) {
     _setBioEl('bio-stat-en',  d.n_en);
     _setBioEl('bio-stat-vu',  d.n_vu);
 
-    // IVC
-    var ivc = d.ivc != null ? d.ivc.toFixed(2) : '—';
-    _setBioEl('bio-ivc-score', ivc);
-    var interp = 'Baja sensibilidad ambiental';
-    if (d.ivc > 1.5) interp = 'Alta sensibilidad ambiental';
-    else if (d.ivc > 0.5) interp = 'Sensibilidad moderada';
-    _setBioEl('bio-ivc-interp', interp);
-
     // Áreas protegidas
     _setBioAlert('bio-alert-snaspe', d.snaspe_int, d.snaspe_dist);
     _setBioAlert('bio-alert-19300',  d.int_19300,  null);
@@ -3060,7 +3042,7 @@ window.addEventListener('message', function(event) {
     saveResultado('biodiversidad', 'Biodiversidad', {
         n_especies: d.n_especies, n_rce: d.n_rce,
         n_cr: d.n_cr, n_en: d.n_en, n_vu: d.n_vu,
-        ivc: d.ivc, mean: d.n_especies,
+        mean: d.n_especies,
         piso: d.piso, snaspe_int: d.snaspe_int,
         top_amenazadas: d.top_amenazadas
     }, null, null, null);

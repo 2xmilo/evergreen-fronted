@@ -163,9 +163,7 @@ function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin) {
 
     // Capturar preview visual para el repositorio (async — no bloquea el flujo)
     // Solo para indicadores con capa de mosaico (excluye biodiversidad)
-    if (tipo !== 'biodiversidad' && tilesUrl) {
-        (function(_k, _t) { captureAndSavePreview(_k, _t); })(key, ts);
-    }
+    return ts;
 }
 
 /** Formatea el valor principal a mostrar en la tarjeta */
@@ -480,7 +478,7 @@ function activarIndicador(key, ts) {
     var url = _tilesCache[activeKey];
     if (!url) {
         // Tile GEE expirado — intentar mostrar preview guardada en Storage
-        if (entry.previewPath) {
+        if (entry.previewPath && (typeof _isLegacyPreviewPath !== 'function' || !_isLegacyPreviewPath(entry.previewPath))) {
             _restorePreviewOnMap(key, entry.previewPath, entry.previewBounds);
             _indicadorActivo = activeKey;
             renderIndicadorCards();
