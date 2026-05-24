@@ -827,9 +827,13 @@ async function descargar() {
     }, MENSAJES_PROCESAMIENTO[0].duracion);
 
     try {
+        const headers = (typeof getBackendAuthHeaders === 'function')
+            ? await getBackendAuthHeaders({ 'Content-Type': 'application/json' })
+            : { 'Content-Type': 'application/json' };
+
         const response = await fetch(`${API_URL}/api/descargar`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(payload)
         });
 

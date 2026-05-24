@@ -30,6 +30,19 @@ var _VEG_GRADIENTE_DEFAULT = 'linear-gradient(90deg,#440154,#31688e,#35b779,#fde
 var vegLayer = null;
 var demLayer = null;
 
+function fetchBackendJson(url, payload) {
+    var headersPromise = (typeof getBackendAuthHeaders === 'function')
+        ? getBackendAuthHeaders({ 'Content-Type': 'application/json' })
+        : Promise.resolve({ 'Content-Type': 'application/json' });
+    return headersPromise.then(function(headers) {
+        return fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+        });
+    });
+}
+
 function requestVegetacion() {
     if (!WorkspaceState.zonaGEE) return _noZonaGuard();
 
@@ -44,11 +57,7 @@ function requestVegetacion() {
         fecha_fin: document.getElementById('veg-fin').value
     };
 
-    fetch('https://evergreen-backend-awv1.onrender.com/api/vegetacion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
+    fetchBackendJson('https://evergreen-backend-awv1.onrender.com/api/vegetacion', payload)
     .then(function(r) { return r.json(); })
     .then(function(data) {
         btn.innerHTML = '<i class="fas fa-seedling"></i> Generar Análisis';
@@ -152,11 +161,7 @@ function requestAgua() {
         fecha_fin: document.getElementById('agua-fin').value
     };
 
-    fetch('https://evergreen-backend-awv1.onrender.com/api/vegetacion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
+    fetchBackendJson('https://evergreen-backend-awv1.onrender.com/api/vegetacion', payload)
     .then(function(r) { return r.json(); })
     .then(function(data) {
         btn.innerHTML = '<i class="fas fa-tint"></i> Generar Análisis de Agua';
@@ -238,11 +243,7 @@ function requestElevacion() {
         fuente: fuente
     };
 
-    fetch('https://evergreen-backend-awv1.onrender.com/api/dem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
+    fetchBackendJson('https://evergreen-backend-awv1.onrender.com/api/dem', payload)
     .then(function(r) { return r.json(); })
     .then(function(data) {
         btn.innerHTML = '<i class="fas fa-layer-group"></i> Procesar Capas';
@@ -359,7 +360,7 @@ function clearZoneState() {
     saveWorkspaceState();
 }
 
-function clearZone() {
+async function clearZone() {
     if (!WorkspaceState.zona) return;
     if (!confirm('¿Eliminar la zona activa y todos sus análisis?\n\nEsta acción no se puede deshacer.')) return;
 
@@ -371,7 +372,7 @@ function clearZone() {
 
     // Borrar datos en Supabase (cascade borra también los results)
     if (window._sbUserId && typeof clearCloudData === 'function') {
-        clearCloudData(window._sbUserId, deletedId);
+        await clearCloudData(window._sbUserId, deletedId);
     }
 
     WorkspaceState.resultados = {};
@@ -416,15 +417,22 @@ function usarCuencaEnWorkspace() {
     }
 
     function _aplicarCuenca() {
+        var replacedWorkspaceId = WorkspaceState.zonaId;
+        var replacingCurrentZone = !!(WorkspaceState.zona && replacedWorkspaceId);
+        if (replacingCurrentZone && typeof clearAnalysisStateForZoneChange === 'function') {
+            var hadResults = clearAnalysisStateForZoneChange();
+            if (hadResults && window._sbUserId && typeof clearResultsForWorkspace === 'function') {
+                clearResultsForWorkspace(window._sbUserId, replacedWorkspaceId);
+            }
+        }
+
         WorkspaceState.zona       = geojson;
         WorkspaceState.zonaHa     = ha;
         WorkspaceState.zonaNombre = props.nombre || 'Cuenca DGA';
 
-        if (typeof turf !== 'undefined') {
-            WorkspaceState.zonaGEE = turf.simplify(geojson, { tolerance: 0.001, highQuality: true });
-        } else {
-            WorkspaceState.zonaGEE = geojson;
-        }
+        WorkspaceState.zonaGEE = (typeof simplifyZoneForGee === 'function')
+            ? simplifyZoneForGee(geojson, ha)
+            : geojson;
 
         if (typeof agregarPoligonoDesdeWorkspace === 'function') {
             agregarPoligonoDesdeWorkspace(geojson, WorkspaceState.zonaNombre, ha);

@@ -823,7 +823,7 @@ function _restorePreviewOnMap(key, filePath, storedBounds) {
 
     _sb.storage
         .from('result-previews')
-        .createSignedUrl(filePath, 60 * 60 * 24 * 365) // URL firmada por 1 año
+        .createSignedUrl(filePath, 60 * 15)
         .then(function(res) {
             if (res.error || !res.data) { console.warn('[Preview] signed URL error:', res.error); return; }
 
@@ -843,11 +843,24 @@ function _restorePreviewOnMap(key, filePath, storedBounds) {
 async function deletePreviewsFromStorage(userId, workspaceId) {
     if (!_sb || !userId || !workspaceId) return;
     try {
-        var folder   = userId + '/' + workspaceId + '/';
-        var listRes  = await _sb.storage.from('result-previews').list(userId + '/' + workspaceId);
-        if (listRes.error || !listRes.data || listRes.data.length === 0) return;
+        var folder = userId + '/' + workspaceId + '/';
+        var prefix = userId + '/' + workspaceId;
+        var limit = 100;
+        var offset = 0;
+        var paths = [];
 
-        var paths = listRes.data.map(function(f) { return folder + f.name; });
+        while (true) {
+            var listRes = await _sb.storage
+                .from('result-previews')
+                .list(prefix, { limit: limit, offset: offset });
+            if (listRes.error) throw listRes.error;
+            var batch = listRes.data || [];
+            batch.forEach(function(f) { paths.push(folder + f.name); });
+            if (batch.length < limit) break;
+            offset += limit;
+        }
+
+        if (paths.length === 0) return;
         await _sb.storage.from('result-previews').remove(paths);
         console.log('[Preview] 🗑️ eliminadas', paths.length, 'imágenes de', workspaceId);
     } catch(e) {

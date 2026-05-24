@@ -21,6 +21,63 @@
 // Clave: 'tipo_indice_ts'  (ej: 'vegetacion_NDVI_1737500000000')
 var _tilesCache = {};
 
+function simplifyZoneForGee(geojson, ha) {
+    if (!geojson || !geojson.geometry || !geojson.geometry.type || !geojson.geometry.type.includes('Polygon')) {
+        return geojson;
+    }
+    if (typeof turf === 'undefined') return geojson;
+
+    // Small AOIs must keep their real shape. Larger zones get a mild simplification
+    // to keep GEE requests light without turning narrow polygons into triangles.
+    var areaHa = Number(ha || 0);
+    var tolerance = 0;
+    if (areaHa >= 10000) tolerance = 0.001;
+    else if (areaHa >= 1000) tolerance = 0.0003;
+    else if (areaHa >= 100) tolerance = 0.0001;
+    if (!tolerance) return geojson;
+
+    try {
+        return turf.simplify(geojson, { tolerance: tolerance, highQuality: true });
+    } catch(e) {
+        return geojson;
+    }
+}
+
+function clearAnalysisStateForZoneChange() {
+    var hadResults = false;
+    if (WorkspaceState.resultados) {
+        hadResults = Object.keys(WorkspaceState.resultados).some(function(key) {
+            var value = WorkspaceState.resultados[key];
+            return Array.isArray(value) ? value.length > 0 : !!value;
+        });
+    }
+
+    WorkspaceState.resultados = {};
+    _tilesCache = {};
+
+    if (typeof _previewOverlays !== 'undefined' && typeof map !== 'undefined') {
+        Object.keys(_previewOverlays).forEach(function(key) {
+            try { map.removeLayer(_previewOverlays[key]); } catch(e) {}
+        });
+        _previewOverlays = {};
+    }
+
+    if (typeof _layerRegistry !== 'undefined') {
+        Object.keys(_layerRegistry).forEach(function(id) {
+            var layer = _layerRegistry[id];
+            try {
+                if (layer && typeof map !== 'undefined' && map.hasLayer(layer)) map.removeLayer(layer);
+            } catch(e) {}
+        });
+        _layerRegistry = {};
+    }
+
+    if (typeof _refreshGeeLayersPanel === 'function') _refreshGeeLayersPanel();
+    if (typeof renderIndicadorCards === 'function') renderIndicadorCards();
+    if (typeof refreshIndRows === 'function') refreshIndRows();
+    return hadResults;
+}
+
 // Instancias Chart.js del panel de monitoreo (para poder destruirlas en re-render)
 var _monitorCharts = {};
 
@@ -40,8 +97,8 @@ function loadWorkspaceState() {
             // Asegurar zonaGEE siempre disponible si hay zona
             if (WorkspaceState.zona && !WorkspaceState.zonaGEE) {
                 try {
-                    WorkspaceState.zonaGEE = (typeof turf !== 'undefined')
-                        ? turf.simplify(WorkspaceState.zona, { tolerance: 0.001, highQuality: true })
+                    WorkspaceState.zonaGEE = (typeof simplifyZoneForGee === 'function')
+                        ? simplifyZoneForGee(WorkspaceState.zona, WorkspaceState.zonaHa)
                         : WorkspaceState.zona;
                 } catch(e) { WorkspaceState.zonaGEE = WorkspaceState.zona; }
             }

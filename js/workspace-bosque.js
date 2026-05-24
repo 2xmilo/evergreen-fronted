@@ -48,14 +48,20 @@ function requestBosque() {
         '<i class="fas fa-spinner fa-spin" style="font-size:22px; color:var(--accent); display:block; margin-bottom:10px;"></i>' +
         '<p style="font-size:12px; color:var(--muted); margin:0;">Consultando Hansen GFC + NASA ORNL…<br><small>30–60 segundos en primera consulta</small></p>';
 
-    fetch('https://evergreen-backend-awv1.onrender.com/api/bosque', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            geojson:   WorkspaceState.zonaGEE.geometry,
-            buffer_km: bufferKm
-        })
-    })
+    var payload = {
+        geojson:   WorkspaceState.zonaGEE.geometry,
+        buffer_km: bufferKm
+    };
+
+    var request = (typeof fetchBackendJson === 'function')
+        ? fetchBackendJson('https://evergreen-backend-awv1.onrender.com/api/bosque', payload)
+        : fetch('https://evergreen-backend-awv1.onrender.com/api/bosque', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+    request
     .then(function(r) { return r.json(); })
     .then(function(data) {
         btn.innerHTML = '<i class="fas fa-satellite-dish"></i> Calcular';
@@ -314,4 +320,3 @@ function _histChartOptions(tickColor) {
         animation: { duration: 350 }
     };
 }
-

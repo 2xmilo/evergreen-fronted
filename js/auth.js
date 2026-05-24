@@ -10,6 +10,22 @@ window._sbUserZones = [];
 
 var PLAN_LIMITS = { 'free': 1, 'pro': 3, 'admin': Infinity };
 
+async function getBackendAuthHeaders(baseHeaders) {
+    var headers = Object.assign({}, baseHeaders || {});
+    if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+    if (!_sb) return headers;
+    try {
+        var result = await _sb.auth.getSession();
+        var session = result.data && result.data.session;
+        if (session && session.access_token) {
+            headers.Authorization = 'Bearer ' + session.access_token;
+        }
+    } catch(e) {
+        console.warn('[Auth] getBackendAuthHeaders:', e);
+    }
+    return headers;
+}
+
 function isValidStoredZone(z) {
     return !!(z && z.id && z.polygon_geojson);
 }
@@ -96,13 +112,9 @@ async function loadCloudWorkspace(userId) {
             if (activeZone.polygon_geojson) {
                 WorkspaceState.zona    = activeZone.polygon_geojson;
                 // zonaGEE = versión simplificada para GEE (si turf disponible, si no usa zona directa)
-                try {
-                    WorkspaceState.zonaGEE = (typeof turf !== 'undefined')
-                        ? turf.simplify(activeZone.polygon_geojson, { tolerance: 0.001, highQuality: true })
-                        : activeZone.polygon_geojson;
-                } catch(e) {
-                    WorkspaceState.zonaGEE = activeZone.polygon_geojson;
-                }
+                WorkspaceState.zonaGEE = (typeof simplifyZoneForGee === 'function')
+                    ? simplifyZoneForGee(activeZone.polygon_geojson, activeZone.zona_ha)
+                    : activeZone.polygon_geojson;
                 changed = true;
             }
             WorkspaceState.zonaId = activeZone.id;
@@ -305,6 +317,22 @@ async function clearCloudData(userId, workspaceId) {
 }
 
 /* ── Cambiar zona activa en cloud y cargar sus datos ─────────────────── */
+async function clearResultsForWorkspace(userId, workspaceId) {
+    if (!_sb || !userId || !workspaceId) return;
+    try {
+        if (typeof deletePreviewsFromStorage === 'function') {
+            await deletePreviewsFromStorage(userId, workspaceId);
+        }
+        var res = await _sb.from('results')
+            .delete()
+            .eq('workspace_id', workspaceId)
+            .eq('user_id', userId);
+        if (res.error) throw res.error;
+    } catch (e) {
+        console.warn('[Auth] clearResultsForWorkspace:', e);
+    }
+}
+
 async function switchZoneCloud(userId, zoneId) {
     if (!_sb || !userId || !zoneId) return null;
     try {
@@ -322,7 +350,9 @@ async function switchZoneCloud(userId, zoneId) {
         WorkspaceState.zonaNombre = zone.zone_name       || 'Mi zona de estudio';
         WorkspaceState.zonaHa     = zone.zona_ha         || 0;
         WorkspaceState.zona       = zone.polygon_geojson || null;
-        WorkspaceState.zonaGEE    = zone.polygon_geojson || null;
+        WorkspaceState.zonaGEE    = (typeof simplifyZoneForGee === 'function' && zone.polygon_geojson)
+            ? simplifyZoneForGee(zone.polygon_geojson, zone.zona_ha)
+            : (zone.polygon_geojson || null);
         WorkspaceState.resultados = {};
 
         res.forEach(function(row) {

@@ -63,15 +63,22 @@ function initWorkspaceMap() {
                 return;
             }
 
+            var replacedWorkspaceId = WorkspaceState.zonaId;
+            var replacingCurrentZone = !!(WorkspaceState.zona && replacedWorkspaceId);
+            if (replacingCurrentZone && typeof clearAnalysisStateForZoneChange === 'function') {
+                var hadResults = clearAnalysisStateForZoneChange();
+                if (hadResults && window._sbUserId && typeof clearResultsForWorkspace === 'function') {
+                    clearResultsForWorkspace(window._sbUserId, replacedWorkspaceId);
+                }
+            }
+
             WorkspaceState.zona = geojson;
             WorkspaceState.zonaHa = ha;
 
             // Simplificar para GEE usando Turf si está disponible - SOLO a poligonos
-            if (typeof turf !== 'undefined' && geojson.geometry.type.includes('Polygon')) {
-                WorkspaceState.zonaGEE = turf.simplify(geojson, { tolerance: 0.001, highQuality: true });
-            } else {
-                WorkspaceState.zonaGEE = geojson; // Fallback para puntos (no necesitan simplificar)
-            }
+            WorkspaceState.zonaGEE = (typeof simplifyZoneForGee === 'function')
+                ? simplifyZoneForGee(geojson, ha)
+                : geojson;
 
             updateZoneUI();
             saveWorkspaceState();   // saveWorkspaceToCloud se encarga de insert/update según zonaId
@@ -133,7 +140,11 @@ function startNewZone() {
             WorkspaceState.zonaHa     = 0;
             WorkspaceState.zonaId     = null;
             WorkspaceState.zonaNombre = 'Mi zona de estudio';
-            WorkspaceState.resultados = {};
+            if (typeof clearAnalysisStateForZoneChange === 'function') {
+                clearAnalysisStateForZoneChange();
+            } else {
+                WorkspaceState.resultados = {};
+            }
             if (globalDrawnItems) globalDrawnItems.clearLayers();
             updateZoneUI();
             renderIndicadorCards();
