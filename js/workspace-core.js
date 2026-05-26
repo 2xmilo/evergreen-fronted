@@ -532,19 +532,19 @@ function activarIndicador(key, ts) {
         return;
     }
 
+    if (entry.previewPath && (typeof _isLegacyPreviewPath !== 'function' || !_isLegacyPreviewPath(entry.previewPath))) {
+        _restorePreviewOnMap(key, entry.previewPath, entry.previewBounds);
+        _indicadorActivo = activeKey;
+        renderIndicadorCards();
+        mostrarNotificacion('Mostrando capa guardada');
+        return;
+    }
+
     var url = _tilesCache[activeKey];
     if (!url) {
-        // Tile GEE expirado — intentar mostrar preview guardada en Storage
-        if (entry.previewPath && (typeof _isLegacyPreviewPath !== 'function' || !_isLegacyPreviewPath(entry.previewPath))) {
-            _restorePreviewOnMap(key, entry.previewPath, entry.previewBounds);
-            _indicadorActivo = activeKey;
-            renderIndicadorCards();
-            mostrarNotificacion('🖼️ Mostrando vista guardada — el tile GEE expiró');
-        } else {
-            mostrarNotificacion('⏱️ Capa expirada. Recalcula en el tab correspondiente.');
-            _indicadorActivo = null;
-            renderIndicadorCards();
-        }
+        mostrarNotificacion('Capa expirada. Recalcula en el tab correspondiente.');
+        _indicadorActivo = null;
+        renderIndicadorCards();
         return;
     }
 

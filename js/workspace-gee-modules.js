@@ -534,25 +534,25 @@ function restoreLastActiveLayer() {
         return bLast.ts - aLast.ts;
     });
 
-    // 1ª prioridad: activar el más reciente con tile en caché (URL viva)
+    // 1ª prioridad: activar el más reciente con preview guardada en Storage
     for (var i = 0; i < keys.length; i++) {
         var key    = keys[i];
         var arr    = resultados[key];
         var latest = arr[arr.length - 1];
-        var cacheKey = key + '_' + latest.ts;
-        if (_tilesCache[cacheKey]) {
+        if (latest.previewPath && (typeof _isLegacyPreviewPath !== 'function' || !_isLegacyPreviewPath(latest.previewPath))) {
             activarIndicador(key);
             return;
         }
     }
 
-    // 2ª prioridad: activar el más reciente con preview guardada en Storage
+    // 2ª prioridad: usar tile temporal GEE solo si aún no existe PNG persistente
     for (var j = 0; j < keys.length; j++) {
         var k2     = keys[j];
         var arr2   = resultados[k2];
         var latest2 = arr2[arr2.length - 1];
-        if (latest2.previewPath && (typeof _isLegacyPreviewPath !== 'function' || !_isLegacyPreviewPath(latest2.previewPath))) {
-            activarIndicador(k2); // activarIndicador detectará previewPath y restaurará la imagen
+        var cacheKey = k2 + '_' + latest2.ts;
+        if (_tilesCache[cacheKey]) {
+            activarIndicador(k2);
             return;
         }
     }
