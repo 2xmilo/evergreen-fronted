@@ -287,7 +287,7 @@
                 btnHtml = '<span class="dmc-calc-premium">Premium</span>';
             } else if (calcId) {
                 btnHtml = '<button class="dmc-calc-dl-btn" onclick="dmcDownloadCalculo(\'' + code + '\',\'' + calcId + '\')">' +
-                          '<i class="fas fa-download"></i> Descargar CSV</button>';
+                          '<i class="fas fa-download"></i> Mes completo con ET calculada</button>';
             }
             html += '<div class="dmc-calc-card' + (s.recomendado ? ' dmc-calc-card--rec' : '') + '">' +
                 '<div class="dmc-calc-head">' +
