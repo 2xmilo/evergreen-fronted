@@ -662,6 +662,97 @@ body.workspace-mode {
   font-size:9px !important; color:var(--muted2) !important;
   text-align:center !important;
 }
+
+/* ══ SECCIÓN IA — Cálculos derivados ════════════════════ */
+#tab-clima-content .dmc-ai-section {
+  border-top:1px solid rgba(106,170,53,0.15) !important;
+  margin-top:2px !important;
+}
+#tab-clima-content .dmc-ai-header {
+  display:flex !important; align-items:center !important; gap:6px !important;
+  padding:8px 12px 5px !important;
+  font-size:9.5px !important; font-weight:700 !important;
+  color:var(--muted2) !important; text-transform:uppercase !important;
+  letter-spacing:.4px !important;
+}
+#tab-clima-content .dmc-ai-header i { color:var(--accent) !important; font-size:10px !important; }
+#tab-clima-content .dmc-ai-body {
+  padding:4px 10px 10px !important;
+  display:flex !important; flex-direction:column !important; gap:5px !important;
+}
+#tab-clima-content .dmc-ai-loading,
+#tab-clima-content .dmc-ai-error {
+  font-size:10.5px !important; color:var(--muted2) !important; padding:4px 2px !important;
+}
+/* Tarjeta de cálculo */
+#tab-clima-content .dmc-calc-card {
+  border:1px solid var(--panel-border) !important;
+  border-radius:7px !important; padding:8px 10px !important;
+  background:#fff !important;
+  display:flex !important; flex-direction:column !important; gap:3px !important;
+}
+#tab-clima-content .dmc-calc-card--rec {
+  border-color:rgba(106,170,53,0.4) !important;
+  background:#f7fbf2 !important;
+}
+#tab-clima-content .dmc-calc-head {
+  display:flex !important; align-items:center !important;
+  justify-content:space-between !important;
+}
+#tab-clima-content .dmc-calc-name {
+  font-size:11.5px !important; font-weight:700 !important; color:var(--text) !important;
+}
+#tab-clima-content .dmc-calc-badge-rec {
+  font-size:9px !important; font-weight:700 !important;
+  background:rgba(106,170,53,0.12) !important; color:#2d6a10 !important;
+  border:1px solid rgba(106,170,53,0.25) !important;
+  border-radius:4px !important; padding:1px 5px !important;
+}
+#tab-clima-content .dmc-calc-razon {
+  font-size:10px !important; color:var(--muted2) !important;
+}
+#tab-clima-content .dmc-calc-dl-btn {
+  align-self:flex-start !important; margin-top:4px !important;
+  padding:4px 10px !important; border-radius:6px !important;
+  background:var(--accent) !important; color:#fff !important;
+  border:none !important; font-size:10.5px !important; font-weight:600 !important;
+  cursor:pointer !important; display:flex !important; align-items:center !important; gap:5px !important;
+  transition:filter .12s !important;
+}
+#tab-clima-content .dmc-calc-dl-btn:hover { filter:brightness(1.12) !important; }
+#tab-clima-content .dmc-calc-premium {
+  align-self:flex-start !important; margin-top:4px !important;
+  font-size:9.5px !important; font-weight:700 !important;
+  color:#7a5300 !important; background:#fff6e0 !important;
+  border:1px solid rgba(200,160,0,.3) !important;
+  border-radius:4px !important; padding:2px 7px !important;
+}
+/* Chat */
+#tab-clima-content .dmc-ai-chat {
+  display:flex !important; gap:5px !important; margin-top:6px !important;
+}
+#tab-clima-content .dmc-ai-input {
+  flex:1 !important; font-size:10.5px !important;
+  padding:5px 8px !important; border-radius:6px !important;
+  border:1px solid var(--panel-border) !important;
+  background:#fff !important; color:var(--text) !important;
+  font-family:inherit !important;
+}
+#tab-clima-content .dmc-ai-input:focus {
+  outline:none !important; border-color:rgba(106,170,53,0.5) !important;
+}
+#tab-clima-content .dmc-ai-send {
+  padding:5px 9px !important; border-radius:6px !important;
+  background:var(--accent) !important; color:#fff !important;
+  border:none !important; cursor:pointer !important; font-size:10px !important;
+}
+#tab-clima-content .dmc-ai-chat-resp {
+  font-size:10.5px !important; line-height:1.45 !important;
+  color:var(--text) !important; padding:0 2px !important;
+}
+#tab-clima-content .dmc-chat-thinking { color:var(--muted2) !important; }
+#tab-clima-content .dmc-chat-answer   { color:var(--text) !important; }
+
 #tab-clima-content .panel-header-compact,
 #tab-clima-content .draw-tools-bar,
 #tab-clima-content .app-title,

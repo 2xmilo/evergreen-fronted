@@ -84,6 +84,26 @@
         });
     }
 
+    function postDmcJson(path, body) {
+        var headersPromise = (typeof getBackendAuthHeaders === 'function')
+            ? getBackendAuthHeaders({ 'Content-Type': 'application/json' })
+            : Promise.resolve({ 'Content-Type': 'application/json' });
+        return headersPromise.then(function(headers) {
+            return fetch(backendUrl(path), {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(body)
+            });
+        }).then(function(response) {
+            return response.json().then(function(data) {
+                if (!response.ok) {
+                    throw new Error(data.error || data.detalle || 'Error AI');
+                }
+                return data;
+            });
+        });
+    }
+
     /* ── Marcadores en el mapa ── */
 
     function _clearMarkers() {
@@ -197,9 +217,9 @@
         }).join('');
     }
 
-    /* ── Variables disponibles (async, se carga dentro del detail) ── */
+    /* ── Variables disponibles + dispara análisis IA ── */
 
-    function _loadVariablesInto(containerId, code) {
+    function _loadVariablesInto(containerId, code, stationName) {
         fetchDmcJson('/api/dmc/estacion/' + encodeURIComponent(code) + '/variables')
             .then(function(data) {
                 var el = $(containerId);
@@ -210,14 +230,89 @@
                     return;
                 }
                 el.innerHTML = vars.map(function(v) {
-                    return '<span class="dmc-var-chip" title="' + escapeHtml(v.descripcion || v.nombre) + '">' +
+                    return '<span class="dmc-var-chip" title="' + escapeHtml(v.unidad || '') + '">' +
                         escapeHtml(v.nombreCorto || v.nombre) + '</span>';
                 }).join('');
+
+                // Disparar análisis IA con las variables detectadas
+                var varNames = vars.map(function(v) { return v.nombreCorto || v.nombre; });
+                _loadCalcSugerencias(code, stationName || code, varNames);
             })
             .catch(function() {
                 var el = $(containerId);
                 if (el) el.innerHTML = '<span class="dmc-var-chip dmc-var-chip--none">No disponible</span>';
             });
+    }
+
+    /* ── Análisis IA: sugerencias de cálculos ── */
+
+    var _CALCULO_IDS = {
+        'priestley_taylor': 'priestley',
+        'penman_monteith':  'penman',
+        'vpd':              'vpd',
+        'evap_penman':      'penman',   // pendiente
+        'gdd':              null        // pendiente
+    };
+
+    function _loadCalcSugerencias(code, nombre, varNames) {
+        var container = $('dmc-calc-' + code);
+        if (!container) return;
+        container.innerHTML = '<div class="dmc-ai-loading"><i class="fas fa-spinner fa-spin"></i> Analizando variables...</div>';
+
+        postDmcJson('/api/ai/analizar-estacion', {
+            codigo: code,
+            nombre: nombre,
+            variables: varNames
+        }).then(function(data) {
+            _renderCalcSugerencias(container, data.sugerencias || [], code, varNames, nombre);
+        }).catch(function(err) {
+            console.warn('[DMC AI]', err);
+            container.innerHTML = '<span class="dmc-ai-error">No se pudo cargar el análisis.</span>';
+        });
+    }
+
+    function _renderCalcSugerencias(container, sugerencias, code, varNames, nombre) {
+        var disponibles = sugerencias.filter(function(s) { return s.disponible; });
+        if (!disponibles.length) {
+            container.innerHTML = '<span class="dmc-ai-error">Sin cálculos disponibles para esta estación.</span>';
+            return;
+        }
+
+        var html = '';
+        disponibles.forEach(function(s) {
+            var calcId = _CALCULO_IDS[s.id] || null;
+            var isPremium = (s.id === 'evap_penman' || s.id === 'gdd');
+            var btnHtml = '';
+            if (isPremium) {
+                btnHtml = '<span class="dmc-calc-premium">Premium</span>';
+            } else if (calcId) {
+                btnHtml = '<button class="dmc-calc-dl-btn" onclick="dmcDownloadCalculo(\'' + code + '\',\'' + calcId + '\')">' +
+                          '<i class="fas fa-download"></i> Descargar CSV</button>';
+            }
+            html += '<div class="dmc-calc-card' + (s.recomendado ? ' dmc-calc-card--rec' : '') + '">' +
+                '<div class="dmc-calc-head">' +
+                    '<span class="dmc-calc-name">' + escapeHtml(s.nombre) + '</span>' +
+                    (s.recomendado ? '<span class="dmc-calc-badge-rec">Recomendado</span>' : '') +
+                '</div>' +
+                '<div class="dmc-calc-razon">' + escapeHtml(s.razon || '') + '</div>' +
+                btnHtml +
+            '</div>';
+        });
+
+        // Chat input
+        html += '<div class="dmc-ai-chat">' +
+            '<input class="dmc-ai-input" id="dmc-chat-input-' + code + '" type="text" ' +
+            'placeholder="Pregunta sobre esta estación..." ' +
+            'onkeydown="if(event.key===\'Enter\')dmcChatPregunta(\'' + code + '\',\'' + escapeHtml(nombre) + '\')" />' +
+            '<button class="dmc-ai-send" onclick="dmcChatPregunta(\'' + code + '\',\'' + escapeHtml(nombre) + '\')">' +
+            '<i class="fas fa-paper-plane"></i></button>' +
+        '</div>' +
+        '<div class="dmc-ai-chat-resp" id="dmc-chat-resp-' + code + '"></div>';
+
+        container.innerHTML = html;
+        // Guardar variables para el chat
+        container._varNames = varNames;
+        container._nombre   = nombre;
     }
 
     /* ── Buscar estaciones ── */
@@ -332,10 +427,20 @@
                     '<span>Mes completo</span>' +
                     '<small>15 min · ~2800 filas</small>' +
                 '</button>' +
+            '</div>' +
+
+            /* Sección IA — se rellena async tras cargar variables */
+            '<div class="dmc-ai-section">' +
+                '<div class="dmc-ai-header">' +
+                    '<i class="fas fa-wand-magic-sparkles"></i> Cálculos disponibles' +
+                '</div>' +
+                '<div class="dmc-ai-body" id="dmc-calc-' + code + '">' +
+                    '<div class="dmc-ai-loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>' +
+                '</div>' +
             '</div>';
 
-        /* Cargar variables de forma asíncrona */
-        _loadVariablesInto(varsId, code);
+        /* Cargar variables de forma asíncrona → dispara análisis IA */
+        _loadVariablesInto(varsId, code, st.nombreEstacion || code);
     }
 
     /* ── Cargar resumen de estación ── */
@@ -414,6 +519,54 @@
         });
     }
 
+    /* ── Descarga con cálculo derivado ── */
+
+    function downloadCalculo(code, calculo) {
+        var labels = { priestley: 'ET Priestley-Taylor', penman: 'ET Penman-Monteith', vpd: 'VPD' };
+        var label = labels[calculo] || calculo;
+        setStatus('Generando CSV con ' + label + '...', 'loading');
+        _downloadBlob(
+            '/api/dmc/estacion/' + encodeURIComponent(code) + '/historico.csv?periodo=mensual&calculo=' + calculo,
+            'dmc_' + code + '_mensual_' + calculo + '.csv'
+        ).then(function() {
+            setStatus('CSV con ' + label + ' descargado para estación ' + code + '.', 'ok');
+        }).catch(function(error) {
+            console.warn('[DMC calc]', error);
+            setStatus(error.message || 'No se pudo descargar.', 'error');
+        });
+    }
+
+    /* ── Chat IA ── */
+
+    function chatPregunta(code, nombre) {
+        var input = $('dmc-chat-input-' + code);
+        var resp  = $('dmc-chat-resp-' + code);
+        if (!input || !resp) return;
+        var pregunta = input.value.trim();
+        if (!pregunta) return;
+
+        var container = $('dmc-calc-' + code);
+        var varNames  = (container && container._varNames) || [];
+
+        input.disabled = true;
+        resp.innerHTML = '<span class="dmc-chat-thinking"><i class="fas fa-spinner fa-spin"></i> Pensando...</span>';
+
+        postDmcJson('/api/ai/chat-estacion', {
+            codigo: code,
+            nombre: nombre,
+            variables: varNames,
+            pregunta: pregunta
+        }).then(function(data) {
+            resp.innerHTML = '<span class="dmc-chat-answer">' + escapeHtml(data.respuesta || '') + '</span>';
+            input.value = '';
+        }).catch(function() {
+            resp.innerHTML = '<span class="dmc-ai-error">Error al consultar el asistente.</span>';
+        }).finally(function() {
+            input.disabled = false;
+            input.focus();
+        });
+    }
+
     /* ── Event listeners ── */
 
     function onListClick(event) {
@@ -441,5 +594,7 @@
     window.dmcLoadSummary           = loadSummary;
     window.dmcDownloadCsv           = downloadCsv;
     window.dmcDownloadHistorico     = downloadHistorico;
+    window.dmcDownloadCalculo       = downloadCalculo;
+    window.dmcChatPregunta          = chatPregunta;
     window.dmcClearMarkers          = _clearMarkers;
 })();
