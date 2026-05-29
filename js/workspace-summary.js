@@ -553,7 +553,9 @@ function _refreshGeeLayersPanel() {
     ids.forEach(function(id) {
         var label = _GEE_LAYER_LABELS[id] || id;
         var rowId = 'glayer-' + id.replace(/_/g, '-');
-        html += '<div class="map-layer-row off" id="' + rowId + '"' +
+        var layerOnMap = _layerRegistry[id] && typeof map !== 'undefined' && map.hasLayer(_layerRegistry[id]);
+        var rowState = layerOnMap ? 'on' : 'off';
+        html += '<div class="map-layer-row ' + rowState + '" id="' + rowId + '"' +
                 ' onclick="toggleLayerById(\'' + id + '\', this);">' +
                 '<div class="map-layer-check"><i class="fas fa-check"></i></div>' +
                 '<span class="map-layer-label">' + label + '</span>' +
@@ -838,6 +840,7 @@ function _restorePreviewOnMap(key, filePath, storedBounds) {
             var overlay = L.imageOverlay(url, bounds, { opacity: 0.8, zIndex: 400 });
             overlay.addTo(map);
             _previewOverlays[key] = overlay;
+            registerLayer(key, overlay);  // registrar en panel → slider controla opacidad
             console.log('[Preview] 🖼️ overlay restaurado para', key);
         });
 }
