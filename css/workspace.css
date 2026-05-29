@@ -125,11 +125,14 @@ body.workspace-mode {
   border:1px solid rgba(106,170,53,0.2); border-top:none;
   border-radius:0 0 10px 10px;
   box-shadow:0 8px 24px rgba(0,0,0,0.4);
-  overflow:hidden;
+  overflow-y:auto; overflow-x:hidden;
   transition:max-height .25s cubic-bezier(.4,0,.2,1), opacity .2s;
-  max-height:500px; opacity:1; backdrop-filter:blur(12px);
+  max-height:70vh; opacity:1; backdrop-filter:blur(12px);
+  scrollbar-width:thin; scrollbar-color:rgba(106,170,53,0.3) transparent;
 }
-.map-layers-body.collapsed { max-height:0; opacity:0; pointer-events:none; }
+.map-layers-body::-webkit-scrollbar { width:4px; }
+.map-layers-body::-webkit-scrollbar-thumb { background:rgba(106,170,53,0.3); border-radius:2px; }
+.map-layers-body.collapsed { max-height:0; opacity:0; pointer-events:none; overflow:hidden; }
 .map-layer-row {
   display:flex; align-items:center; gap:8px;
   padding:8px 12px; cursor:pointer;
@@ -369,6 +372,9 @@ body.workspace-mode {
 #tab-clima-content .control-panel {
   background:transparent !important; border:none !important;
   box-shadow:none !important; padding:0 !important; margin:0 !important; width:100% !important;
+  /* FIX: desactivar scroll propio y dejar que ws-module-content sea el contenedor de scroll */
+  display:block !important; height:auto !important; overflow:visible !important;
+  flex-shrink:unset !important;
 }
 #tab-clima-content .accordion-section {
   border:1px solid var(--panel-border) !important;
@@ -1107,7 +1113,7 @@ body.workspace-mode {
 .draw-tools-toggle i.toggle-chev { font-size:8px; transition:transform .2s; }
 .draw-tools-toggle.open i.toggle-chev { transform:rotate(180deg); }
 .draw-tools-collapsible { overflow:hidden; transition:max-height .2s ease; max-height:0; }
-.draw-tools-collapsible.open { max-height:200px; }
+.draw-tools-collapsible.open { max-height:280px; }
 
 /* ══ BIODIVERSIDAD PANEL ══════════════════════════════════════════════ */
 /* Blanket color reset — el workspace hereda blanco del mapa oscuro */
@@ -1322,6 +1328,148 @@ body.workspace-mode {
   color: #fff;
   font-weight: 700;
 }
+
+/* ══ BIO POPUP FICHA ══════════════════════════════════════ */
+.bio-popup-ficha { min-width: 210px; font-family: 'Inter',-apple-system,sans-serif; }
+.bio-popup-title {
+  font-size: 11.5px; font-weight: 700; color: #1a1a1a;
+  padding-bottom: 6px; margin-bottom: 6px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.bio-popup-table { border-collapse: collapse; width: 100%; }
+.bio-popup-label {
+  font-size: 9px; color: #9ca3af; text-transform: uppercase;
+  letter-spacing: .45px; font-weight: 600;
+  padding: 2.5px 10px 2.5px 0; vertical-align: top; white-space: nowrap;
+}
+.bio-popup-val { font-size: 11px; color: #1a1a1a; font-weight: 500; padding: 2.5px 0; }
+
+/* ══ PANEL DE CAPAS — SECCIONES ════════════════════════ */
+.layers-section-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px 4px;
+  font-size: 9px; font-weight: 700;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase; letter-spacing: .8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 2px;
+}
+.layers-section-hdr:first-child { border-top: none; margin-top: 0; }
+.layers-section-hdr--clickable { cursor: pointer; transition: color .15s; }
+.layers-section-hdr--clickable:hover { color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.03); }
+.layers-section-source {
+  font-size: 8px; font-weight: 500;
+  color: rgba(255,255,255,0.2);
+  text-transform: none; letter-spacing: .2px;
+  display: flex; align-items: center; gap: 3px;
+}
+
+/* ══ SIMBIO PANEL (mapa principal) ════════════════════════ */
+.map-layer-simbio-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:7px 12px; cursor:pointer;
+  border-top:1px solid rgba(255,255,255,0.07);
+  font-size:10px; font-weight:600;
+  color:rgba(255,255,255,0.45); text-transform:uppercase; letter-spacing:.5px;
+  transition:background .15s;
+}
+.map-layer-simbio-header:hover { background:rgba(106,170,53,0.07); }
+.map-layer-simbio-header i { font-size:8px; color:rgba(255,255,255,0.3); transition:transform .2s; }
+.map-layer-simbio-group {
+  padding:5px 12px 2px 33px;
+  font-size:9px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  color:rgba(255,255,255,0.22);
+}
+.map-layer-simbio-buffer {
+  display:flex; align-items:center; gap:8px;
+  padding:5px 12px 5px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.simbio-buffer-sel {
+  flex:1; background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.1);
+  color:rgba(255,255,255,0.7); border-radius:4px;
+  font-size:10px; padding:2px 6px; font-family:inherit; cursor:pointer;
+}
+.simbio-buffer-sel:focus { outline:none; border-color:rgba(106,170,53,0.4); }
+#simbio-section-body.simbio-collapsed { display:none; }
+.simbio-status {
+  margin:6px 12px; padding:5px 8px; border-radius:5px;
+  font-size:10px; line-height:1.4;
+  border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.6);
+  background:rgba(255,255,255,0.04);
+}
+.simbio-status--ok      { border-color:rgba(106,170,53,.35)!important; background:#0e1f09!important; color:rgba(150,220,90,.9)!important; }
+.simbio-status--warn    { border-color:rgba(200,160,0,.35)!important;  background:#1a1500!important;  color:rgba(220,190,60,.9)!important; }
+.simbio-status--error   { border-color:rgba(198,66,66,.35)!important;  background:#1a0a0a!important;  color:rgba(220,100,100,.9)!important; }
+.simbio-status--loading { border-color:rgba(80,130,180,.35)!important; background:#0a1018!important;  color:rgba(100,160,220,.9)!important; }
+
+/* ══ DMC MARKERS (mapa principal) ════════════════════════ */
+.dmc-map-label {
+  background: rgba(10,18,12,0.82) !important;
+  border: 1px solid rgba(79,195,247,0.45) !important;
+  border-radius: 4px !important;
+  color: rgba(255,255,255,0.92) !important;
+  font-size: 10px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500 !important;
+  padding: 2px 6px !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+.dmc-map-label::before { display: none !important; }
+
+/* Popup: fondo claro explícito para override del tema oscuro */
+.dmc-station-popup .leaflet-popup-content-wrapper {
+  background: #fff !important;
+  color: #1a1a1a !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+  border: 1px solid rgba(0,0,0,0.07) !important;
+  padding: 0 !important;
+}
+.dmc-station-popup .leaflet-popup-content { margin: 0 !important; }
+.dmc-station-popup .leaflet-popup-tip { background: #fff !important; }
+.dmc-station-popup .leaflet-popup-close-button {
+  color: #999 !important; font-size: 16px !important;
+  top: 6px !important; right: 8px !important;
+}
+
+.dmc-map-popup { min-width: 220px; font-family: 'Inter', sans-serif; }
+.dmc-popup-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 8px; padding: 12px 14px 6px;
+}
+.dmc-popup-name { font-size: 12.5px; font-weight: 700; color: #111; line-height: 1.3; flex: 1; }
+.dmc-popup-code {
+  font-size: 10px; font-weight: 600; color: #4fc3f7;
+  text-decoration: none; white-space: nowrap;
+  display: flex; align-items: center; gap: 3px;
+  padding: 2px 6px; border-radius: 4px;
+  border: 1px solid rgba(79,195,247,0.3);
+  background: rgba(79,195,247,0.06);
+  transition: background .12s;
+}
+.dmc-popup-code:hover { background: rgba(79,195,247,0.14); }
+.dmc-popup-meta {
+  font-size: 10px; color: #888; line-height: 1.5;
+  padding: 0 14px 8px;
+}
+.dmc-popup-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 0 14px; }
+.dmc-popup-actions {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 5px; padding: 10px 14px 12px;
+}
+.dmc-popup-btn {
+  padding: 5px 4px; border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #f8f8f8; font-size: 10px; font-weight: 500;
+  cursor: pointer; font-family: inherit; color: #333;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  transition: all .12s;
+}
+.dmc-popup-btn:hover { background: #edf7e4; border-color: rgba(106,170,53,0.4); color: #2d6a10; }
+.dmc-popup-btn--wide { grid-column: 1 / -1; }
 
 .bio-action-row { display: flex; gap: 8px; padding: 12px 16px; border-bottom: 1px solid rgba(0,0,0,0.08); }
 .bio-action-btn { flex: 1; padding: 8px 10px; border-radius: 7px; border: 1px solid rgba(0,0,0,0.1); background: transparent; font-size: 11.5px; color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; font-family: inherit; }

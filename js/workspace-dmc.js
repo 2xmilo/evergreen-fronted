@@ -9,6 +9,8 @@
         selectedCode: null
     };
 
+    var _markerLayer = null;
+
     function $(id) { return document.getElementById(id); }
 
     function escapeHtml(value) {
@@ -82,6 +84,77 @@
         });
     }
 
+    function _clearMarkers() {
+        if (_markerLayer && typeof map !== 'undefined') {
+            try { map.removeLayer(_markerLayer); } catch(e) {}
+        }
+        _markerLayer = null;
+    }
+
+    function _renderStationMarkers(stations) {
+        _clearMarkers();
+        if (!stations || !stations.length) return;
+        if (typeof map === 'undefined' || typeof L === 'undefined') return;
+
+        var markers = [];
+        stations.forEach(function(st) {
+            var lat = Number(st.latitud);
+            var lon = Number(st.longitud);
+            if (!lat || !lon) return;
+
+            var dist = st.distance_km != null
+                ? Number(st.distance_km).toLocaleString('es-CL', { maximumFractionDigits: 1 }) + ' km'
+                : '';
+            var altura = st.altura != null ? Math.round(st.altura) + ' msnm' : '';
+            var code = st.codigoNacional;
+
+            var m = L.circleMarker([lat, lon], {
+                radius: 5,
+                color: '#4fc3f7',
+                fillColor: '#4fc3f7',
+                fillOpacity: 0.9,
+                weight: 2
+            });
+
+            m.bindTooltip(escapeHtml(st.nombreEstacion), {
+                permanent: true,
+                direction: 'top',
+                offset: [0, -8],
+                className: 'dmc-map-label',
+                opacity: 1
+            });
+
+            var fichaUrl = 'https://climatologia.meteochile.gob.cl/application/productos/fichaEstacion/' + code;
+            m.bindPopup(
+                '<div class="dmc-map-popup">' +
+                  '<div class="dmc-popup-header">' +
+                    '<span class="dmc-popup-name">' + escapeHtml(st.nombreEstacion) + '</span>' +
+                    '<a class="dmc-popup-code" href="' + fichaUrl + '" target="_blank" title="Ver ficha DMC">' +
+                      '<i class="fas fa-external-link-alt"></i> ' + escapeHtml(String(code)) +
+                    '</a>' +
+                  '</div>' +
+                  '<div class="dmc-popup-meta">' +
+                    [escapeHtml(st.region || ''), dist, altura, escapeHtml(st.zonaGeografica || '')].filter(Boolean).join(' &middot; ') +
+                  '</div>' +
+                  '<div class="dmc-popup-divider"></div>' +
+                  '<div class="dmc-popup-actions">' +
+                    '<button class="dmc-popup-btn" onclick="dmcLoadSummary(\'' + code + '\')"><i class="fas fa-chart-bar"></i> Resumen</button>' +
+                    '<button class="dmc-popup-btn" onclick="dmcDownloadCsv(\'' + code + '\')"><i class="fas fa-download"></i> CSV 12h</button>' +
+                    '<button class="dmc-popup-btn" onclick="dmcDownloadHistorico(\'' + code + '\',\'24h\')"><i class="fas fa-clock"></i> CSV 24h</button>' +
+                    '<button class="dmc-popup-btn dmc-popup-btn--wide" onclick="dmcDownloadHistorico(\'' + code + '\',\'mensual\')"><i class="fas fa-calendar-alt"></i> Mensual</button>' +
+                  '</div>' +
+                '</div>',
+                { className: 'dmc-station-popup', maxWidth: 260 }
+            );
+
+            markers.push(m);
+        });
+
+        if (markers.length) {
+            _markerLayer = L.layerGroup(markers).addTo(map);
+        }
+    }
+
     function renderStations(stations) {
         var list = $('dmc-stations-list');
         var detail = $('dmc-detail');
@@ -136,12 +209,14 @@
             .then(function(data) {
                 state.stations = data.stations || [];
                 renderStations(state.stations);
+                _renderStationMarkers(state.stations);
                 var cacheLabel = data.cache && data.cache.hit ? 'cache local' : 'DMC';
                 setStatus('Se encontraron ' + state.stations.length + ' estaciones cercanas (' + cacheLabel + ').', 'ok');
             })
             .catch(function(error) {
                 console.warn('[DMC] estaciones:', error);
                 renderStations([]);
+                _clearMarkers();
                 setStatus(error.message || 'No se pudo consultar DMC.', 'error');
             })
             .finally(function() {
@@ -193,6 +268,45 @@
                 console.warn('[DMC] resumen:', error);
                 setStatus(error.message || 'No se pudo cargar el resumen DMC.', 'error');
             });
+    }
+
+    function downloadHistorico(code, periodo) {
+        var label = periodo === 'mensual' ? 'serie mensual' : 'últimas 24h';
+        setStatus('Generando CSV DMC ' + label + '...', 'loading');
+        var headersPromise = (typeof getBackendAuthHeaders === 'function')
+            ? getBackendAuthHeaders({})
+            : Promise.resolve({});
+
+        headersPromise.then(function(headers) {
+            return fetch(
+                backendUrl('/api/dmc/estacion/' + encodeURIComponent(code) + '/historico.csv?periodo=' + periodo),
+                { headers: headers }
+            );
+        }).then(function(response) {
+            if (!response.ok) {
+                return response.json().then(function(data) {
+                    throw new Error(data.error || data.detalle || 'No se pudo generar CSV DMC');
+                });
+            }
+            return response.blob().then(function(blob) {
+                var filename = 'dmc_' + code + '_' + periodo + '.csv';
+                var disposition = response.headers.get('Content-Disposition') || '';
+                var match = disposition.match(/filename="?([^"]+)"?/i);
+                if (match) filename = match[1];
+                var url = URL.createObjectURL(blob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+                setStatus('CSV DMC ' + label + ' descargado para estación ' + code + '.', 'ok');
+            });
+        }).catch(function(error) {
+            console.warn('[DMC] historico csv:', error);
+            setStatus(error.message || 'No se pudo descargar CSV DMC.', 'error');
+        });
     }
 
     function downloadCsv(code) {
@@ -252,5 +366,9 @@
         init();
     }
 
-    window.searchDmcNearbyStations = searchNearbyStations;
+    window.searchDmcNearbyStations  = searchNearbyStations;
+    window.dmcLoadSummary           = loadSummary;
+    window.dmcDownloadCsv           = downloadCsv;
+    window.dmcDownloadHistorico     = downloadHistorico;
+    window.dmcClearMarkers          = _clearMarkers;
 })();

@@ -63,34 +63,126 @@
         </button>
         <div class="map-layers-body collapsed" id="map-layers-body">
 
-            <!-- Cuencas DGA -->
+            <!-- ── ZONA ── -->
+            <div class="layers-section-hdr">Zona</div>
+
+            <div class="map-layer-row on" id="layer-aoi"
+                 onclick="toggleAoiVisibility(); this.classList.toggle('on'); this.classList.toggle('off');">
+                <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                <span class="map-layer-label">Zona de estudio</span>
+            </div>
+            <div class="map-layer-opacity">
+                <input type="range" min="0" max="100" value="25" class="opacity-slider"
+                    oninput="changeAoiOpacityDirect(this.value/100); document.getElementById('oval-aoi').textContent=this.value+'%'">
+                <span class="opacity-val" id="oval-aoi">25%</span>
+            </div>
+
             <div class="map-layer-row off" id="layer-cuencas"
                  onclick="toggleCapasCuencas(); this.classList.toggle('on'); this.classList.toggle('off');">
                 <div class="map-layer-check"><i class="fas fa-check"></i></div>
                 <span class="map-layer-label">Cuencas DGA</span>
             </div>
             <div class="map-layer-opacity">
-                <span class="opacity-label">Opacidad</span>
                 <input type="range" min="0" max="100" value="100" class="opacity-slider"
                     oninput="setCuencasOpacity(this.value/100); document.getElementById('oval-cuencas').textContent=this.value+'%'">
                 <span class="opacity-val" id="oval-cuencas">100%</span>
             </div>
 
-            <!-- AOI -->
-            <div class="map-layer-row on" id="layer-aoi"
-                 onclick="toggleAoiVisibility(); this.classList.toggle('on'); this.classList.toggle('off');">
-                <div class="map-layer-check"><i class="fas fa-check"></i></div>
-                <span class="map-layer-label">AOI</span>
-            </div>
-            <div class="map-layer-opacity">
-                <span class="opacity-label">Opacidad</span>
-                <input type="range" min="0" max="100" value="25" class="opacity-slider"
-                    oninput="changeAoiOpacityDirect(this.value/100); document.getElementById('oval-aoi').textContent=this.value+'%'">
-                <span class="opacity-val" id="oval-aoi">25%</span>
-            </div>
-
-            <!-- Capas GEE dinámicas (se agregan al calcular análisis) -->
+            <!-- ── ANÁLISIS (auto-gestionado por workspace-summary.js) ── -->
             <div id="gee-layers-dynamic" style="display:none;"></div>
+
+            <!-- ── CONTEXTO TERRITORIAL ── -->
+            <div class="layers-section-hdr layers-section-hdr--clickable" onclick="toggleSimbioSection()">
+                <span>Contexto territorial</span>
+                <span class="layers-section-source">MMA · SIMBIO&nbsp;<i class="fas fa-chevron-down" id="simbio-section-chev" style="font-size:7px;transition:transform .2s;"></i></span>
+            </div>
+            <div id="simbio-section-body">
+
+                <div class="simbio-status" id="simbio-status" style="display:none;"></div>
+
+                <div class="map-layer-simbio-buffer">
+                    <span class="opacity-label">Buffer</span>
+                    <select class="simbio-buffer-sel" onchange="setSimbioBuffer(+this.value)">
+                        <option value="0">Zona exacta</option>
+                        <option value="10">+10 km</option>
+                        <option value="30">+30 km</option>
+                        <option value="50">+50 km</option>
+                    </select>
+                </div>
+
+                <div class="map-layer-row off" id="simbio-row-ap_areas"
+                     onclick="toggleSimbioLayer('ap_areas', this.classList.toggle('on')); this.classList.toggle('off');">
+                    <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                    <span class="map-layer-label">Áreas Protegidas</span>
+                    <span class="map-gee-badge" style="background:rgba(0,166,0,.18);color:#00a600;">Protección</span>
+                </div>
+                <div class="map-layer-opacity">
+                    <input type="range" min="0" max="100" value="25" class="opacity-slider simbio-op-slider" data-key="ap_areas"
+                        oninput="setSimbioOpacity('ap_areas', this.value/100); document.getElementById('simbio-oval-ap_areas').textContent=this.value+'%'">
+                    <span class="opacity-val" id="simbio-oval-ap_areas">25%</span>
+                </div>
+
+                <div class="map-layer-row off" id="simbio-row-ap_sitios"
+                     onclick="toggleSimbioLayer('ap_sitios', this.classList.toggle('on')); this.classList.toggle('off');">
+                    <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                    <span class="map-layer-label">Sitios Prioritarios</span>
+                    <span class="map-gee-badge" style="background:rgba(237,115,50,.18);color:#ed7332;">Protección</span>
+                </div>
+                <div class="map-layer-opacity">
+                    <input type="range" min="0" max="100" value="25" class="opacity-slider simbio-op-slider" data-key="ap_sitios"
+                        oninput="setSimbioOpacity('ap_sitios', this.value/100); document.getElementById('simbio-oval-ap_sitios').textContent=this.value+'%'">
+                    <span class="opacity-val" id="simbio-oval-ap_sitios">25%</span>
+                </div>
+
+                <div class="map-layer-row off" id="simbio-row-ap_privada"
+                     onclick="toggleSimbioLayer('ap_privada', this.classList.toggle('on')); this.classList.toggle('off');">
+                    <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                    <span class="map-layer-label">Conservación Privada</span>
+                    <span class="map-gee-badge" style="background:rgba(158,94,73,.18);color:#9e5e49;">Protección</span>
+                </div>
+                <div class="map-layer-opacity">
+                    <input type="range" min="0" max="100" value="25" class="opacity-slider simbio-op-slider" data-key="ap_privada"
+                        oninput="setSimbioOpacity('ap_privada', this.value/100); document.getElementById('simbio-oval-ap_privada').textContent=this.value+'%'">
+                    <span class="opacity-val" id="simbio-oval-ap_privada">25%</span>
+                </div>
+
+                <div class="map-layer-row off" id="simbio-row-hum_inv"
+                     onclick="toggleSimbioLayer('hum_inv', this.classList.toggle('on')); this.classList.toggle('off');">
+                    <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                    <span class="map-layer-label">Inventario Humedales</span>
+                    <span class="map-gee-badge" style="background:rgba(0,188,212,.18);color:#00bcd4;">Humedales</span>
+                </div>
+                <div class="map-layer-opacity">
+                    <input type="range" min="0" max="100" value="25" class="opacity-slider simbio-op-slider" data-key="hum_inv"
+                        oninput="setSimbioOpacity('hum_inv', this.value/100); document.getElementById('simbio-oval-hum_inv').textContent=this.value+'%'">
+                    <span class="opacity-val" id="simbio-oval-hum_inv">25%</span>
+                </div>
+
+                <div class="map-layer-row off" id="simbio-row-hum_urbanos"
+                     onclick="toggleSimbioLayer('hum_urbanos', this.classList.toggle('on')); this.classList.toggle('off');">
+                    <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                    <span class="map-layer-label">Humedales Urbanos</span>
+                    <span class="map-gee-badge" style="background:rgba(0,200,117,.18);color:#00c875;">Humedales</span>
+                </div>
+                <div class="map-layer-opacity">
+                    <input type="range" min="0" max="100" value="25" class="opacity-slider simbio-op-slider" data-key="hum_urbanos"
+                        oninput="setSimbioOpacity('hum_urbanos', this.value/100); document.getElementById('simbio-oval-hum_urbanos').textContent=this.value+'%'">
+                    <span class="opacity-val" id="simbio-oval-hum_urbanos">25%</span>
+                </div>
+
+                <div class="map-layer-row off" id="simbio-row-rest_inic"
+                     onclick="toggleSimbioLayer('rest_inic', this.classList.toggle('on')); this.classList.toggle('off');">
+                    <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                    <span class="map-layer-label">Iniciativas Restauración</span>
+                    <span class="map-gee-badge" style="background:rgba(8,163,0,.18);color:#08a300;">Restauración</span>
+                </div>
+                <div class="map-layer-opacity">
+                    <input type="range" min="0" max="100" value="75" class="opacity-slider simbio-op-slider" data-key="rest_inic"
+                        oninput="setSimbioOpacity('rest_inic', this.value/100); document.getElementById('simbio-oval-rest_inic').textContent=this.value+'%'">
+                    <span class="opacity-val" id="simbio-oval-rest_inic">75%</span>
+                </div>
+
+            </div><!-- /simbio-section-body -->
 
         </div>
     </div>
@@ -157,39 +249,27 @@
                 <span id="rs-meta-gee"          style="display:none;"></span>
             </div>
 
-            <!-- Botones zona -->
-            <div class="rs-btn-grid" style="margin-bottom:6px;">
-                <button class="rs-btn rs-btn--primary" id="btn-dibujar-zona">
-                    <i class="fas fa-pen-alt"></i> Dibujar zona
-                </button>
-                <button class="rs-btn" onclick="usarCuencaEnWorkspace()">
-                    <i class="fas fa-water"></i> Usar cuenca
-                </button>
-            </div>
-            <div class="rs-btn-grid" style="margin-bottom:8px;">
-                <button class="rs-btn" onclick="clearZone()" style="color:#e57373;">
-                    <i class="fas fa-trash-alt"></i> Eliminar zona
-                </button>
-                <button class="rs-btn" onclick="resetAnalisis()" style="color:var(--muted2);">
-                    <i class="fas fa-undo"></i> Reiniciar análisis
-                </button>
-            </div>
-
-            <!-- Herramientas leaflet-draw (colapsables) -->
+            <!-- Herramientas de dibujo y zona -->
             <button class="draw-tools-toggle" id="draw-toggle-btn" onclick="toggleDrawTools()">
                 <span><i class="fas fa-draw-polygon" style="margin-right:5px;font-size:9px;"></i>Herramientas de dibujo</span>
                 <i class="fas fa-chevron-down toggle-chev"></i>
             </button>
             <div class="draw-tools-collapsible" id="draw-tools-wrap">
                 <div class="draw-tools" style="margin-bottom:0;padding-bottom:4px;">
-                    <button class="draw-btn" id="btn-draw-polygon" onclick="activarDibujo('polygon')">
-                        <i class="fas fa-draw-polygon"></i> Dibujar polígono
+                    <button class="draw-btn" id="btn-draw-polygon" onclick="startDrawingZone()">
+                        <i class="fas fa-pen-alt"></i> Dibujar zona
+                    </button>
+                    <button class="draw-btn" onclick="usarCuencaEnWorkspace()">
+                        <i class="fas fa-water"></i> Usar cuenca
                     </button>
                     <button class="draw-btn" id="btn-edit" onclick="activarEdicion()">
                         <i class="fas fa-edit"></i> Editar / Eliminar
                     </button>
-                    <button class="draw-btn" id="btn-clear-all" onclick="limpiarTodo()">
-                        <i class="fas fa-trash"></i> Limpiar todo
+                    <button class="draw-btn" id="btn-clear-all" onclick="clearZone()" style="color:#e57373;">
+                        <i class="fas fa-trash-alt"></i> Eliminar zona
+                    </button>
+                    <button class="draw-btn" onclick="resetAnalisis()" style="color:var(--muted2);">
+                        <i class="fas fa-undo"></i> Reiniciar análisis
                     </button>
                 </div>
             </div>
@@ -1107,7 +1187,11 @@
 <script>
     function toggleAccordion(id) {
         var el = document.getElementById('content-' + id);
-        if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        var section = document.getElementById('accordion-' + id);
+        if (!el) return;
+        var isOpen = el.style.display !== 'none';
+        el.style.display = isOpen ? 'none' : 'block';
+        if (section) section.classList.toggle('open', !isOpen);
     }
     function switchTool() {}
     function agregarPoligonoDesdeWorkspace(geojson, nombre, ha) {
@@ -1127,7 +1211,8 @@
 <script src="js/workspace-gee-modules.js?v=8"></script>
 <script src="js/workspace-zones.js?v=4"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
-<script src="js/workspace-dmc.js?v=1"></script>
+<script src="js/workspace-dmc.js?v=3"></script>
+<script src="js/workspace-simbio.js?v=1"></script>
 
 <!-- CONTACTO -->
 <script>

@@ -528,6 +528,40 @@ function clearBioEvidencePoints() {
     _bioEvidenceLegend = null;
 }
 
+function _formatBioDate(eventDate, year, month) {
+    if (eventDate) {
+        var d = new Date(eventDate);
+        if (!isNaN(d.getTime())) {
+            return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+    }
+    if (year) {
+        var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        return (month ? meses[month - 1] + ' ' : '') + year;
+    }
+    return '—';
+}
+
+function _buildBioPopupHtml(p) {
+    var fecha  = _formatBioDate(p.eventDate, p.year, p.month);
+    var nombre = _escapeBioHtml(p.species || '—');
+    var base   = _escapeBioHtml(p.basisOfRecord || '—');
+    var reino  = _escapeBioHtml(p.kingdom || '—');
+    var filo   = _escapeBioHtml(p.phylum  || '—');
+    var clase  = _escapeBioHtml(p.class   || '—');
+    return '<div class="bio-popup-ficha">' +
+        '<div class="bio-popup-title">Avistamientos de Especies (GBIF)</div>' +
+        '<table class="bio-popup-table">' +
+        '<tr><td class="bio-popup-label">NOMBRE CIENTÍFICO</td><td class="bio-popup-val"><i>' + nombre + '</i></td></tr>' +
+        '<tr><td class="bio-popup-label">FECHA</td><td class="bio-popup-val">' + fecha + '</td></tr>' +
+        '<tr><td class="bio-popup-label">BASE DEL REGISTRO</td><td class="bio-popup-val">' + base + '</td></tr>' +
+        '<tr><td class="bio-popup-label">REINO</td><td class="bio-popup-val">' + reino + '</td></tr>' +
+        '<tr><td class="bio-popup-label">FILO</td><td class="bio-popup-val">' + filo + '</td></tr>' +
+        '<tr><td class="bio-popup-label">CLASE</td><td class="bio-popup-val">' + clase + '</td></tr>' +
+        '</table>' +
+        '</div>';
+}
+
 function renderBioEvidencePoints() {
     if (!_bioEvidencePoints.length || typeof map === 'undefined' || typeof L === 'undefined') return;
 
@@ -546,21 +580,13 @@ function renderBioEvidencePoints() {
             fillOpacity: 0.55,
             opacity: 0.9
         });
-        var year = p.year || 'sin anio';
-        var uncertainty = p.uncertainty ? '<br>Incertidumbre: ' + Number(p.uncertainty).toLocaleString('es-CL') + ' m' : '';
         var speciesName = p.species || 'Especie sin nombre';
         marker.bindTooltip(_escapeBioHtml(speciesName), {
             direction: 'top',
             sticky: true,
             opacity: 0.92
         });
-        marker.bindPopup(
-            '<strong><i>' + _escapeBioHtml(speciesName) + '</i></strong>' +
-            '<br>Reino: ' + _escapeBioHtml(p.kingdom || '-') +
-            '<br>Anio: ' + _escapeBioHtml(year) +
-            '<br>Registro: ' + _escapeBioHtml(p.basisOfRecord || '-') +
-            uncertainty
-        );
+        marker.bindPopup(_buildBioPopupHtml(p), { maxWidth: 280 });
         group.addLayer(marker);
     });
 
