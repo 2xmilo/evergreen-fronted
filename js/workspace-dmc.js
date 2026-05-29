@@ -84,6 +84,8 @@
         });
     }
 
+    /* ── Marcadores en el mapa ── */
+
     function _clearMarkers() {
         if (_markerLayer && typeof map !== 'undefined') {
             try { map.removeLayer(_markerLayer); } catch(e) {}
@@ -124,7 +126,7 @@
                 opacity: 1
             });
 
-            var fichaUrl = 'https://climatologia.meteochile.gob.cl/application/productos/fichaEstacion/' + code;
+            var fichaUrl = 'https://climatologia.meteochile.gob.cl/application/informacion/fichaDeEstacion/' + code;
             m.bindPopup(
                 '<div class="dmc-map-popup">' +
                   '<div class="dmc-popup-header">' +
@@ -138,10 +140,11 @@
                   '</div>' +
                   '<div class="dmc-popup-divider"></div>' +
                   '<div class="dmc-popup-actions">' +
-                    '<button class="dmc-popup-btn" onclick="dmcLoadSummary(\'' + code + '\')"><i class="fas fa-chart-bar"></i> Resumen</button>' +
-                    '<button class="dmc-popup-btn" onclick="dmcDownloadCsv(\'' + code + '\')"><i class="fas fa-download"></i> CSV 12h</button>' +
-                    '<button class="dmc-popup-btn" onclick="dmcDownloadHistorico(\'' + code + '\',\'24h\')"><i class="fas fa-clock"></i> CSV 24h</button>' +
-                    '<button class="dmc-popup-btn dmc-popup-btn--wide" onclick="dmcDownloadHistorico(\'' + code + '\',\'mensual\')"><i class="fas fa-calendar-alt"></i> Mensual</button>' +
+                    '<button class="dmc-popup-btn" onclick="dmcDownloadCsv(\'' + code + '\')"><i class="fas fa-clock"></i> 12h</button>' +
+                    '<button class="dmc-popup-btn" onclick="dmcDownloadHistorico(\'' + code + '\',\'24h\')"><i class="fas fa-history"></i> 24h</button>' +
+                    '<button class="dmc-popup-btn" onclick="dmcDownloadHistorico(\'' + code + '\',\'7dias\')"><i class="fas fa-calendar-week"></i> 7 días</button>' +
+                    '<button class="dmc-popup-btn" onclick="dmcDownloadHistorico(\'' + code + '\',\'mensual\')"><i class="fas fa-calendar-alt"></i> Mes</button>' +
+                    '<button class="dmc-popup-btn dmc-popup-btn--wide" onclick="dmcLoadSummary(\'' + code + '\')"><i class="fas fa-chart-bar"></i> Ver en panel</button>' +
                   '</div>' +
                 '</div>',
                 { className: 'dmc-station-popup', maxWidth: 260 }
@@ -154,6 +157,8 @@
             _markerLayer = L.layerGroup(markers).addTo(map);
         }
     }
+
+    /* ── Lista de estaciones en el panel ── */
 
     function renderStations(stations) {
         var list = $('dmc-stations-list');
@@ -174,23 +179,48 @@
             var code = escapeHtml(station.codigoNacional);
             var name = escapeHtml(station.nombreEstacion);
             var dist = Number(station.distance_km || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
-            var region = escapeHtml(station.region || 'Sin region');
-            var altura = station.altura != null ? Math.round(station.altura) + ' m' : 's/i';
+            var region = escapeHtml(station.region || '');
+            var altura = station.altura != null ? Math.round(station.altura) + ' m' : '';
             var zona = escapeHtml(station.zonaGeografica || '');
+            var meta = [dist + ' km', region, altura, zona].filter(Boolean).join(' · ');
+
             return '' +
                 '<div class="dmc-card" data-code="' + code + '">' +
                     '<div class="dmc-card-main">' +
                         '<div class="dmc-name">' + name + '</div>' +
-                        '<div class="dmc-meta">' + dist + ' km - ' + region + ' - ' + altura + (zona ? ' - ' + zona : '') + '</div>' +
-                        '<div class="dmc-code">Codigo DMC ' + code + '</div>' +
+                        '<div class="dmc-meta">' + meta + '</div>' +
                     '</div>' +
-                    '<div class="dmc-card-actions">' +
-                        '<button type="button" class="dmc-small-btn" data-action="summary" data-code="' + code + '">Resumen</button>' +
-                        '<button type="button" class="dmc-small-btn" data-action="csv" data-code="' + code + '">CSV 12h</button>' +
-                    '</div>' +
+                    '<button type="button" class="dmc-small-btn dmc-small-btn--go" data-action="summary" data-code="' + code + '" title="Ver detalle">' +
+                        '<i class="fas fa-chevron-right"></i>' +
+                    '</button>' +
                 '</div>';
         }).join('');
     }
+
+    /* ── Variables disponibles (async, se carga dentro del detail) ── */
+
+    function _loadVariablesInto(containerId, code) {
+        fetchDmcJson('/api/dmc/estacion/' + encodeURIComponent(code) + '/variables')
+            .then(function(data) {
+                var el = $(containerId);
+                if (!el) return;
+                var vars = data.variables || [];
+                if (!vars.length) {
+                    el.innerHTML = '<span class="dmc-var-chip dmc-var-chip--none">Sin info</span>';
+                    return;
+                }
+                el.innerHTML = vars.map(function(v) {
+                    return '<span class="dmc-var-chip" title="' + escapeHtml(v.descripcion || v.nombre) + '">' +
+                        escapeHtml(v.nombreCorto || v.nombre) + '</span>';
+                }).join('');
+            })
+            .catch(function() {
+                var el = $(containerId);
+                if (el) el.innerHTML = '<span class="dmc-var-chip dmc-var-chip--none">No disponible</span>';
+            });
+    }
+
+    /* ── Buscar estaciones ── */
 
     function searchNearbyStations() {
         var center = getZoneCenter();
@@ -224,10 +254,14 @@
             });
     }
 
+    /* ── Formato de valores ── */
+
     function fmt(value, suffix) {
         if (value == null || value === '') return '-';
         return Number(value).toLocaleString('es-CL', { maximumFractionDigits: 1 }) + (suffix || '');
     }
+
+    /* ── Detalle de estación con downloads + variables ── */
 
     function renderSummary(data) {
         var detail = $('dmc-detail');
@@ -237,32 +271,82 @@
         var latest = data.latest || {};
         var status = data.status || {};
         var isOld = status.desactualizada || status.fueraDeServicio;
+        var code = st.codigoNacional || state.selectedCode || '';
+        var varsId = 'dmc-vars-' + code;
+        var fichaUrl = 'https://climatologia.meteochile.gob.cl/application/informacion/fichaDeEstacion/' + escapeHtml(String(code));
 
         detail.style.display = 'block';
-        detail.innerHTML = '' +
+        detail.innerHTML =
+            /* Header */
             '<div class="dmc-detail-head">' +
-                '<div>' +
+                '<div style="min-width:0;">' +
                     '<div class="dmc-detail-title">' + escapeHtml(st.nombreEstacion || 'Estacion DMC') + '</div>' +
                     '<div class="dmc-detail-sub">' + escapeHtml(latest.momento || data.fechaCreacion || '') + '</div>' +
                 '</div>' +
-                '<span class="dmc-pill ' + (isOld ? 'dmc-pill--warn' : 'dmc-pill--ok') + '">' + (isOld ? 'revisar estado' : 'actualizada') + '</span>' +
+                '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">' +
+                    '<span class="dmc-pill ' + (isOld ? 'dmc-pill--warn' : 'dmc-pill--ok') + '">' +
+                        (isOld ? 'revisar' : 'activa') +
+                    '</span>' +
+                    '<a href="' + fichaUrl + '" target="_blank" class="dmc-ficha-link" title="Ver ficha DMC">' +
+                        '<i class="fas fa-external-link-alt"></i> ' + escapeHtml(String(code)) +
+                    '</a>' +
+                '</div>' +
             '</div>' +
+
+            /* Métricas recientes */
             '<div class="dmc-metrics">' +
-                '<div><strong>' + fmt(latest.temperatura_c, ' C') + '</strong><span>Temp.</span></div>' +
-                '<div><strong>' + fmt(latest.humedad_relativa_pct, ' %') + '</strong><span>HR</span></div>' +
-                '<div><strong>' + fmt(latest.precipitacion_24h_mm, ' mm') + '</strong><span>PP 24h</span></div>' +
-                '<div><strong>' + fmt(latest.viento_kt, ' kt') + '</strong><span>Viento</span></div>' +
+                '<div><strong>' + fmt(latest.temperatura_c, '°') + '</strong><span>Temp.</span></div>' +
+                '<div><strong>' + fmt(latest.humedad_relativa_pct, '%') + '</strong><span>HR</span></div>' +
+                '<div><strong>' + fmt(latest.precipitacion_24h_mm, 'mm') + '</strong><span>PP 24h</span></div>' +
+                '<div><strong>' + fmt(latest.viento_kt, 'kt') + '</strong><span>Viento</span></div>' +
             '</div>' +
-            '<div class="dmc-detail-note">Datos recientes normalizados desde DMC. La descarga CSV usa las ultimas 12 horas disponibles.</div>';
+
+            /* Variables disponibles */
+            '<div class="dmc-section-row">' +
+                '<span class="dmc-section-label">Variables</span>' +
+                '<div class="dmc-vars-row" id="' + varsId + '">' +
+                    '<span class="dmc-var-chip dmc-var-chip--none"><i class="fas fa-spinner fa-spin"></i></span>' +
+                '</div>' +
+            '</div>' +
+
+            /* Descargas */
+            '<div class="dmc-section-label" style="padding:8px 12px 4px;">Descargar</div>' +
+            '<div class="dmc-dl-grid">' +
+                '<button class="dmc-dl-btn" onclick="dmcDownloadCsv(\'' + code + '\')">' +
+                    '<i class="fas fa-clock"></i>' +
+                    '<span>12 horas</span>' +
+                    '<small>EMA reciente</small>' +
+                '</button>' +
+                '<button class="dmc-dl-btn" onclick="dmcDownloadHistorico(\'' + code + '\',\'24h\')">' +
+                    '<i class="fas fa-history"></i>' +
+                    '<span>24 horas</span>' +
+                    '<small>15 min · mes actual</small>' +
+                '</button>' +
+                '<button class="dmc-dl-btn" onclick="dmcDownloadHistorico(\'' + code + '\',\'7dias\')">' +
+                    '<i class="fas fa-calendar-week"></i>' +
+                    '<span>7 días</span>' +
+                    '<small>15 min · mes actual</small>' +
+                '</button>' +
+                '<button class="dmc-dl-btn" onclick="dmcDownloadHistorico(\'' + code + '\',\'mensual\')">' +
+                    '<i class="fas fa-calendar-alt"></i>' +
+                    '<span>Mes completo</span>' +
+                    '<small>15 min · ~2800 filas</small>' +
+                '</button>' +
+            '</div>';
+
+        /* Cargar variables de forma asíncrona */
+        _loadVariablesInto(varsId, code);
     }
+
+    /* ── Cargar resumen de estación ── */
 
     function loadSummary(code) {
         state.selectedCode = code;
-        setStatus('Consultando resumen diario de estacion ' + code + '...', 'loading');
+        setStatus('Consultando resumen de estacion ' + code + '...', 'loading');
         fetchDmcJson('/api/dmc/estacion/' + encodeURIComponent(code) + '/resumen')
             .then(function(data) {
                 renderSummary(data);
-                setStatus('Resumen DMC cargado para estacion ' + code + '.', 'ok');
+                setStatus('Estacion ' + code + ' cargada.', 'ok');
             })
             .catch(function(error) {
                 console.warn('[DMC] resumen:', error);
@@ -270,79 +354,67 @@
             });
     }
 
-    function downloadHistorico(code, periodo) {
-        var label = periodo === 'mensual' ? 'serie mensual' : 'últimas 24h';
-        setStatus('Generando CSV DMC ' + label + '...', 'loading');
+    /* ── Descargas CSV ── */
+
+    function _downloadBlob(url, defaultFilename) {
         var headersPromise = (typeof getBackendAuthHeaders === 'function')
             ? getBackendAuthHeaders({})
             : Promise.resolve({});
 
-        headersPromise.then(function(headers) {
-            return fetch(
-                backendUrl('/api/dmc/estacion/' + encodeURIComponent(code) + '/historico.csv?periodo=' + periodo),
-                { headers: headers }
-            );
+        return headersPromise.then(function(headers) {
+            return fetch(backendUrl(url), { headers: headers });
         }).then(function(response) {
             if (!response.ok) {
                 return response.json().then(function(data) {
-                    throw new Error(data.error || data.detalle || 'No se pudo generar CSV DMC');
+                    throw new Error(data.error || data.detalle || 'Error al generar CSV');
                 });
             }
             return response.blob().then(function(blob) {
-                var filename = 'dmc_' + code + '_' + periodo + '.csv';
+                var filename = defaultFilename;
                 var disposition = response.headers.get('Content-Disposition') || '';
                 var match = disposition.match(/filename="?([^"]+)"?/i);
                 if (match) filename = match[1];
-                var url = URL.createObjectURL(blob);
+                var url2 = URL.createObjectURL(blob);
                 var link = document.createElement('a');
-                link.href = url;
+                link.href = url2;
                 link.download = filename;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
-                URL.revokeObjectURL(url);
-                setStatus('CSV DMC ' + label + ' descargado para estación ' + code + '.', 'ok');
+                URL.revokeObjectURL(url2);
             });
-        }).catch(function(error) {
-            console.warn('[DMC] historico csv:', error);
-            setStatus(error.message || 'No se pudo descargar CSV DMC.', 'error');
         });
     }
 
     function downloadCsv(code) {
-        setStatus('Generando CSV DMC de ultimas 12 horas...', 'loading');
-        var headersPromise = (typeof getBackendAuthHeaders === 'function')
-            ? getBackendAuthHeaders({})
-            : Promise.resolve({});
-
-        headersPromise.then(function(headers) {
-            return fetch(backendUrl('/api/dmc/estacion/' + encodeURIComponent(code) + '/recientes.csv'), { headers: headers });
-        }).then(function(response) {
-            if (!response.ok) {
-                return response.json().then(function(data) {
-                    throw new Error(data.error || data.detalle || 'No se pudo generar CSV DMC');
-                });
-            }
-            return response.blob().then(function(blob) {
-                var filename = 'dmc_' + code + '_ultimas_12h.csv';
-                var disposition = response.headers.get('Content-Disposition') || '';
-                var match = disposition.match(/filename="?([^"]+)"?/i);
-                if (match) filename = match[1];
-                var url = URL.createObjectURL(blob);
-                var link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                URL.revokeObjectURL(url);
-                setStatus('CSV DMC descargado para estacion ' + code + '.', 'ok');
-            });
+        setStatus('Generando CSV 12h...', 'loading');
+        _downloadBlob(
+            '/api/dmc/estacion/' + encodeURIComponent(code) + '/recientes.csv',
+            'dmc_' + code + '_12h.csv'
+        ).then(function() {
+            setStatus('CSV 12h descargado para estacion ' + code + '.', 'ok');
         }).catch(function(error) {
-            console.warn('[DMC] csv:', error);
-            setStatus(error.message || 'No se pudo descargar CSV DMC.', 'error');
+            console.warn('[DMC] csv 12h:', error);
+            setStatus(error.message || 'No se pudo descargar CSV.', 'error');
         });
     }
+
+    function downloadHistorico(code, periodo) {
+        var labels = { '24h': '24 horas', '7dias': '7 dias', 'mensual': 'mes completo' };
+        var label = labels[periodo] || periodo;
+        setStatus('Generando CSV ' + label + '...', 'loading');
+        _downloadBlob(
+            '/api/dmc/estacion/' + encodeURIComponent(code) + '/historico.csv?periodo=' + periodo,
+            'dmc_' + code + '_' + periodo + '.csv'
+        ).then(function() {
+            setStatus('CSV ' + label + ' descargado para estacion ' + code + '.', 'ok');
+        }).catch(function(error) {
+            console.warn('[DMC] historico csv (' + periodo + '):', error);
+            setStatus(error.message || 'No se pudo descargar CSV.', 'error');
+        });
+    }
+
+    /* ── Event listeners ── */
 
     function onListClick(event) {
         var button = event.target.closest('button[data-action]');
@@ -350,7 +422,6 @@
         var code = button.getAttribute('data-code');
         var action = button.getAttribute('data-action');
         if (action === 'summary') loadSummary(code);
-        if (action === 'csv') downloadCsv(code);
     }
 
     function init() {
