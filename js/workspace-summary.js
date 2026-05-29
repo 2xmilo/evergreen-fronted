@@ -518,6 +518,10 @@ var _layerRegistry = {};
 
 function registerLayer(id, layerInstance) {
     _layerRegistry[id] = layerInstance;
+    // Opacidad por defecto 80% — coincide con el valor inicial del slider
+    if (layerInstance && typeof layerInstance.setOpacity === 'function') {
+        layerInstance.setOpacity(0.8);
+    }
     _refreshGeeLayersPanel();
 }
 
@@ -625,9 +629,11 @@ function _activatePersistedResultLayer(key) {
         _indicadorLayer = L.tileLayer(url, {
             pane: 'overlayPane',
             zIndex: 400,
-            crossOrigin: 'anonymous'
+            crossOrigin: 'anonymous',
+            opacity: 0.8
         });
         _indicadorLayer.addTo(map);
+        registerLayer(key, _indicadorLayer);  // aparece en panel con slider
         _indicadorActivo = activeKey;
         if (typeof renderIndicadorCards === 'function') renderIndicadorCards();
         return true;
@@ -829,7 +835,7 @@ function _restorePreviewOnMap(key, filePath, storedBounds) {
 
             var url    = res.data.signedUrl;
             var bounds = storedBounds ? L.latLngBounds(storedBounds) : L.geoJSON(WorkspaceState.zona).getBounds();
-            var overlay = L.imageOverlay(url, bounds, { opacity: 0.9, zIndex: 400 });
+            var overlay = L.imageOverlay(url, bounds, { opacity: 0.8, zIndex: 400 });
             overlay.addTo(map);
             _previewOverlays[key] = overlay;
             console.log('[Preview] 🖼️ overlay restaurado para', key);
