@@ -895,6 +895,27 @@
                     </div>
                 </div>
 
+                <div class="accordion-section open" id="accordion-dmc">
+                    <div class="accordion-header" onclick="toggleAccordion('dmc')">
+                        <span class="accordion-title">Estaciones DMC cercanas</span>
+                        <i class="fas fa-chevron-down accordion-chevron"></i>
+                    </div>
+                    <div class="accordion-content" id="content-dmc" style="display:block;">
+                        <div class="accordion-body">
+                            <div class="dmc-actions">
+                                <button type="button" class="dmc-primary-btn" id="btn-dmc-search">
+                                    <i class="fas fa-location-crosshairs"></i>
+                                    Buscar cerca de mi zona
+                                </button>
+                            </div>
+                            <p class="dmc-help">Consulta estaciones automaticas DMC disponibles cerca del centro de la zona activa.</p>
+                            <div class="dmc-status" id="dmc-status">Define una zona y presiona buscar.</div>
+                            <div class="dmc-stations-list" id="dmc-stations-list"></div>
+                            <div class="dmc-detail" id="dmc-detail" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="estimation-panel" id="estimation">
                     <strong>📊 Estimación de tiempo:</strong>
                     <p id="estimation-text">Dibuja una zona para calcular</p>
@@ -1106,6 +1127,7 @@
 <script src="js/workspace-gee-modules.js?v=8"></script>
 <script src="js/workspace-zones.js?v=4"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
+<script src="js/workspace-dmc.js?v=1"></script>
 
 <!-- CONTACTO -->
 <script>
