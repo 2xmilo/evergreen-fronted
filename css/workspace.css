@@ -2066,3 +2066,25 @@ body.workspace-mode {
     text-align: right; margin-top: 8px;
     font-family: 'DM Mono',monospace;
 }
+
+/* Fix: options del dropdown ARClim heredan tema oscuro del topbar */
+.arclim-sel select option,
+.arclim-sel select optgroup {
+    background: #fff !important;
+    color: var(--text) !important;
+    font-weight: 400;
+    padding: 4px 8px;
+}
+.arclim-sel select optgroup {
+    font-weight: 700 !important;
+    color: var(--accent-dark) !important;
+    font-size: 11px;
+}
+.arclim-sel select option {
+    font-size: 12px;
+}
+.arclim-sel select option:checked,
+.arclim-sel select option:hover {
+    background: var(--accent-light) !important;
+    color: var(--text) !important;
+}
