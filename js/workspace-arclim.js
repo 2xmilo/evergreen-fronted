@@ -155,17 +155,28 @@
             .trim();
     }
 
-    /* Reverse geocoding con Nominatim (CORS-libre, sin auth) */
+    /* Reverse geocoding con Nominatim (CORS-libre, sin auth)
+       zoom=10 devuelve city/town/village confiable; zoom=8 en zonas
+       remotas (Aysén, Magallanes) solo devuelve county/state. */
     function _nominatimComuna(lat, lon) {
         var url = 'https://nominatim.openstreetmap.org/reverse?lat=' + lat +
-                  '&lon=' + lon + '&format=json&accept-language=es&zoom=8';
+                  '&lon=' + lon + '&format=json&accept-language=es&zoom=10';
         return fetch(url, { headers: { 'User-Agent': 'Evergreen/1.0' } })
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 var addr = data.address || {};
-                /* Nominatim usa campos distintos según el nivel admin */
-                return addr.city || addr.town || addr.village ||
-                       addr.county || addr.municipality || '';
+                /* Nominatim usa campos distintos según el nivel admin.
+                   Orden: más específico → menos específico. */
+                var comuna = addr.city || addr.town || addr.village ||
+                             addr.municipality || addr.hamlet || addr.suburb;
+
+                /* Fallback: si no hay town/village, intentar derivar de county
+                   ("Provincia de Capitán Prat" → "Capitán Prat" → falla pero
+                   al menos devuelve algo identificable para diagnóstico). */
+                if (!comuna && addr.county) {
+                    comuna = addr.county.replace(/^Provincia\s+de\s+/i, '');
+                }
+                return comuna || '';
             });
     }
 
