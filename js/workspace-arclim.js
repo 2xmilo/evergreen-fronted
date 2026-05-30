@@ -42,8 +42,9 @@
     };
 
     /* ── Cache ──────────────────────────────────────────────────────── */
-    var _geoCache = {};   // indId+'_'+scenario → FeatureCollection (con geometrías)
-    var _tabCache = {};   // 'tab_'+indId+'_'+scenario → {arclim_id → valor}
+    var _geoCache        = {};    // indId+'_'+scenario → FeatureCollection (con geometrías)
+    var _tabCache        = {};    // 'tab_'+indId+'_'+scenario → {arclim_id → valor}
+    var _comunasListCache = null; // [{arclim_id, nombre}]
 
     /* ── Estado del mapa ────────────────────────────────────────────── */
     var _choroplethLayer = null;
@@ -133,7 +134,50 @@
 
     /* ================================================================
        DETECCIÓN DE COMUNA
+       Estrategia: Nominatim (OpenStreetMap) → nombre de comuna
+       Luego empareja contra lista de comunas ARClim via Flask proxy.
+       Sin dependencia del GeoJSON de ARClim (que es inestable).
        ================================================================ */
+
+    /* Normaliza texto: mayúsculas, sin tildes, sin caracteres extra */
+    function _normalizar(str) {
+        return String(str || '')
+            .toUpperCase()
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .replace(/[^A-Z0-9 ]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    /* Reverse geocoding con Nominatim (CORS-libre, sin auth) */
+    function _nominatimComuna(lat, lon) {
+        var url = 'https://nominatim.openstreetmap.org/reverse?lat=' + lat +
+                  '&lon=' + lon + '&format=json&accept-language=es&zoom=8';
+        return fetch(url, { headers: { 'User-Agent': 'Evergreen/1.0' } })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var addr = data.address || {};
+                /* Nominatim usa campos distintos según el nivel admin */
+                return addr.city || addr.town || addr.village ||
+                       addr.county || addr.municipality || '';
+            });
+    }
+
+    /* Lista de comunas ARClim via proxy Flask */
+    function _fetchComunasList() {
+        if (_comunasListCache) return Promise.resolve(_comunasListCache);
+        var url = API_BASE + '/api/arclim/comunas';
+        return fetch(url, { headers: _authHeaders() })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (json) {
+                _comunasListCache = json.comunas || [];
+                return _comunasListCache;
+            });
+    }
 
     function _detectComuna() {
         var ws   = window.WorkspaceState;
@@ -144,16 +188,32 @@
         try { centroid = turf.centroid(zona); }
         catch (e) { return Promise.resolve(null); }
 
-        /* Usamos hot_days/present como base para geometrías de todas las comunas */
-        return _fetchGeoJSON('hot_days', 'present').then(function (fc) {
-            for (var i = 0; i < fc.features.length; i++) {
-                try {
-                    if (turf.booleanPointInPolygon(centroid, fc.features[i])) {
-                        return fc.features[i];
-                    }
-                } catch (e) { /* skip */ }
+        var lon = centroid.geometry.coordinates[0];
+        var lat = centroid.geometry.coordinates[1];
+
+        return Promise.all([
+            _nominatimComuna(lat, lon),
+            _fetchComunasList()
+        ]).then(function (results) {
+            var nombreNom  = _normalizar(results[0]);
+            var listaComunas = results[1];
+
+            if (!nombreNom || !listaComunas.length) return null;
+
+            /* Búsqueda exacta primero */
+            var match = listaComunas.find(function (c) {
+                return _normalizar(c.nombre) === nombreNom;
+            });
+
+            /* Fallback: la lista contiene el nombre buscado o viceversa */
+            if (!match) {
+                match = listaComunas.find(function (c) {
+                    var norm = _normalizar(c.nombre);
+                    return norm.indexOf(nombreNom) !== -1 || nombreNom.indexOf(norm) !== -1;
+                });
             }
-            return null;
+
+            return match || null;
         });
     }
 
@@ -377,16 +437,17 @@
         _setHeader('<i class="fas fa-spinner fa-spin" style="color:var(--accent);margin-right:6px;font-size:10px;"></i><span style="color:var(--muted2);font-size:11px;">Detectando comuna…</span>');
 
         _detectComuna()
-            .then(function (comunaFeat) {
-                if (!comunaFeat) {
+            .then(function (comuna) {
+                if (!comuna) {
                     _setHeader('<span class="arclim-no-zone"><i class="fas fa-exclamation-triangle" style="margin-right:5px;color:#f5a623;"></i>Zona fuera de cobertura ARClim (solo Chile).</span>');
                     _setLoading(false);
                     return;
                 }
 
-                var nom     = comunaFeat.properties['NOM_COMUNA'] || '';
-                var nomFmt  = nom.charAt(0) + nom.slice(1).toLowerCase();
-                var arclimId = String(comunaFeat.properties['arclim_id']);
+                /* _detectComuna retorna {arclim_id, nombre} */
+                var nom      = String(comuna.nombre || '');
+                var nomFmt   = nom.charAt(0) + nom.slice(1).toLowerCase();
+                var arclimId = String(comuna.arclim_id);
 
                 _setHeader(
                     '<i class="fas fa-map-marker-alt" style="color:var(--accent);font-size:11px;"></i>' +
