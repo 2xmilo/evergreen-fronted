@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=16">
+    <link rel="stylesheet" href="css/workspace.css?v=17">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -1013,7 +1013,7 @@
         </div>
 
         <!-- ═══════════════════════════════════════
-             TAB RIESGOS: Proyecciones ARClim
+             TAB RIESGOS: Series de tiempo ARClim
         ════════════════════════════════════════ -->
         <div class="ws-module-content" id="tab-riesgos-content">
 
@@ -1025,20 +1025,72 @@
                 </span>
             </div>
 
-            <!-- Subtítulo meta -->
-            <div class="arclim-meta-row">
-                <span class="arclim-meta-label">Modelos CR2 · 5 km · Chile</span>
-                <span class="arclim-meta-period">1980 – 2010 → ~2050</span>
+            <!-- Selectores -->
+            <div class="arclim-selectors" id="arclim-selectors" style="display:none;">
+                <div class="arclim-sel">
+                    <label>Indicador</label>
+                    <select id="arclim-sel-indicator" onchange="arclimUpdateChart()"></select>
+                </div>
+                <div class="arclim-sel-row">
+                    <div class="arclim-sel">
+                        <label>Escenario</label>
+                        <select id="arclim-sel-scenario" onchange="arclimUpdateChart()">
+                            <option value="ssp585">SSP5-8.5 (alto)</option>
+                            <option value="ssp245">SSP2-4.5 (medio)</option>
+                        </select>
+                    </div>
+                    <div class="arclim-sel">
+                        <label>Estación</label>
+                        <select id="arclim-sel-season" onchange="arclimUpdateChart()">
+                            <option value="annual">Anual</option>
+                            <option value="djf">Verano (DEF)</option>
+                            <option value="mam">Otoño (MAM)</option>
+                            <option value="jja">Invierno (JJA)</option>
+                            <option value="son">Primavera (SON)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <!-- Spinner de carga -->
+            <!-- Gráfico principal -->
+            <div class="arclim-chart-wrap" id="arclim-chart-wrap" style="display:none;">
+                <canvas id="arclim-chart-main"></canvas>
+                <div class="arclim-chart-loading" id="arclim-chart-loading" style="display:flex;">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando serie de tiempo…
+                </div>
+            </div>
+
+            <!-- Leyenda del gráfico -->
+            <div class="arclim-chart-legend" id="arclim-chart-legend" style="display:none;">
+                <span><span class="arclim-serie-dot" style="background:#e74c3c;"></span>Promedio simulaciones</span>
+                <span><span class="arclim-serie-dot" style="background:rgba(70,130,180,0.4);"></span>Modelos individuales</span>
+                <span><span class="arclim-serie-band" style="background:rgba(173,200,225,0.5);"></span>Histórico (1980–2010)</span>
+                <span><span class="arclim-serie-band" style="background:rgba(245,200,160,0.6);"></span>Futuro (2035–2065)</span>
+            </div>
+
+            <!-- Descripción del indicador + valores presente/futuro -->
+            <div class="arclim-info-block" id="arclim-info-block" style="display:none;">
+                <div class="arclim-info-desc" id="arclim-info-desc"></div>
+                <div class="arclim-info-stats">
+                    <div class="arclim-info-stat">
+                        <span class="arclim-info-num" id="arclim-info-present">—</span>
+                        <span class="arclim-info-lbl">Presente (1980–2010)</span>
+                    </div>
+                    <div class="arclim-info-arrow" id="arclim-info-arrow">→</div>
+                    <div class="arclim-info-stat arclim-info-stat--future">
+                        <span class="arclim-info-num" id="arclim-info-future">—</span>
+                        <span class="arclim-info-lbl">~2050 (2035–2065)</span>
+                    </div>
+                    <div class="arclim-info-delta" id="arclim-info-delta"></div>
+                </div>
+                <div class="arclim-info-unit" id="arclim-info-unit"></div>
+            </div>
+
+            <!-- Spinner de carga inicial -->
             <div id="arclim-loading" class="arclim-loading" style="display:none;">
                 <i class="fas fa-spinner fa-spin"></i>
-                <span>Cargando proyecciones climáticas…</span>
+                <span>Detectando comuna…</span>
             </div>
-
-            <!-- Cards de indicadores (generadas dinámicamente) -->
-            <div id="arclim-indicators-body"></div>
 
             <!-- Pie de fuente -->
             <div class="arclim-footer">
@@ -1256,7 +1308,7 @@
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=5"></script>
 <script src="js/workspace-simbio.js?v=1"></script>
-<script src="js/workspace-arclim.js?v=2"></script>
+<script src="js/workspace-arclim.js?v=3"></script>
 
 <!-- CONTACTO -->
 <script>

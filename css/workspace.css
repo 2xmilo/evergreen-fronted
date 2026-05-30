@@ -1970,3 +1970,99 @@ body.workspace-mode {
 
 /* Botón de serie dentro de la card (chart icon) */
 .arclim-serie-btn { margin-right: 4px; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   ARCLIM — Opción B: gráfico inline (sin cards)
+   ══════════════════════════════════════════════════════════════════════ */
+
+.arclim-selectors {
+    padding: 10px 16px 12px;
+    border-bottom: 1px solid var(--panel-border);
+    background: rgba(0,0,0,0.012);
+}
+.arclim-sel { display: flex; flex-direction: column; gap: 4px; }
+.arclim-sel + .arclim-sel-row { margin-top: 8px; }
+.arclim-sel-row { display: flex; gap: 10px; }
+.arclim-sel-row .arclim-sel { flex: 1; }
+.arclim-sel label {
+    font-size: 9px; font-weight: 600; color: var(--muted2);
+    text-transform: uppercase; letter-spacing: .5px;
+}
+.arclim-sel select {
+    border: 1px solid rgba(0,0,0,0.12); border-radius: 6px;
+    padding: 6px 9px; font-size: 12px; color: var(--text);
+    background: #fff; font-family: inherit; cursor: pointer;
+    transition: border-color .12s;
+}
+.arclim-sel select:focus { outline: none; border-color: var(--accent); }
+.arclim-sel select:hover { border-color: rgba(0,0,0,0.25); }
+
+.arclim-chart-wrap {
+    position: relative;
+    height: 280px;
+    padding: 12px 16px 4px;
+    background: #fff;
+}
+.arclim-chart-loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; font-size: 11px; color: var(--muted);
+    background: rgba(255,255,255,0.85);
+    z-index: 1;
+}
+.arclim-chart-loading i { color: var(--accent); font-size: 13px; }
+
+.arclim-chart-legend {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    padding: 4px 16px 12px;
+    font-size: 10px; color: var(--muted);
+    border-bottom: 1px solid var(--panel-border);
+}
+.arclim-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+.arclim-info-block {
+    padding: 12px 16px 14px;
+    border-bottom: 1px solid var(--panel-border);
+}
+.arclim-info-desc {
+    font-size: 11px; color: var(--muted);
+    margin-bottom: 11px; line-height: 1.5;
+}
+.arclim-info-stats {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 4px;
+}
+.arclim-info-stat {
+    text-align: center; min-width: 64px;
+}
+.arclim-info-num {
+    display: block; font-size: 22px; font-weight: 700;
+    font-family: 'DM Mono',monospace; color: var(--text);
+    line-height: 1; letter-spacing: -.02em;
+}
+.arclim-info-stat--future .arclim-info-num { color: #d95f0e; }
+.arclim-info-lbl {
+    display: block; font-size: 8px; color: var(--muted2);
+    text-transform: uppercase; letter-spacing: .4px;
+    margin-top: 5px; font-weight: 600;
+}
+.arclim-info-arrow {
+    font-size: 22px; font-weight: 700; color: rgba(0,0,0,0.2);
+    margin: 0 4px; line-height: 1;
+}
+.arclim-info-arrow.up   { color: #c1372b; }
+.arclim-info-arrow.down { color: #2c6fb5; }
+
+.arclim-info-delta {
+    font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 5px;
+    margin-left: auto; font-family: 'DM Mono',monospace; letter-spacing: -.02em;
+}
+.arclim-info-delta.up   { color: #c1372b; background: rgba(193,55,43,.10); }
+.arclim-info-delta.down { color: #2c6fb5; background: rgba(44,111,181,.10); }
+.arclim-info-delta.neutral { color: var(--muted2); background: rgba(0,0,0,.04); }
+
+.arclim-info-unit {
+    font-size: 9px; color: var(--muted2);
+    text-align: right; margin-top: 8px;
+    font-family: 'DM Mono',monospace;
+}
