@@ -60,7 +60,8 @@
         if (_geoCache[key]) return Promise.resolve(_geoCache[key]);
 
         var attr = '$CLIMA$' + indId + '$annual$' + scenario;
-        var url  = ARCLIM_BASE + '/datos/comunas/geojson/?attributes=NOM_COMUNA,arclim_id,' + encodeURIComponent(attr);
+        /* No encodeURIComponent: ARClim espera '$' literal, no '%24' */
+        var url  = ARCLIM_BASE + '/datos/comunas/geojson/?attributes=NOM_COMUNA,arclim_id,' + attr;
 
         return fetch(url)
             .then(function (r) {
@@ -83,7 +84,8 @@
         if (_tabCache[key]) return Promise.resolve(_tabCache[key]);
 
         var attr = '$CLIMA$' + indId + '$annual$' + scenario;
-        var url  = ARCLIM_BASE + '/datos/comunas/json/?attributes=' + encodeURIComponent(attr);
+        /* No encodeURIComponent: ARClim espera '$' literal, no '%24' */
+        var url  = ARCLIM_BASE + '/datos/comunas/json/?attributes=' + attr;
 
         return fetch(url)
             .then(function (r) {
