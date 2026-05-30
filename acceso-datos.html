@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=13">
+    <link rel="stylesheet" href="css/workspace.css?v=14">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -38,6 +38,7 @@
         <button class="tab-btn"        id="tab-btn-bosque"        onclick="switchWorkspaceTab('bosque')">Bosque</button>
         <button class="tab-btn"        id="tab-btn-biodiversidad" onclick="switchWorkspaceTab('biodiversidad')">Biodiversidad</button>
         <button class="tab-btn"        id="tab-btn-clima"         onclick="switchWorkspaceTab('clima')">Clima</button>
+        <button class="tab-btn"        id="tab-btn-riesgos"       onclick="switchWorkspaceTab('riesgos'); arclimLoadTab()">Riesgos</button>
     </div>
 
     <div class="topbar-right" style="display:flex;align-items:center;gap:8px;">
@@ -189,6 +190,9 @@
 
     <!-- BIODIVERSIDAD IFRAME -->
     <iframe id="iframe-biodiversidad" class="ws-iframe-wrapper" src=""></iframe>
+
+    <!-- LEYENDA CHOROPLETH ARCLIM (flotante sobre el mapa) -->
+    <div id="arclim-legend" class="arclim-legend" style="display:none;"></div>
 
     <!-- ── LEFT PANEL ── -->
     <aside class="left-panel" id="ws-left-panel">
@@ -1007,6 +1011,44 @@
             </div>
         </div>
 
+        <!-- ═══════════════════════════════════════
+             TAB RIESGOS: Proyecciones ARClim
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content" id="tab-riesgos-content">
+
+            <!-- Encabezado: comuna detectada -->
+            <div class="arclim-header" id="arclim-comuna-header">
+                <span class="arclim-no-zone">
+                    <i class="fas fa-draw-polygon" style="margin-right:5px;opacity:.45;"></i>
+                    Define una zona de estudio primero.
+                </span>
+            </div>
+
+            <!-- Subtítulo meta -->
+            <div class="arclim-meta-row">
+                <span class="arclim-meta-label">Modelos CR2 · 5 km · Chile</span>
+                <span class="arclim-meta-period">1980 – 2010 → ~2050</span>
+            </div>
+
+            <!-- Spinner de carga -->
+            <div id="arclim-loading" class="arclim-loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Cargando proyecciones climáticas…</span>
+            </div>
+
+            <!-- Cards de indicadores (generadas dinámicamente) -->
+            <div id="arclim-indicators-body"></div>
+
+            <!-- Pie de fuente -->
+            <div class="arclim-footer">
+                <a href="https://arclim.mma.gob.cl" target="_blank" class="arclim-source-link">
+                    <i class="fas fa-external-link-alt" style="font-size:8px;margin-right:3px;"></i>
+                    Fuente: Atlas de Riesgos Climáticos · MMA / CR2 · PUC
+                </a>
+            </div>
+
+        </div><!-- /tab-riesgos-content -->
+
     </aside>
 
     <!-- ── MINI PANEL (bottom-right · Leyenda + Bosque) ── -->
@@ -1213,6 +1255,7 @@
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=5"></script>
 <script src="js/workspace-simbio.js?v=1"></script>
+<script src="js/workspace-arclim.js?v=1"></script>
 
 <!-- CONTACTO -->
 <script>

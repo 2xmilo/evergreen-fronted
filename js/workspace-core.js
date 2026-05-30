@@ -642,7 +642,8 @@ var TAB_META = {
     'elevacion':     { icon: 'fas fa-mountain',   title: 'Elevación' },
     'bosque':        { icon: 'fas fa-tree',        title: 'Bosque' },
     'biodiversidad': { icon: 'fas fa-leaf',        title: 'Biodiversidad' },
-    'clima':         { icon: 'fas fa-cloud',       title: 'Clima' }
+    'clima':         { icon: 'fas fa-cloud',              title: 'Clima' },
+    'riesgos':       { icon: 'fas fa-exclamation-triangle', title: 'Riesgos Climáticos' }
 };
 
 // Cambiar de Módulo (Tab)

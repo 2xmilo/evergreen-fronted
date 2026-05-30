@@ -1694,3 +1694,130 @@ body.workspace-mode {
 .bio-table-footer { padding: 8px 16px; border-top: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .bio-table-count { font-size: 11px; color: #6b7280; }
 .bio-export-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); background: transparent; color: #6b7280; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-family: inherit; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   ARCLIM — TAB RIESGOS CLIMÁTICOS
+   Fuente: ARClim · MMA / CR2 · UC
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Header: comuna detectada ──────────────────────────────────────── */
+.arclim-header {
+    display: flex; align-items: center; gap: 7px;
+    padding: 11px 16px 9px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    min-height: 38px;
+}
+.arclim-comuna-name {
+    font-size: 13px; font-weight: 600; color: var(--fg);
+    flex: 1; letter-spacing: -.01em;
+}
+.arclim-source-badge {
+    font-size: 9px; font-weight: 600; letter-spacing: .4px;
+    color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08); padding: 2px 7px;
+    border-radius: 3px; text-transform: uppercase;
+    text-decoration: none; transition: color .12s, border-color .12s;
+}
+.arclim-source-badge:hover { color: var(--accent); border-color: rgba(106,170,53,0.3); }
+.arclim-no-zone { font-size: 11px; color: var(--muted2); }
+
+/* ── Meta row ──────────────────────────────────────────────────────── */
+.arclim-meta-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 16px 6px; font-size: 9px; color: var(--muted2);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.arclim-meta-period { font-family: 'DM Mono',monospace; font-size: 9px; color: rgba(255,255,255,0.2); }
+.arclim-meta-label  { font-size: 9px; color: rgba(255,255,255,0.2); }
+
+/* ── Loading ───────────────────────────────────────────────────────── */
+.arclim-loading {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 22px; font-size: 11px; color: var(--muted2);
+}
+
+/* ── Grupo label ───────────────────────────────────────────────────── */
+.arclim-group-label {
+    padding: 10px 16px 3px; font-size: 8.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .6px;
+    color: rgba(255,255,255,0.22);
+    border-top: 1px solid rgba(255,255,255,0.04);
+}
+.arclim-group-label:first-child { border-top: none; padding-top: 8px; }
+
+/* ── Card de indicador ─────────────────────────────────────────────── */
+.arclim-ind-card {
+    margin: 3px 10px; padding: 9px 11px 8px;
+    background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.055);
+    border-radius: 8px; cursor: default;
+    transition: background .12s, border-color .12s;
+}
+.arclim-ind-card:hover { background: rgba(106,170,53,0.05); border-color: rgba(106,170,53,0.15); }
+.arclim-card-active { background: rgba(106,170,53,0.07) !important; border-color: rgba(106,170,53,0.3) !important; }
+
+.arclim-ind-head { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.arclim-ind-icon { font-size: 10px; color: var(--accent); width: 14px; text-align: center; flex-shrink: 0; }
+.arclim-ind-label { font-size: 11px; font-weight: 600; color: var(--fg); flex: 1; }
+
+.arclim-map-btn {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+    color: rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 6px;
+    font-size: 9px; cursor: pointer; transition: all .12s; flex-shrink: 0;
+}
+.arclim-map-btn:hover { background: rgba(106,170,53,0.12); border-color: rgba(106,170,53,0.3); color: var(--accent); }
+
+.arclim-ind-desc { font-size: 9px; color: var(--muted2); margin-bottom: 8px; line-height: 1.45; }
+
+.arclim-ind-values { display: flex; align-items: center; gap: 6px; }
+.arclim-val-block { text-align: center; min-width: 44px; }
+.arclim-val-num {
+    display: block; font-size: 17px; font-weight: 700;
+    font-family: 'DM Mono',monospace; color: rgba(255,255,255,0.85);
+    line-height: 1; letter-spacing: -.02em;
+}
+.arclim-val-block--future .arclim-val-num { color: #fd8d3c; }
+.arclim-val-lbl {
+    display: block; font-size: 7.5px; color: var(--muted2);
+    text-transform: uppercase; letter-spacing: .3px; margin-top: 3px;
+}
+
+.arclim-arrow { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.2); margin: 0 1px; line-height: 1; }
+.arclim-arrow.up   { color: #f03b20; }
+.arclim-arrow.down { color: #3182bd; }
+
+.arclim-delta {
+    font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+    margin-left: auto; font-family: 'DM Mono',monospace; letter-spacing: -.02em;
+}
+.arclim-delta.up      { color: #f03b20; background: rgba(240,59,32,.1); }
+.arclim-delta.down    { color: #3182bd; background: rgba(49,130,189,.1); }
+.arclim-delta.neutral { color: var(--muted2); background: rgba(255,255,255,.05); }
+
+.arclim-ind-unit { font-size: 8px; color: rgba(255,255,255,0.2); text-align: right; margin-top: 4px; font-family: 'DM Mono',monospace; }
+
+/* ── Pie de fuente ──────────────────────────────────────────────────── */
+.arclim-footer { text-align: center; padding: 14px 0 8px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); }
+.arclim-source-link { font-size: 9px; color: rgba(255,255,255,0.2); text-decoration: none; transition: color .12s; }
+.arclim-source-link:hover { color: var(--accent); }
+
+/* ── Leyenda choropleth (flotante sobre el mapa) ────────────────────── */
+.arclim-legend {
+    position: absolute; bottom: 26px; right: 12px;
+    background: rgba(15,20,15,0.93); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 9px; padding: 11px 13px 10px; min-width: 148px;
+    z-index: 800; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.arclim-legend-close {
+    position: absolute; top: 5px; right: 7px;
+    background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.3); font-size: 9px; padding: 2px 4px; transition: color .12s;
+}
+.arclim-legend-close:hover { color: rgba(255,255,255,0.7); }
+.arclim-legend-title { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; padding-right: 16px; }
+.arclim-legend-period { font-size: 8.5px; color: rgba(255,255,255,0.25); margin-bottom: 8px; font-family: 'DM Mono',monospace; }
+.arclim-legend-items { display: flex; flex-direction: column; gap: 4px; }
+.arclim-legend-item  { display: flex; align-items: center; gap: 7px; }
+.arclim-legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.08); }
+.arclim-legend-label { font-size: 9px; color: rgba(255,255,255,0.5); font-family: 'DM Mono',monospace; letter-spacing: -.01em; }
