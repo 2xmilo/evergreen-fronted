@@ -8,9 +8,9 @@
     'use strict';
 
     /* Proxy Flask — evita CORS y el GeoJSON inestable de ARClim */
-    var API_BASE = (typeof BACKEND_URL !== 'undefined' && BACKEND_URL)
-        ? BACKEND_URL.replace(/\/$/, '')
-        : 'https://precipitacion-backend.onrender.com';
+    var API_BASE = (typeof API_URL !== 'undefined' && API_URL)
+        ? API_URL.replace(/\/$/, '')
+        : 'https://evergreen-backend-awv1.onrender.com';
 
     /* ── Catálogo de indicadores ────────────────────────────────────── */
     var INDICADORES = [
