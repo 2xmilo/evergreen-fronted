@@ -7,7 +7,10 @@
 (function () {
     'use strict';
 
-    var ARCLIM_BASE = 'https://arclim.mma.gob.cl/api';
+    /* Proxy Flask — evita CORS y el GeoJSON inestable de ARClim */
+    var API_BASE = (typeof BACKEND_URL !== 'undefined' && BACKEND_URL)
+        ? BACKEND_URL.replace(/\/$/, '')
+        : 'https://precipitacion-backend.onrender.com';
 
     /* ── Catálogo de indicadores ────────────────────────────────────── */
     var INDICADORES = [
@@ -59,18 +62,18 @@
         var key = indId + '_' + scenario;
         if (_geoCache[key]) return Promise.resolve(_geoCache[key]);
 
-        var attr = '$CLIMA$' + indId + '$annual$' + scenario;
-        /* No encodeURIComponent: ARClim espera '$' literal, no '%24' */
-        var url  = ARCLIM_BASE + '/datos/comunas/geojson/?attributes=NOM_COMUNA,arclim_id,' + attr;
+        var url = API_BASE + '/api/arclim/geojson?id=' + indId + '&scenario=' + scenario;
 
-        return fetch(url)
+        return fetch(url, { headers: _authHeaders() })
             .then(function (r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
             })
             .then(function (json) {
-                _geoCache[key] = json.data;
-                return json.data;
+                /* El proxy retorna el FeatureCollection dentro de json.data */
+                var fc = json.data || json;
+                _geoCache[key] = fc;
+                return fc;
             });
     }
 
@@ -83,25 +86,25 @@
         var key = 'tab_' + indId + '_' + scenario;
         if (_tabCache[key]) return Promise.resolve(_tabCache[key]);
 
-        var attr = '$CLIMA$' + indId + '$annual$' + scenario;
-        /* No encodeURIComponent: ARClim espera '$' literal, no '%24' */
-        var url  = ARCLIM_BASE + '/datos/comunas/json/?attributes=' + attr;
+        var url = API_BASE + '/api/arclim/indicador?id=' + indId + '&scenario=' + scenario;
 
-        return fetch(url)
+        return fetch(url, { headers: _authHeaders() })
             .then(function (r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
             })
             .then(function (json) {
-                var data   = json.data;
-                var result = {};
-                // data.index[i] = arclim_id, data.values[i] = [valor]
-                data.index.forEach(function (id, i) {
-                    result[String(id)] = data.values[i][0];
-                });
+                /* El proxy retorna {ok, data: {arclim_id: valor}} */
+                var result = json.data || {};
                 _tabCache[key] = result;
                 return result;
             });
+    }
+
+    /* Helper: headers de autenticación Supabase (igual que workspace-dmc.js) */
+    function _authHeaders() {
+        var token = (window._supabaseSession && window._supabaseSession.access_token) || '';
+        return token ? { 'Authorization': 'Bearer ' + token } : {};
     }
 
     /**
