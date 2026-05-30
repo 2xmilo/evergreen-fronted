@@ -1868,3 +1868,105 @@ body.workspace-mode {
     font-size: 10px; color: var(--muted);
     font-family: 'DM Mono',monospace; letter-spacing: -.01em;
 }
+
+/* ── Modal de Serie de Tiempo ─────────────────────────────────────── */
+.arclim-serie-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 4000;
+    background: rgba(15,20,15,0.78);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+    padding: 20px;
+}
+.arclim-serie-overlay.open { display: flex; }
+
+.arclim-serie-modal {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 12px 50px rgba(0,0,0,0.35);
+    width: 100%; max-width: 920px;
+    max-height: 90vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+
+.arclim-serie-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 18px 22px 12px;
+    border-bottom: 1px solid var(--panel-border);
+}
+.arclim-serie-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
+.arclim-serie-sub   { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+.arclim-serie-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.08); background: #fff;
+    cursor: pointer; font-size: 14px; color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .12s; flex-shrink: 0; margin-left: 14px;
+}
+.arclim-serie-close:hover { background: var(--hover); color: var(--text); }
+
+.arclim-serie-controls {
+    display: flex; gap: 14px; padding: 12px 22px;
+    border-bottom: 1px solid var(--panel-border);
+    background: rgba(0,0,0,0.012);
+}
+.arclim-serie-ctrl { display: flex; flex-direction: column; gap: 4px; }
+.arclim-serie-ctrl label {
+    font-size: 9px; font-weight: 600; color: var(--muted2);
+    text-transform: uppercase; letter-spacing: .5px;
+}
+.arclim-serie-ctrl select {
+    border: 1px solid rgba(0,0,0,0.12); border-radius: 6px;
+    padding: 5px 9px; font-size: 12px; color: var(--text);
+    background: #fff; font-family: inherit; cursor: pointer;
+    transition: border-color .12s;
+}
+.arclim-serie-ctrl select:focus { outline: none; border-color: var(--accent); }
+.arclim-serie-ctrl select:hover { border-color: rgba(0,0,0,0.25); }
+
+.arclim-serie-canvas-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 360px;
+    padding: 16px 22px;
+    background: #fff;
+}
+.arclim-serie-canvas-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+    transition: opacity .2s;
+}
+.arclim-serie-loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    gap: 9px; font-size: 12px; color: var(--muted);
+    background: rgba(255,255,255,0.85);
+    z-index: 1;
+}
+.arclim-serie-loading i { color: var(--accent); font-size: 14px; }
+
+.arclim-serie-footer {
+    padding: 12px 22px 16px;
+    border-top: 1px solid var(--panel-border);
+    background: rgba(0,0,0,0.012);
+}
+.arclim-serie-legend {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    font-size: 11px; color: var(--muted);
+    margin-bottom: 6px;
+}
+.arclim-serie-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.arclim-serie-dot {
+    width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+}
+.arclim-serie-band {
+    width: 14px; height: 8px; border-radius: 2px; display: inline-block;
+}
+.arclim-serie-source {
+    font-size: 9.5px; color: var(--muted2);
+    font-family: 'DM Mono',monospace; letter-spacing: -.01em;
+}
+
+/* Botón de serie dentro de la card (chart icon) */
+.arclim-serie-btn { margin-right: 4px; }

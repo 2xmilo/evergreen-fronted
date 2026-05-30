@@ -50,6 +50,11 @@
     var _choroplethLayer = null;
     var _activeIndId     = null;
 
+    /* ── Estado actual de la comuna detectada ───────────────────────── */
+    var _currentArclimId  = null;
+    var _currentNombre    = '';
+    var _serieChart       = null;
+
     /* ================================================================
        FETCH HELPERS
        ================================================================ */
@@ -381,6 +386,9 @@
             html += '  <div class="arclim-ind-head">';
             html += '    <i class="fas ' + ind.icono + ' arclim-ind-icon"></i>';
             html += '    <span class="arclim-ind-label">' + ind.label + '</span>';
+            html += '    <button class="arclim-map-btn arclim-serie-btn" onclick="event.stopPropagation(); arclimShowSerie(\'' + ind.id + '\')" title="Ver serie de tiempo 1970-2069">';
+            html += '      <i class="fas fa-chart-line"></i>';
+            html += '    </button>';
             html += '    <button class="arclim-map-btn" onclick="event.stopPropagation(); arclimShowOnMap(\'' + ind.id + '\')" title="Ver distribución en mapa">';
             html += '      <i class="fas fa-map"></i>';
             html += '    </button>';
@@ -449,6 +457,10 @@
                 var nomFmt   = nom.charAt(0) + nom.slice(1).toLowerCase();
                 var arclimId = String(comuna.arclim_id);
 
+                /* Guardar estado para que arclimShowSerie() pueda usarlo */
+                _currentArclimId = arclimId;
+                _currentNombre   = nomFmt;
+
                 _setHeader(
                     '<i class="fas fa-map-marker-alt" style="color:var(--accent);font-size:11px;"></i>' +
                     '<span class="arclim-comuna-name">' + nomFmt + '</span>' +
@@ -488,6 +500,234 @@
     };
 
     /* ================================================================
+       SERIE DE TIEMPO — Modal con Chart.js
+       ================================================================ */
+
+    function _ensureSerieModal() {
+        if (document.getElementById('arclim-serie-overlay')) return;
+        var html =
+            '<div id="arclim-serie-overlay" class="arclim-serie-overlay" onclick="if(event.target===this)arclimCloseSerie()">' +
+            '  <div class="arclim-serie-modal">' +
+            '    <div class="arclim-serie-header">' +
+            '      <div>' +
+            '        <div class="arclim-serie-title" id="arclim-serie-title">—</div>' +
+            '        <div class="arclim-serie-sub" id="arclim-serie-sub">—</div>' +
+            '      </div>' +
+            '      <button class="arclim-serie-close" onclick="arclimCloseSerie()" title="Cerrar">' +
+            '        <i class="fas fa-times"></i>' +
+            '      </button>' +
+            '    </div>' +
+            '    <div class="arclim-serie-controls">' +
+            '      <div class="arclim-serie-ctrl">' +
+            '        <label>Escenario</label>' +
+            '        <select id="arclim-serie-scenario" onchange="arclimRefetchSerie()">' +
+            '          <option value="ssp585">SSP5-8.5 (alto)</option>' +
+            '          <option value="ssp245">SSP2-4.5 (medio)</option>' +
+            '        </select>' +
+            '      </div>' +
+            '      <div class="arclim-serie-ctrl">' +
+            '        <label>Estación</label>' +
+            '        <select id="arclim-serie-season" onchange="arclimRefetchSerie()">' +
+            '          <option value="annual">Anual</option>' +
+            '          <option value="djf">Verano (DEF)</option>' +
+            '          <option value="mam">Otoño (MAM)</option>' +
+            '          <option value="jja">Invierno (JJA)</option>' +
+            '          <option value="son">Primavera (SON)</option>' +
+            '        </select>' +
+            '      </div>' +
+            '    </div>' +
+            '    <div class="arclim-serie-canvas-wrap">' +
+            '      <div id="arclim-serie-loading" class="arclim-serie-loading">' +
+            '        <i class="fas fa-spinner fa-spin"></i> Cargando serie de tiempo…' +
+            '      </div>' +
+            '      <canvas id="arclim-serie-canvas"></canvas>' +
+            '    </div>' +
+            '    <div class="arclim-serie-footer">' +
+            '      <div class="arclim-serie-legend">' +
+            '        <span><span class="arclim-serie-dot" style="background:#e74c3c;"></span>Promedio simulaciones</span>' +
+            '        <span><span class="arclim-serie-dot" style="background:rgba(70,130,180,0.4);"></span>Modelos individuales</span>' +
+            '        <span><span class="arclim-serie-band" style="background:rgba(173,200,225,0.5);"></span>Período histórico</span>' +
+            '        <span><span class="arclim-serie-band" style="background:rgba(245,200,160,0.6);"></span>Período futuro</span>' +
+            '      </div>' +
+            '      <div class="arclim-serie-source">Fuente: ARClim · MMA / CR2 · 20+ modelos CMIP6 a 5 km</div>' +
+            '    </div>' +
+            '  </div>' +
+            '</div>';
+        var div = document.createElement('div');
+        div.innerHTML = html;
+        document.body.appendChild(div.firstChild);
+    }
+
+    function _renderSerieChart(data, cfg) {
+        var canvas = document.getElementById('arclim-serie-canvas');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        /* Registrar plugin de annotation si está disponible */
+        if (window['chartjs-plugin-annotation'] && !Chart.registry.plugins.get('annotation')) {
+            Chart.register(window['chartjs-plugin-annotation']);
+        }
+
+        if (_serieChart) { _serieChart.destroy(); _serieChart = null; }
+
+        var years    = data.years || [];
+        var mean     = data.mean  || [];
+        var series   = data.series || [];
+
+        var datasets = [];
+
+        /* Simulaciones individuales — líneas finas semitransparentes */
+        series.forEach(function (s) {
+            datasets.push({
+                data: s,
+                borderColor: 'rgba(70,130,180,0.28)',
+                borderWidth: 0.8,
+                pointRadius: 0,
+                pointHoverRadius: 0,
+                tension: 0.2,
+                fill: false,
+                order: 2,
+            });
+        });
+
+        /* Promedio — línea gruesa roja */
+        datasets.push({
+            label: 'Promedio simulaciones',
+            data: mean,
+            borderColor: '#e74c3c',
+            backgroundColor: '#e74c3c',
+            borderWidth: 2.2,
+            pointRadius: 1.8,
+            pointHoverRadius: 4,
+            tension: 0.15,
+            fill: false,
+            order: 1,
+        });
+
+        _serieChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: { labels: years, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function (items) { return 'Año ' + items[0].label; },
+                            label: function (ctx) {
+                                if (ctx.datasetIndex === datasets.length - 1) {
+                                    return 'Promedio: ' + Number(ctx.parsed.y).toFixed(1) + ' ' + cfg.unit;
+                                }
+                                return null;
+                            },
+                        },
+                    },
+                    /* Bandas de período histórico (1980-2010) y futuro (2035-2065) */
+                    annotation: {
+                        annotations: {
+                            histBand: {
+                                type: 'box',
+                                xMin: 10, xMax: 40,   /* 1980 → 2010 (index based) */
+                                backgroundColor: 'rgba(173,200,225,0.18)',
+                                borderColor: 'rgba(173,200,225,0.4)',
+                                borderWidth: 0,
+                            },
+                            futBand: {
+                                type: 'box',
+                                xMin: 65, xMax: 95,   /* 2035 → 2065 */
+                                backgroundColor: 'rgba(245,200,160,0.18)',
+                                borderColor: 'rgba(245,200,160,0.4)',
+                                borderWidth: 0,
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            maxTicksLimit: 10,
+                            callback: function (val, idx) {
+                                var y = years[idx];
+                                return y ? Math.round(y) : '';
+                            },
+                            color: '#9ca3af', font: { size: 10 },
+                        },
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                    },
+                    y: {
+                        title: { display: true, text: cfg.unit, color: '#6b7280', font: { size: 10 } },
+                        ticks: { color: '#9ca3af', font: { size: 10 } },
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                    },
+                },
+            },
+        });
+    }
+
+    function _loadSerie(indId) {
+        if (!_currentArclimId) {
+            console.warn('[ARClim] No hay comuna detectada');
+            return;
+        }
+        var cfg = INDICADORES.find(function (i) { return i.id === indId; });
+        if (!cfg) return;
+
+        _ensureSerieModal();
+        document.getElementById('arclim-serie-overlay').classList.add('open');
+
+        var titleEl   = document.getElementById('arclim-serie-title');
+        var subEl     = document.getElementById('arclim-serie-sub');
+        var loadingEl = document.getElementById('arclim-serie-loading');
+        var canvas    = document.getElementById('arclim-serie-canvas');
+
+        titleEl.textContent = cfg.label + ' — ' + _currentNombre;
+        subEl.textContent   = cfg.desc;
+        loadingEl.style.display = 'flex';
+        canvas.style.opacity = 0;
+
+        var scenario = document.getElementById('arclim-serie-scenario').value;
+        var season   = document.getElementById('arclim-serie-season').value;
+
+        var url = API_BASE + '/api/arclim/serie?id=' + indId +
+                  '&key=' + _currentArclimId +
+                  '&scenario=' + scenario +
+                  '&season=' + season;
+
+        /* Guardar en dataset para refetch */
+        document.getElementById('arclim-serie-overlay').dataset.indId = indId;
+
+        fetch(url, { headers: _authHeaders() })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                loadingEl.style.display = 'none';
+                canvas.style.opacity = 1;
+                _renderSerieChart(data, cfg);
+            })
+            .catch(function (e) {
+                loadingEl.innerHTML = '<i class="fas fa-times-circle" style="color:#e74c3c;"></i> Error al cargar la serie: ' + e.message;
+                console.warn('[ARClim serie]', e);
+            });
+    }
+
+    window.arclimShowSerie = function (indId) { _loadSerie(indId); };
+
+    window.arclimCloseSerie = function () {
+        var overlay = document.getElementById('arclim-serie-overlay');
+        if (overlay) overlay.classList.remove('open');
+        if (_serieChart) { _serieChart.destroy(); _serieChart = null; }
+    };
+
+    window.arclimRefetchSerie = function () {
+        var overlay = document.getElementById('arclim-serie-overlay');
+        var indId   = overlay && overlay.dataset.indId;
+        if (indId) _loadSerie(indId);
+    };
+
+    /* ================================================================
        ENGANCHE AL CAMBIO DE ZONA
        ================================================================ */
 
@@ -497,8 +737,11 @@
             var _orig = updateZoneUI;
             updateZoneUI = function () {
                 _orig.apply(this, arguments);
-                /* Limpiar choropleth al cambiar zona */
+                /* Limpiar choropleth y estado al cambiar zona */
                 _removeChoropleth();
+                _currentArclimId = null;
+                _currentNombre   = '';
+                if (typeof window.arclimCloseSerie === 'function') window.arclimCloseSerie();
                 /* Recargar panel si el tab está activo */
                 var tabContent = document.getElementById('tab-riesgos-content');
                 if (tabContent && tabContent.classList.contains('active')) {
