@@ -320,31 +320,128 @@ nav.scrolled {
     transform: rotate(45deg) scale(1.1);
 }
 
-.mobile-nav-actions {
+/* ── HAMBURGER BUTTON ── */
+.mobile-nav-toggle {
     display: none;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 38px;
+    height: 38px;
+    background: transparent;
+    border: 1px solid var(--white-10);
+    border-radius: 8px;
+    padding: 0;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+}
+.mobile-nav-toggle:hover {
+    border-color: rgba(200, 168, 130, 0.4);
+    background: rgba(200, 168, 130, 0.06);
+}
+.mobile-nav-toggle span {
+    display: block;
+    width: 18px;
+    height: 1.5px;
+    background: var(--white);
+    margin: 0 auto;
+    border-radius: 2px;
+    transition: transform .25s ease, opacity .2s ease;
+}
+.mobile-nav-toggle.active span:nth-child(1) {
+    transform: translateY(6.5px) rotate(45deg);
+}
+.mobile-nav-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+.mobile-nav-toggle.active span:nth-child(3) {
+    transform: translateY(-6.5px) rotate(-45deg);
 }
 
-.mobile-nav-actions a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 36px;
-    padding: 0 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(244, 247, 241, 0.16);
-    background: rgba(12, 24, 12, 0.72);
+/* ── MOBILE DRAWER ── */
+.mobile-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .25s ease;
+}
+.mobile-drawer.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+.mobile-drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(14, 26, 14, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.mobile-drawer-panel {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 82%;
+    max-width: 340px;
+    background: var(--green-900);
+    border-left: 1px solid var(--glass-brd);
+    padding: 70px 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: -8px 0 30px rgba(0,0,0,0.4);
+    transform: translateX(100%);
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.mobile-drawer.open .mobile-drawer-panel {
+    transform: translateX(0);
+}
+.mobile-drawer-close {
+    position: absolute;
+    top: 18px; right: 18px;
+    background: transparent;
+    border: 1px solid var(--white-10);
+    border-radius: 50%;
+    width: 38px; height: 38px;
     color: var(--white);
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color .2s, background .2s;
 }
-
-.mobile-nav-actions a:last-child {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--bg);
+.mobile-drawer-close:hover {
+    border-color: rgba(200, 168, 130, 0.5);
+    background: rgba(200, 168, 130, 0.08);
+}
+.mobile-drawer-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 4px;
+    color: var(--white);
+    font-size: 16px;
+    font-weight: 400;
+    text-decoration: none;
+    border-bottom: 1px solid var(--white-06);
+    transition: color .2s, padding-left .2s;
+}
+.mobile-drawer-link:hover {
+    color: var(--accent);
+    padding-left: 6px;
+}
+.mobile-drawer-link--accent {
+    color: var(--accent);
+    font-weight: 500;
+}
+.mobile-drawer-link--accent:hover {
+    color: var(--white);
+}
+.mobile-drawer-divider {
+    height: 1px;
+    background: var(--white-10);
+    margin: 16px 0 8px;
 }
 
 .nav-pill {
@@ -1332,12 +1429,45 @@ footer {
         display: none;
     }
 
-    .mobile-nav-actions {
+    .mobile-nav-toggle {
         display: flex;
     }
 
     section {
-        padding: 80px 0;
+        padding: 56px 0;
+    }
+
+    /* Background-attachment: fixed causa lag/glitches en Safari mobile.
+       En mobile dejamos scroll normal. */
+    .services {
+        background-attachment: scroll;
+    }
+
+    /* Hero: padding lateral + altura adaptativa */
+    .hero {
+        height: auto;
+        min-height: 88vh;
+        padding-top: 90px;
+    }
+
+    .hero-inner {
+        padding: 0 24px 48px !important;
+    }
+
+    /* Cards más compactas */
+    .svc-card {
+        min-height: auto;
+        padding: 32px 24px;
+    }
+
+    .proj-card-body {
+        padding: 22px 22px;
+    }
+
+    /* Hero badges en mobile: wrap natural */
+    .hero-badges {
+        flex-wrap: wrap;
+        gap: 8px !important;
     }
 
     .services-grid {
@@ -1392,5 +1522,80 @@ footer {
     /* News grid */
     .news-grid {
         grid-template-columns: 1fr;
+    }
+
+    /* Services grid: prevenir scroll horizontal en mobiles <350px */
+    .services-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    /* Footer: forzar column override del inline style */
+    footer .container {
+        flex-direction: column !important;
+        gap: 16px !important;
+        text-align: center;
+    }
+    .foot-brand, .foot-copy, .foot-links {
+        text-align: center;
+    }
+}
+
+/* Mobile chico (iPhone SE, Galaxy A serie, <480px) */
+@media (max-width: 480px) {
+    nav {
+        padding: 14px 18px;
+    }
+    .nav-brand img {
+        height: 36px !important;
+    }
+    section {
+        padding: 44px 0;
+    }
+    .container {
+        padding: 0 1.1rem;
+    }
+    .hero {
+        min-height: 84vh;
+        padding-top: 84px;
+    }
+    .hero-inner {
+        padding: 0 18px 36px !important;
+    }
+    h1.hero-title {
+        font-size: 2.1rem;
+        line-height: 1.05;
+    }
+    .hero-sub {
+        font-size: 14.5px;
+        line-height: 1.55;
+    }
+    .hero-cta {
+        padding: 12px 22px !important;
+        font-size: 14px;
+    }
+    .svc-card {
+        padding: 24px 20px;
+        border-radius: 14px;
+    }
+    .svc-name {
+        font-size: 17px !important;
+    }
+    .svc-desc {
+        font-size: 13px !important;
+        line-height: 1.55;
+    }
+    h2.title {
+        font-size: 28px;
+    }
+    .subtitle {
+        font-size: 15px;
+    }
+    .mobile-drawer-panel {
+        padding: 62px 22px 24px;
+    }
+    .mobile-drawer-link {
+        font-size: 15px;
+        padding: 12px 4px;
     }
 }

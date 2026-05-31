@@ -77,11 +77,38 @@
                     </a>
                 </li>
             </ul>
-            <div class="mobile-nav-actions">
-                <a href="lab.html">Monitor Pro</a>
-                <a href="login.html">Workspace</a>
-            </div>
+            <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Abrir menú" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </nav>
+
+        <!-- Mobile drawer -->
+        <div class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+            <div class="mobile-drawer-backdrop" onclick="closeMobileDrawer()"></div>
+            <nav class="mobile-drawer-panel">
+                <button class="mobile-drawer-close" onclick="closeMobileDrawer()" aria-label="Cerrar menú">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22">
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                    </svg>
+                </button>
+                <a href="#servicios" class="mobile-drawer-link" onclick="closeMobileDrawer()">Servicios</a>
+                <a href="#proyectos" class="mobile-drawer-link" onclick="closeMobileDrawer()">Proyectos</a>
+                <a href="#enfoque" class="mobile-drawer-link" onclick="closeMobileDrawer()">Enfoque</a>
+                <a href="#noticias" class="mobile-drawer-link" onclick="closeMobileDrawer()">Noticias</a>
+                <a href="#contacto" class="mobile-drawer-link" onclick="closeMobileDrawer()">Contacto</a>
+                <div class="mobile-drawer-divider"></div>
+                <a href="lab.html" class="mobile-drawer-link mobile-drawer-link--accent">
+                    Monitor Pro
+                    <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+                        <path d="M8 1L10 6L15 8L10 10L8 15L6 10L1 8L6 6z"/>
+                    </svg>
+                </a>
+                <a href="login.html" class="mobile-drawer-link mobile-drawer-link--accent">Workspace →</a>
+            </nav>
+        </div>
 
         <!-- ── HERO ── -->
         <section class="hero" id="inicio">
@@ -484,6 +511,41 @@
             entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('v'); });
         }, { threshold: 0.10 });
         document.querySelectorAll('.r').forEach(el => obs.observe(el));
+
+        // ── Mobile drawer ──
+        const mobileToggle = document.getElementById('mobile-nav-toggle');
+        const mobileDrawer = document.getElementById('mobile-drawer');
+
+        function openMobileDrawer() {
+            if (!mobileDrawer || !mobileToggle) return;
+            mobileDrawer.classList.add('open');
+            mobileDrawer.setAttribute('aria-hidden', 'false');
+            mobileToggle.classList.add('active');
+            mobileToggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeMobileDrawer() {
+            if (!mobileDrawer || !mobileToggle) return;
+            mobileDrawer.classList.remove('open');
+            mobileDrawer.setAttribute('aria-hidden', 'true');
+            mobileToggle.classList.remove('active');
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+        window.closeMobileDrawer = closeMobileDrawer;
+
+        if (mobileToggle) {
+            mobileToggle.addEventListener('click', () => {
+                if (mobileDrawer.classList.contains('open')) closeMobileDrawer();
+                else openMobileDrawer();
+            });
+        }
+        // Cerrar drawer con tecla Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && mobileDrawer && mobileDrawer.classList.contains('open')) {
+                closeMobileDrawer();
+            }
+        });
     </script>
 
     <script src="js/main.js"></script>
