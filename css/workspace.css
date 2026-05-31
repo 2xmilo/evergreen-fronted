@@ -2110,17 +2110,16 @@ body.workspace-mode {
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 2px; height: 36px;
-    border-radius: 1px;
-    background: rgba(0,0,0,0.12);
-    transition: background .15s, height .15s;
-    opacity: 0;
+    width: 3px; height: 40px;
+    border-radius: 2px;
+    background: rgba(106,170,53,0.35);  /* accent suave siempre visible */
+    transition: background .15s, height .15s, width .15s;
 }
 .panel-resize-handle:hover::after,
 .panel-resize-handle.active::after {
-    opacity: 1;
     background: var(--accent);
-    height: 60px;
+    height: 64px;
+    width: 4px;
 }
 .panel-resize-handle:hover,
 .panel-resize-handle.active {
