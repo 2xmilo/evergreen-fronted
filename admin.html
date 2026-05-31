@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Evergreen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body style="visibility:hidden;">
+
+    <!-- ── Header ── -->
+    <header class="adm-header">
+        <div class="adm-brand">
+            <img src="img/logo3.png" alt="Evergreen">
+            <div class="adm-brand-text">
+                <span class="adm-brand-name">Evergreen</span>
+                <span class="adm-brand-sub">Panel de Administración</span>
+            </div>
+        </div>
+        <div class="adm-header-right">
+            <span class="adm-user-email" id="adm-email"></span>
+            <a href="acceso-datos.html" class="adm-monitor-btn">
+                <i class="fas fa-arrow-left" style="font-size:10px;"></i>
+                Monitor Pro
+            </a>
+        </div>
+    </header>
+
+    <!-- ── Contenido ── -->
+    <div class="adm-container">
+
+        <h1 class="adm-page-title">Gestión de Usuarios</h1>
+        <p class="adm-page-sub">Administra planes, accesos y estado de los usuarios del Monitor Pro.</p>
+
+        <!-- Stats -->
+        <div class="adm-stats">
+            <div class="adm-stat-card">
+                <span class="adm-stat-val" id="stat-total">—</span>
+                <span class="adm-stat-lbl">Total usuarios</span>
+            </div>
+            <div class="adm-stat-card accent">
+                <span class="adm-stat-val" id="stat-active">—</span>
+                <span class="adm-stat-lbl">Activos esta semana</span>
+            </div>
+            <div class="adm-stat-card">
+                <span class="adm-stat-val" id="stat-free">—</span>
+                <span class="adm-stat-lbl">Plan Free</span>
+            </div>
+            <div class="adm-stat-card pro">
+                <span class="adm-stat-val" id="stat-pro">—</span>
+                <span class="adm-stat-lbl">Plan Pro</span>
+            </div>
+            <div class="adm-stat-card ent">
+                <span class="adm-stat-val" id="stat-enterprise">—</span>
+                <span class="adm-stat-lbl">Enterprise</span>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="adm-table-card">
+            <div class="adm-table-header">
+                <span class="adm-table-title">
+                    <i class="fas fa-users" style="color:#6AAA35;margin-right:7px;font-size:13px;"></i>
+                    Usuarios registrados
+                </span>
+                <button class="adm-refresh-btn" onclick="fetchUsers()">
+                    <i class="fas fa-sync-alt" style="font-size:10px;"></i>
+                    Actualizar
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div id="adm-loading" class="adm-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                Cargando usuarios…
+            </div>
+
+            <!-- Tabla real -->
+            <div id="adm-table-wrap" style="display:none;">
+                <div class="adm-table-wrap">
+                    <table class="adm-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Plan</th>
+                                <th>Estado</th>
+                                <th>Último acceso</th>
+                                <th style="text-align:center;">Zonas</th>
+                                <th style="text-align:center;">Análisis</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adm-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /container -->
+
+    <!-- Toast -->
+    <div id="adm-toast"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/admin.js"></script>
+
+</body>
+</html>

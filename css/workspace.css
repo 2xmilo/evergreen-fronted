@@ -2188,17 +2188,15 @@ body.workspace-mode {
 }
 .um-trigger.open .um-trigger-chev { transform: rotate(180deg); }
 
-/* Dropdown */
+/* Dropdown — position:fixed para salir del stacking context del topbar */
 .um-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
+    position: fixed;
     width: 280px;
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
     border: 1px solid rgba(0,0,0,0.08);
-    z-index: 1000;
+    z-index: 9999;
     overflow: hidden;
     animation: um-in .15s ease;
 }

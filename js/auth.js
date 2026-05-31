@@ -8,7 +8,7 @@ window._sbUserEmail = null;
 window._sbUserPlan  = 'free';
 window._sbUserZones = [];
 
-var PLAN_LIMITS = { 'free': 1, 'pro': 3, 'admin': Infinity };
+var PLAN_LIMITS = { 'free': 1, 'pro': 3, 'enterprise': Infinity, 'admin': Infinity };
 
 async function getBackendAuthHeaders(baseHeaders) {
     var headers = Object.assign({}, baseHeaders || {});
@@ -379,3 +379,139 @@ async function logoutUser() {
     window._sbUserZones = [];
     window.location.href = 'login.html';
 }
+
+/* ── User Menu ─────────────────────────────────────────────────────────── */
+
+var PLAN_FEATURES = {
+    free: {
+        label: 'Free',
+        features: [
+            '1 zona de estudio',
+            'Vegetación, Agua y Elevación',
+            'Descarga de series climáticas',
+            'Biodiversidad GBIF',
+        ]
+    },
+    pro: {
+        label: 'Pro',
+        features: [
+            '3 zonas de estudio',
+            'Acceso total a todos los módulos',
+            'Capas SIMBIO y Riesgos ARClim',
+            'Estaciones DMC cercanas',
+            'Historial de mediciones ilimitado',
+        ]
+    },
+    enterprise: {
+        label: 'Enterprise',
+        features: [
+            'Zonas ilimitadas',
+            'Acceso total a todos los módulos',
+            'Soporte prioritario',
+            'Exportación avanzada de datos',
+            'Acceso API',
+        ]
+    },
+    admin: {
+        label: 'Admin',
+        features: [
+            'Zonas ilimitadas',
+            'Acceso total a todos los módulos',
+            'Panel de administración',
+            'Gestión de usuarios y planes',
+        ]
+    }
+};
+
+var _umOpen = false;
+var _umLoaded = false;
+
+async function toggleUserMenu() {
+    var dropdown = document.getElementById('user-menu-dropdown');
+    var trigger  = document.getElementById('user-menu-trigger');
+    if (!dropdown || !trigger) return;
+
+    _umOpen = !_umOpen;
+
+    if (_umOpen) {
+        // Calcular posición relativa al viewport (position:fixed)
+        var rect = trigger.getBoundingClientRect();
+        dropdown.style.top   = (rect.bottom + 6) + 'px';
+        dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+        dropdown.style.left  = 'auto';
+    }
+
+    dropdown.style.display = _umOpen ? 'block' : 'none';
+    trigger.classList.toggle('open', _umOpen);
+
+    if (_umOpen && !_umLoaded) {
+        await _renderUserMenu();
+        _umLoaded = true;
+    }
+}
+
+function closeUserMenu() {
+    var dropdown = document.getElementById('user-menu-dropdown');
+    var trigger  = document.getElementById('user-menu-trigger');
+    if (!_umOpen) return;
+    _umOpen = false;
+    if (dropdown) dropdown.style.display = 'none';
+    if (trigger)  trigger.classList.remove('open');
+}
+
+async function _renderUserMenu() {
+    var plan  = window._sbUserPlan  || 'free';
+    var email = window._sbUserEmail || '';
+
+    // Header
+    var emailEl = document.getElementById('um-header-email');
+    var badgeEl = document.getElementById('um-plan-badge');
+    if (emailEl) emailEl.textContent = email;
+    if (badgeEl) {
+        badgeEl.textContent = (PLAN_FEATURES[plan] || {}).label || plan;
+        badgeEl.className   = 'um-plan-badge ' + plan;
+    }
+
+    // Stats — zonas y ha desde globals ya cargados
+    var zones = (window._sbUserZones || []).length;
+    var ha    = (typeof WorkspaceState !== 'undefined' && WorkspaceState.zonaHa)
+        ? Number(WorkspaceState.zonaHa).toLocaleString('es-CL')
+        : '—';
+
+    var zonesEl = document.getElementById('um-stat-zones');
+    var haEl    = document.getElementById('um-stat-ha');
+    if (zonesEl) zonesEl.textContent = zones || '—';
+    if (haEl)    haEl.textContent    = ha;
+
+    // Análisis — consulta rápida a Supabase
+    var analysesEl = document.getElementById('um-stat-analyses');
+    if (analysesEl && _sb && window._sbUserId) {
+        try {
+            var r = await _sb.from('analysis_usage').select('id', { count: 'exact', head: true }).eq('user_id', window._sbUserId);
+            analysesEl.textContent = (r.count != null) ? r.count : '—';
+        } catch(e) { analysesEl.textContent = '—'; }
+    }
+
+    // Features del plan
+    var featEl = document.getElementById('um-features');
+    if (featEl) {
+        var feats = (PLAN_FEATURES[plan] || {}).features || [];
+        featEl.innerHTML = feats.map(function(f) {
+            return '<li>' + f + '</li>';
+        }).join('');
+    }
+
+    // Admin link — solo si es admin
+    var adminLink = document.getElementById('um-admin-link');
+    if (adminLink) adminLink.style.display = (plan === 'admin') ? 'flex' : 'none';
+}
+
+// Cerrar al hacer click fuera
+document.addEventListener('click', function(e) {
+    if (!_umOpen) return;
+    var trigger  = document.getElementById('user-menu-trigger');
+    var dropdown = document.getElementById('user-menu-dropdown');
+    if (!trigger || !dropdown) return;
+    if (trigger.contains(e.target) || dropdown.contains(e.target)) return;
+    closeUserMenu();
+});
