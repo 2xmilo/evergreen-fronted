@@ -1530,6 +1530,79 @@ footer {
         gap: 14px;
     }
 
+    /* Form: nombre/email en 1 columna en mobile (no apretarlos) */
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    /* iOS Safari hace zoom automático en inputs con font-size <16px.
+       Forzamos 16px en mobile para evitarlo. */
+    input, select, textarea {
+        font-size: 16px;
+        padding: 13px 16px;
+    }
+
+    /* Contact form: padding más compacto */
+    .contact-form {
+        padding: 28px 22px;
+        border-radius: 18px;
+    }
+
+    /* Pillars en mobile más compactos */
+    .pillar {
+        padding: 18px 18px;
+        gap: 14px;
+        grid-template-columns: 48px 1fr;
+    }
+    .pillar-num-box {
+        width: 40px; height: 40px;
+        font-size: 12px;
+    }
+    .pillar-title {
+        font-size: 16px;
+    }
+    .pillar-text {
+        font-size: 13.5px;
+        line-height: 1.65;
+    }
+
+    /* Contact items más compactos */
+    .ci {
+        padding: 16px 18px;
+        gap: 12px;
+    }
+    .ci-icon { width: 34px; height: 34px; }
+
+    /* Why quote */
+    .why-quote {
+        padding: 22px 24px;
+        border-radius: 16px;
+    }
+    .why-quote blockquote {
+        font-size: 17px;
+        margin-bottom: 16px;
+    }
+    .why-quote cite {
+        font-size: 22px;
+        letter-spacing: .08em;
+    }
+
+    /* Why grid: gap más razonable */
+    .why-inner {
+        gap: 40px !important;
+    }
+    .contact-inner {
+        gap: 36px !important;
+    }
+    .why-left .subtitle {
+        margin-bottom: 32px;
+    }
+    .contact-items {
+        margin-top: 28px;
+    }
+
     /* Footer: forzar column override del inline style */
     footer .container {
         flex-direction: column !important;
@@ -1538,6 +1611,11 @@ footer {
     }
     .foot-brand, .foot-copy, .foot-links {
         text-align: center;
+    }
+    .foot-links {
+        gap: 18px !important;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 }
 
@@ -1597,5 +1675,49 @@ footer {
     .mobile-drawer-link {
         font-size: 15px;
         padding: 12px 4px;
+    }
+
+    /* Contact form ultra-compacto en mobile chico */
+    .contact-form {
+        padding: 22px 16px;
+        border-radius: 14px;
+    }
+    .contact-form::before,
+    .contact-form::after {
+        display: none;  /* glow decorativos no aportan en mobile chico */
+    }
+    .form-btn {
+        padding: 14px;
+        font-size: 13.5px;
+    }
+
+    /* Pillars ultra-compactos */
+    .pillar {
+        padding: 16px 14px;
+        gap: 12px;
+        grid-template-columns: 42px 1fr;
+    }
+    .pillar-num-box {
+        width: 36px; height: 36px;
+        border-radius: 9px;
+    }
+
+    /* Projects: card body más compacta */
+    .proj-card-body {
+        padding: 18px 18px;
+    }
+    .proj-name {
+        font-size: 18px !important;
+    }
+    .proj-desc {
+        font-size: 13px !important;
+    }
+
+    /* Why quote más compacta */
+    .why-quote {
+        padding: 18px 18px;
+    }
+    .why-quote blockquote {
+        font-size: 15.5px;
     }
 }
