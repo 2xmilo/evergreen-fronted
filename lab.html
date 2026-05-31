@@ -142,33 +142,26 @@ body {
 }
 .hero-sub strong { color: var(--white); font-weight: 500; }
 
-/* Beta form */
-.beta-form { display: flex; gap: 10px; max-width: 440px; }
-.beta-input {
-  flex: 1; padding: 12px 16px; border-radius: 10px;
-  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-  color: var(--white); font-size: 14px; font-family: var(--sans);
-  outline: none; transition: border-color .2s;
-}
-.beta-input::placeholder { color: var(--muted2); }
-.beta-input:focus { border-color: var(--border-a); }
-.beta-btn {
-  padding: 12px 22px; border-radius: 10px;
+/* Hero CTA — botón único "Abrir Workspace" */
+.hero-cta-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 15px 32px; border-radius: 10px;
   background: var(--accent); border: none;
-  color: var(--bg); font-size: 13.5px; font-weight: 600;
-  font-family: var(--sans); cursor: pointer; white-space: nowrap;
-  transition: background .2s;
+  color: var(--bg); font-size: 14.5px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer;
+  text-decoration: none; letter-spacing: .01em;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  box-shadow: 0 2px 12px rgba(200,168,130,0.18);
 }
-.beta-btn:hover { background: var(--accent-d); }
-.beta-hint { margin-top: 12px; font-size: 11.5px; color: var(--muted2); font-family: var(--mono); }
-
-/* Hero stats strip */
-.hero-stats {
-  display: flex; gap: 28px; margin-top: 36px;
-  padding-top: 28px; border-top: 1px solid var(--border);
+.hero-cta-btn:hover {
+  background: var(--accent-d);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(200,168,130,0.28);
 }
-.hero-stat-val { font-family: var(--serif); font-size: 24px; font-weight: 500; color: var(--white); display: block; }
-.hero-stat-label { font-size: 11px; color: var(--muted2); font-family: var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+.hero-cta-hint {
+  margin-top: 14px; font-size: 11.5px;
+  color: var(--muted2); font-family: var(--mono);
+}
 
 /* ── SCREENSHOT FRAME (hero right) ─────────────── */
 .hero-visual { position: relative; min-height: 560px; display: flex; align-items: center; }
@@ -455,14 +448,49 @@ body {
 }
 .cta-title { font-family: var(--serif); font-size: clamp(32px,3.5vw,50px); font-weight: 500; color: var(--white); line-height: 1.15; margin-bottom: 16px; }
 .cta-sub { font-size: 15px; color: var(--muted); line-height: 1.7; font-weight: 300; margin-bottom: 36px; }
-.cta-form { display: flex; gap: 10px; max-width: 420px; margin: 0 auto; }
-.cta-form .beta-input { background: rgba(255,255,255,0.05); }
-.cta-success {
-  display: none; padding: 14px 24px; border-radius: 10px;
-  background: rgba(106,170,53,0.12); border: 1px solid rgba(106,170,53,0.25);
-  font-size: 14px; color: var(--green-l); max-width: 420px; margin: 0 auto;
+.cta-inner { max-width: 920px; }
+.cta-services {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 18px; margin: 36px 0 40px; text-align: left;
 }
-.cta-hint { margin-top: 14px; font-size: 11.5px; color: var(--muted2); font-family: var(--mono); }
+.cta-service {
+  padding: 22px 22px 20px; border-radius: 12px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  transition: background .2s, border-color .2s;
+}
+.cta-service:hover {
+  background: rgba(255,255,255,0.045);
+  border-color: rgba(200,168,130,0.22);
+}
+.cta-service i {
+  font-size: 18px; color: var(--accent);
+  margin-bottom: 12px; display: block;
+}
+.cta-service h3 {
+  font-family: var(--serif); font-size: 16px; font-weight: 500;
+  color: var(--white); margin: 0 0 6px; letter-spacing: -.005em;
+}
+.cta-service p {
+  font-size: 12.5px; color: var(--muted);
+  line-height: 1.55; margin: 0; font-weight: 300;
+}
+.cta-contact-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 14px 28px; border-radius: 10px;
+  background: var(--accent); border: none;
+  color: var(--bg); font-size: 14px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer;
+  text-decoration: none;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  box-shadow: 0 2px 12px rgba(200,168,130,0.18);
+}
+.cta-contact-btn:hover {
+  background: var(--accent-d);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(200,168,130,0.28);
+}
+.cta-hint { margin-top: 16px; font-size: 11.5px; color: var(--muted2); font-family: var(--mono); }
 
 /* ── FOOTER ────────────────────────────────────── */
 footer {
@@ -500,8 +528,8 @@ footer {
   .feature-media { height: 168px; }
   .features-grid { grid-template-columns: 1fr; }
   footer { flex-direction: column; gap: 16px; text-align: center; padding: 20px 24px; }
-  .beta-form, .cta-form { flex-direction: column; }
-  .hero-stats { flex-wrap: wrap; gap: 16px; }
+  .cta-services { grid-template-columns: 1fr; gap: 14px; }
+  .hero-cta-btn { width: 100%; max-width: 320px; }
   .hero-visual { min-height: 430px; }
   .screenshot-frame { transform: none; animation: consoleFloatMobile 7s ease-in-out infinite; }
   .layer-stack { right: 0; bottom: 20px; width: 168px; }
@@ -548,28 +576,13 @@ footer {
       <div class="hero-label">Beta · Piloto Chile 2026</div>
       <span class="hero-title-product">Monitor Pro</span>
       <p class="hero-sub">
-        Plataforma de monitoreo continuo para <strong>predios, terrenos y zonas de conservación.</strong>
-        Vegetación, agua, biodiversidad y clima — integrados en un solo workspace.
+        Plataforma de <strong>inteligencia ambiental para Chile.</strong>
+        Vegetación, agua, bosque, biodiversidad, clima en vivo y proyecciones climáticas al 2070 — integradas sobre tu zona de estudio.
       </p>
-      <form class="beta-form" onsubmit="submitBeta(event)">
-        <input class="beta-input" type="email" placeholder="tu@email.cl" required id="hero-email">
-        <button class="beta-btn" type="submit">Solicitar Acceso</button>
-      </form>
-      <p class="beta-hint">Acceso gratuito durante el piloto · Sin instalación requerida</p>
-      <div class="hero-stats">
-        <div>
-          <span class="hero-stat-val">6</span>
-          <span class="hero-stat-label">Módulos de análisis</span>
-        </div>
-        <div>
-          <span class="hero-stat-val">Chile</span>
-          <span class="hero-stat-label">Cobertura inicial</span>
-        </div>
-        <div>
-          <span class="hero-stat-val">+20</span>
-          <span class="hero-stat-label">Indicadores ambientales</span>
-        </div>
-      </div>
+      <a href="login.html" class="hero-cta-btn">
+        Abrir Workspace <i class="fas fa-arrow-right" style="margin-left:8px;font-size:11px;"></i>
+      </a>
+      <p class="hero-cta-hint">Acceso gratuito · Sin instalación · Inicia sesión con tu email</p>
     </div>
 
     <!-- Screenshot frame -->
@@ -777,20 +790,45 @@ footer {
   </div>
 </section>
 
-<!-- BETA CTA -->
-<section id="beta" class="cta-section">
+<!-- SERVICIOS PROFESIONALES -->
+<section id="servicios" class="cta-section">
   <div class="cta-inner">
-    <div class="cta-pill"><i class="fas fa-circle" style="font-size:7px;"></i> Acceso Beta abierto</div>
-    <h2 class="cta-title">Empieza a monitorear<br>tu terreno hoy</h2>
-    <p class="cta-sub">Acceso gratuito durante el piloto. Sin tarjeta de crédito. Sin instalación. Solo tu zona y los datos que necesitas.</p>
-    <form class="cta-form" onsubmit="submitBeta(event)">
-      <input class="beta-input" type="email" placeholder="tu@email.cl" required id="cta-email">
-      <button class="beta-btn" type="submit">Solicitar Acceso</button>
-    </form>
-    <div class="cta-success" id="cta-success">
-      <i class="fas fa-check" style="margin-right:8px;"></i> ¡Registrado! Te contactaremos pronto con tu acceso.
+    <div class="cta-pill"><i class="fas fa-handshake" style="font-size:10px;"></i> Servicios profesionales</div>
+    <h2 class="cta-title">¿Necesitas algo<br>más a la medida?</h2>
+    <p class="cta-sub">
+      Monitor Pro es gratuito y abierto. Si tu proyecto requiere análisis personalizados,
+      datos sensibles en entorno privado, o acompañamiento experto, en Evergreen Consultores
+      también ofrecemos servicios profesionales.
+    </p>
+
+    <div class="cta-services">
+      <div class="cta-service">
+        <i class="fas fa-file-shield"></i>
+        <h3>Línea base ambiental</h3>
+        <p>Para EIAs, DIAs y RCAs. Informes técnicos con datos oficiales chilenos.</p>
+      </div>
+      <div class="cta-service">
+        <i class="fas fa-user-shield"></i>
+        <h3>Entornos privados seguros</h3>
+        <p>Tus datasets confidenciales sobre la misma plataforma, bajo NDA.</p>
+      </div>
+      <div class="cta-service">
+        <i class="fas fa-chart-line"></i>
+        <h3>Análisis a medida</h3>
+        <p>Modelos hidrológicos, evapotranspiración, biodiversidad. Interpretación experta.</p>
+      </div>
+      <div class="cta-service">
+        <i class="fas fa-graduation-cap"></i>
+        <h3>Capacitación a tu equipo</h3>
+        <p>Talleres para que tu equipo use Monitor Pro y herramientas geoespaciales.</p>
+      </div>
     </div>
-    <p class="cta-hint">Datos protegidos · Piloto en Chile · Evergreen Consultores 2026</p>
+
+    <a href="index.html#contacto" class="cta-contact-btn">
+      <i class="fas fa-envelope" style="margin-right:8px;font-size:12px;"></i>
+      Contactar a Evergreen
+    </a>
+    <p class="cta-hint">Evergreen Consultores · Chile · 2026</p>
   </div>
 </section>
 
@@ -810,19 +848,6 @@ footer {
 </footer>
 
 <script>
-/* ── Beta form ── */
-function submitBeta(e) {
-  e.preventDefault();
-  const form = e.target;
-  form.style.display = 'none';
-  const success = document.getElementById('cta-success');
-  if (success) success.style.display = 'block';
-  const heroForm = document.querySelector('.beta-form');
-  if (heroForm && form !== heroForm) {
-    heroForm.innerHTML = '<p style="font-family:var(--mono);font-size:11.5px;color:var(--green-l);padding:12px 0;"><i class="fas fa-check" style="margin-right:6px;"></i>¡Registrado! Te contactaremos pronto.</p>';
-  }
-}
-
 /* ── Scroll nav border ── */
 window.addEventListener('scroll', () => {
   document.getElementById('nav').style.borderBottomColor =
