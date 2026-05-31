@@ -94,9 +94,14 @@ body {
 .mobile-drawer {
   position: fixed; inset: 0; z-index: 200;
   pointer-events: none; opacity: 0;
-  transition: opacity .25s ease;
+  visibility: hidden;
+  transition: opacity .25s ease, visibility 0s linear .25s;
 }
-.mobile-drawer.open { opacity: 1; pointer-events: auto; }
+.mobile-drawer.open {
+  opacity: 1; pointer-events: auto;
+  visibility: visible !important;
+  transition: opacity .25s ease, visibility 0s linear 0s;
+}
 .mobile-drawer-backdrop {
   position: absolute; inset: 0;
   background: rgba(10,16,10,0.72);
@@ -630,7 +635,7 @@ footer {
 </nav>
 
 <!-- Mobile drawer -->
-<div class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+<div class="mobile-drawer" id="mobile-drawer" aria-hidden="true" style="visibility:hidden;">
   <div class="mobile-drawer-backdrop" onclick="closeMobileDrawer()"></div>
   <nav class="mobile-drawer-panel">
     <button class="mobile-drawer-close" onclick="closeMobileDrawer()" aria-label="Cerrar menú">

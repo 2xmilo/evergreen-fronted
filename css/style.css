@@ -365,11 +365,14 @@ nav.scrolled {
     z-index: 200;
     pointer-events: none;
     opacity: 0;
-    transition: opacity .25s ease;
+    visibility: hidden;  /* red de seguridad: si CSS no carga, queda oculto inline */
+    transition: opacity .25s ease, visibility 0s linear .25s;
 }
 .mobile-drawer.open {
     opacity: 1;
     pointer-events: auto;
+    visibility: visible !important;  /* sobrescribe el inline */
+    transition: opacity .25s ease, visibility 0s linear 0s;
 }
 .mobile-drawer-backdrop {
     position: absolute;
