@@ -441,11 +441,29 @@ function usarCuencaEnWorkspace() {
 
         WorkspaceState.zona       = geojson;
         WorkspaceState.zonaHa     = ha;
-        WorkspaceState.zonaNombre = props.nombre || 'Cuenca DGA';
+        WorkspaceState.zonaNombre = props.nombre || 'Sub-subcuenca BNA';
 
         WorkspaceState.zonaGEE = (typeof simplifyZoneForGee === 'function')
             ? simplifyZoneForGee(geojson, ha)
             : geojson;
+
+        // Quitar el highlight naranja de la cuenca en la capa de cuencas
+        // (la cuenca seguirá visible si la capa está activa, pero sin marca de "seleccionada")
+        if (cuencaSeleccionada && typeof cuencaSeleccionada.setStyle === 'function') {
+            try {
+                cuencaSeleccionada.setStyle({
+                    fillOpacity: 0.05, weight: 1.2, color: '#0080FF',
+                });
+            } catch(e) {}
+        }
+        cuencaSeleccionada = null;
+
+        // Crear la capa AOI verde sobre el mapa (globalWorkspaceAOILayer).
+        // Esto hace que la cuenca aparezca en el panel de capas como
+        // "Zona de estudio", togglable y con slider de opacidad.
+        if (typeof restoreZoneOnMap === 'function') {
+            try { restoreZoneOnMap(); } catch(e) { console.warn('restoreZoneOnMap:', e); }
+        }
 
         if (typeof agregarPoligonoDesdeWorkspace === 'function') {
             agregarPoligonoDesdeWorkspace(geojson, WorkspaceState.zonaNombre, ha);
@@ -456,7 +474,7 @@ function usarCuencaEnWorkspace() {
         enviarZonaABiodiversidad();
 
         if (typeof mostrarNotificacion === 'function') {
-            mostrarNotificacion('✅ Cuenca "' + WorkspaceState.zonaNombre + '" establecida como zona activa');
+            mostrarNotificacion('✅ Cuenca "' + WorkspaceState.zonaNombre + '" establecida como zona de estudio');
         }
     }
 
