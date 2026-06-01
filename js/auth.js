@@ -191,23 +191,30 @@ async function saveWorkspaceToCloud(userId, state) {
             }
             _workspaceInsertPending = true;
             try {
+                // ── FIX: el índice UNIQUE parcial idx_workspaces_one_active_per_user
+                //         permite solo UNA fila con is_active=true por user_id.
+                //         Si insertamos con is_active=true cuando ya existe otra,
+                //         Postgres tira "duplicate key" y se rompe la sincronización.
+                //         Solución: desactivar TODAS las existentes ANTES del INSERT.
+                var deactivateRes = await _sb.from('workspaces')
+                    .update({ is_active: false })
+                    .eq('user_id', userId)
+                    .eq('is_active', true);
+                if (deactivateRes.error) throw deactivateRes.error;
+
                 data.is_active = true;
                 var r = await _sb.from('workspaces').insert(data).select().single();
                 if (r.error) throw r.error;
                 if (r.data) {
                     WorkspaceState.zonaId = r.data.id;
-                    // Marcar el resto como inactivas
-                    var inactiveRes = await _sb.from('workspaces')
-                        .update({ is_active: false })
-                        .eq('user_id', userId)
-                        .neq('id', r.data.id);
-                    if (inactiveRes.error) throw inactiveRes.error;
+                    // Sincronizar estado is_active en la lista local
+                    (window._sbUserZones || []).forEach(function(z) { z.is_active = false; });
                     // Agregar a lista local solo si no está ya
                     var alreadyIn = (window._sbUserZones || []).some(function(z) { return z.id === r.data.id; });
                     if (!alreadyIn) {
                         window._sbUserZones = [r.data].concat(window._sbUserZones || []);
-                        if (typeof renderZoneSelector === 'function') renderZoneSelector(window._sbUserZones);
                     }
+                    if (typeof renderZoneSelector === 'function') renderZoneSelector(window._sbUserZones);
                     localStorage.setItem('evergreen_workspace', JSON.stringify(WorkspaceState));
                 }
             } finally {
