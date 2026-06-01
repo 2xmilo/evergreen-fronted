@@ -128,30 +128,46 @@ function startDrawingZone() {
     _enableDrawing();
 }
 
-// Crear una zona NUEVA (workspace adicional) — llamada desde el selector de zonas
+// Crear una zona NUEVA (workspace adicional) — llamada desde el selector de zonas.
+// NO fuerza el dibujo: solo prepara el estado vacío y abre el panel de herramientas
+// para que el usuario elija si dibujar, usar cuenca, o cargar desde otro lado.
 function startNewZone() {
     closeZoneSelector();
+
+    function _prepararNueva() {
+        WorkspaceState.zona       = null;
+        WorkspaceState.zonaGEE    = null;
+        WorkspaceState.zonaHa     = 0;
+        WorkspaceState.zonaId     = null;
+        WorkspaceState.zonaNombre = 'Mi zona de estudio';
+        if (typeof clearAnalysisStateForZoneChange === 'function') {
+            clearAnalysisStateForZoneChange();
+        } else {
+            WorkspaceState.resultados = {};
+        }
+        if (globalDrawnItems) globalDrawnItems.clearLayers();
+        updateZoneUI();
+        renderIndicadorCards();
+
+        // Abrir panel de herramientas de dibujo si está colapsado (guía visual)
+        var drawWrap   = document.getElementById('draw-tools-wrap');
+        var drawToggle = document.getElementById('draw-toggle-btn');
+        if (drawWrap && drawToggle && !drawWrap.classList.contains('open')
+            && typeof toggleDrawTools === 'function') {
+            toggleDrawTools();
+        }
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('🆕 Nueva zona lista. Dibuja un polígono o usa una sub-subcuenca.');
+        }
+    }
+
     if (window._sbUserId && typeof checkZoneQuota === 'function') {
         checkZoneQuota(window._sbUserId).then(function(result) {
             if (!result.ok) { mostrarModalLimite(result); return; }
-            // Limpiar estado local para el nuevo workspace
-            WorkspaceState.zona       = null;
-            WorkspaceState.zonaGEE    = null;
-            WorkspaceState.zonaHa     = 0;
-            WorkspaceState.zonaId     = null;
-            WorkspaceState.zonaNombre = 'Mi zona de estudio';
-            if (typeof clearAnalysisStateForZoneChange === 'function') {
-                clearAnalysisStateForZoneChange();
-            } else {
-                WorkspaceState.resultados = {};
-            }
-            if (globalDrawnItems) globalDrawnItems.clearLayers();
-            updateZoneUI();
-            renderIndicadorCards();
-            _enableDrawing();
+            _prepararNueva();
         });
     } else {
-        _enableDrawing();
+        _prepararNueva();
     }
 }
 

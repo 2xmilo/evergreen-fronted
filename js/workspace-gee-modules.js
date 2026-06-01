@@ -393,10 +393,23 @@ async function clearZone() {
     }
 }
 
-// Usar cuenca DGA seleccionada como zona de estudio
+// Usar sub-subcuenca BNA seleccionada como zona de estudio.
+// UX guiada: si no hay cuenca seleccionada y la capa no está visible,
+// activa la capa y muestra mensaje guía amigable en vez de un alert.
 function usarCuencaEnWorkspace() {
     if (typeof cuencaSeleccionada === 'undefined' || !cuencaSeleccionada) {
-        alert('⚠️ Selecciona primero una cuenca haciendo click en el mapa.');
+        var notif = (typeof mostrarNotificacion === 'function')
+            ? mostrarNotificacion
+            : function(m) { console.warn(m); alert(m); };
+
+        // Si la capa no está visible, activarla automáticamente
+        if (typeof _cuencasVisible !== 'undefined' && !_cuencasVisible
+            && typeof toggleCapasCuencas === 'function') {
+            try { toggleCapasCuencas(); } catch(e) {}
+            notif('💧 Capa de sub-subcuencas activada. Haz click sobre una en el mapa para seleccionarla.');
+        } else {
+            notif('💧 Selecciona primero una sub-subcuenca haciendo click sobre ella en el mapa.');
+        }
         return;
     }
 

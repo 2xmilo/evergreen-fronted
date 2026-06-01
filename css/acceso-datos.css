@@ -780,18 +780,53 @@
     display: none !important;
 }
 
-/* Dibujar Handle y Marker control (Leaflet Draw) */
-.leaflet-draw .leaflet-marker-icon,
-.leaflet-vertex,
-.leaflet-helper-line {
+/* Markers de Leaflet Draw — vertices durante dibujo/edición.
+   Los selectores con ".leaflet-draw" no aplican porque los markers viven
+   en .leaflet-marker-pane (no dentro del control). Usamos selectores más
+   amplios + clases específicas que sí aplica Leaflet Draw a los markers. */
+.leaflet-marker-pane > .leaflet-div-icon,
+.leaflet-marker-pane > .leaflet-editing-icon {
+    background: #6AAA35 !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 50% !important;
     width: 10px !important;
     height: 10px !important;
     margin-left: -5px !important;
     margin-top: -5px !important;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.35) !important;
+    box-sizing: border-box !important;
+    cursor: grab !important;
+    transition: transform .12s ease, background .12s ease;
+}
+.leaflet-marker-pane > .leaflet-editing-icon:hover {
+    background: #C8A882 !important;
+    transform: scale(1.4);
+}
+/* El "middle marker" (punto intermedio entre vertices para insertar uno nuevo)
+   se ve más sutil que los vertices reales. */
+.leaflet-marker-pane > .leaflet-div-icon.leaflet-editing-icon-middle {
+    background: rgba(255,255,255,0.85) !important;
+    border-color: #6AAA35 !important;
+    width: 8px !important;
+    height: 8px !important;
+    margin-left: -4px !important;
+    margin-top: -4px !important;
+    opacity: 0.7;
+}
+/* Mouse marker (el que sigue al cursor) — invisible, solo captura clicks */
+.leaflet-mouse-marker {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* (Legacy mantenido por compatibilidad con la toolbar oficial — no afecta los vertices) */
+.leaflet-draw .leaflet-marker-icon {
+    background: #6AAA35 !important;
+    border: 2px solid #fff !important;
     border-radius: 50% !important;
-    background: #ffffff !important;
-    border: 2px solid rgba(0, 200, 142, 0.9) !important;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25) !important;
+    width: 10px !important;
+    height: 10px !important;
 }
 
 .leaflet-draw .leaflet-draw-tooltip {
