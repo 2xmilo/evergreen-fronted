@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
 <style>
@@ -161,6 +162,40 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* KPI row */
 .cz-kpis { flex-shrink: 0; display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+
+/* Overview = ficha técnica morfológica + mini-mapa de forma (compacto) */
+.cz-overview {
+  flex-shrink: 0;
+  display: grid; grid-template-columns: 1.7fr 1fr;
+  gap: 12px;
+}
+.cz-tech-sheet, .cz-shape-mini {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px 8px;
+  display: flex; flex-direction: column; min-height: 0;
+}
+.cz-tech-sheet .cz-table-head,
+.cz-shape-mini .cz-table-head {
+  padding: 0 2px 8px; margin-bottom: 0; font-size: 10px;
+}
+.cz-tech-sheet .cz-table--compact th { padding: 6px 10px; font-size: 9px; }
+.cz-tech-sheet .cz-table--compact td { padding: 6px 10px; font-size: 12px; }
+.cz-tech-sheet .cz-table--compact .cz-td-num { font-size: 12.5px; }
+.cz-tech-sheet .cz-table--compact .cz-td-delta { font-size: 11px; }
+
+/* Mini-mapa schematic de diferencia de polígonos */
+.cz-shape-mini-canvas {
+  position: relative; flex: 1; min-height: 150px;
+}
+.cz-shape-mini-canvas canvas {
+  width: 100% !important; height: 100% !important;
+  display: block;
+}
+
+@media (max-width: 1100px) {
+  .cz-overview { grid-template-columns: 1fr; }
+  .cz-shape-mini-canvas { min-height: 180px; }
+}
 .cz-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 15px 17px; display: flex; flex-direction: column; gap: 11px; }
 .cz-kpi-head { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--w55); display: flex; align-items: center; gap: 8px; }
 .cz-kpi-head i { color: var(--accent); font-size: 12px; }
@@ -373,6 +408,39 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   border-radius: 12px; padding: 14px 14px 12px;
   margin-top: 14px;
 }
+
+/* ARClim — controles del chart (toggle simulaciones + legend) */
+.cz-arclim-chart-controls {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.cz-sims-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--w70);
+}
+.cz-sims-toggle input { display: none; }
+.cz-sims-track {
+  position: relative; width: 28px; height: 14px;
+  border-radius: 999px; background: rgba(244,247,241,0.08);
+  border: 1px solid var(--border); transition: background .2s, border-color .2s;
+  flex-shrink: 0;
+}
+.cz-sims-dot {
+  position: absolute; top: 1px; left: 1px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--w40); transition: transform .2s, background .2s;
+}
+.cz-sims-toggle input:checked + .cz-sims-track {
+  background: rgba(106,170,53,0.22);
+  border-color: rgba(106,170,53,0.45);
+}
+.cz-sims-toggle input:checked + .cz-sims-track .cz-sims-dot {
+  transform: translateX(13px);
+  background: var(--data);
+}
+.cz-sims-toggle:hover .cz-sims-track { border-color: var(--w40); }
+.cz-sims-label { white-space: nowrap; }
 
 /* ── LOADING ── */
 .cz-boot {
@@ -828,6 +896,234 @@ const KPIS=[
   {id:'elev',label:'Elevación', icon:'fa-mountain',mod:'elevacion', key:'mean',fmt:'int',unit:'m',better:'none'},
   {id:'esp', label:'Especies',  icon:'fa-paw',     mod:'biodiversidad',key:'n_especies',fmt:'int',better:'high'},
 ];
+
+/* ══ NUEVO: Ficha técnica + Radar de similitud (reemplaza tira de KPIs) ══ */
+
+// Calcula perímetro en km a partir del polígono [[lat,lng],...]
+function polyPerimeterKm(poly){
+  if(!poly||poly.length<2||typeof turf==='undefined') return null;
+  try{
+    // turf espera [lng,lat]; nuestro poly es [lat,lng]
+    const coords=poly.map(p=>[p[1],p[0]]);
+    if(coords.length>0&&(coords[0][0]!==coords[coords.length-1][0]||coords[0][1]!==coords[coords.length-1][1])){
+      coords.push(coords[0]);
+    }
+    const line=turf.lineString(coords);
+    return turf.length(line,{units:'kilometers'});
+  }catch(e){return null;}
+}
+
+// Distancia entre centroides de dos zonas, en km
+function zoneDistanceKm(zoneA,zoneB){
+  if(!zoneA||!zoneB||typeof turf==='undefined') return null;
+  try{
+    const pA=turf.point([zoneA.lng,zoneA.lat]);
+    const pB=turf.point([zoneB.lng,zoneB.lat]);
+    return turf.distance(pA,pB,{units:'kilometers'});
+  }catch(e){return null;}
+}
+
+// Compacidad de Polsby-Popper: 4π × área / perímetro²
+// = 1 si es círculo perfecto · más baja = forma más alargada
+function compactness(areaHa, perimKm){
+  if(!areaHa||!perimKm||perimKm===0) return null;
+  const areaM2  = areaHa * 10000;
+  const perimM  = perimKm * 1000;
+  return (4 * Math.PI * areaM2) / (perimM * perimM);
+}
+
+// Extensión Norte-Sur del bbox en metros
+function extentNS(zone){
+  if(!zone||!zone.bounds) return null;
+  const s=zone.bounds[0][0], n=zone.bounds[1][0];
+  return (n - s) * 111320;
+}
+
+// Extensión Este-Oeste del bbox en metros (corregida por latitud)
+function extentEO(zone){
+  if(!zone||!zone.bounds) return null;
+  const s=zone.bounds[0][0], n=zone.bounds[1][0];
+  const w=zone.bounds[0][1], e=zone.bounds[1][1];
+  const cLat=(n+s)/2;
+  return (e - w) * 111320 * Math.cos(cLat * Math.PI / 180);
+}
+
+// Redondea a número "agradable" para escala visual (1, 2, 5, 10, 20, 50...)
+function niceRound(n){
+  if(n<=0) return 0;
+  const pow=Math.pow(10,Math.floor(Math.log10(n)));
+  const frac=n/pow;
+  let nice;
+  if(frac<1.5) nice=1; else if(frac<3) nice=2; else if(frac<7) nice=5; else nice=10;
+  return nice*pow;
+}
+function formatMeters(m){
+  return m>=1000 ? (m/1000).toFixed(m%1000?1:0)+' km' : Math.round(m)+' m';
+}
+function formatLatLng(v){
+  return v==null?'—':v.toFixed(3)+'°';
+}
+
+function ZonesTechSheet({zoneA,zoneB}){
+  // Métricas derivadas — solo morfología, sin índices espectrales ni biodiversidad
+  const perimA = useMemo(()=>zoneA?polyPerimeterKm(zoneA.poly):null,[zoneA?.id]);
+  const perimB = useMemo(()=>zoneB?polyPerimeterKm(zoneB.poly):null,[zoneB?.id]);
+  const compA  = useMemo(()=>compactness(zoneA?.area, perimA),[zoneA?.area, perimA]);
+  const compB  = useMemo(()=>compactness(zoneB?.area, perimB),[zoneB?.area, perimB]);
+  const nsA = useMemo(()=>extentNS(zoneA),[zoneA?.id]);
+  const nsB = useMemo(()=>extentNS(zoneB),[zoneB?.id]);
+  const eoA = useMemo(()=>extentEO(zoneA),[zoneA?.id]);
+  const eoB = useMemo(()=>extentEO(zoneB),[zoneB?.id]);
+
+  const rows=[
+    {label:'Área',          a:zoneA?.area, b:zoneB?.area, unit:'ha',  fmt:'int', better:'none'},
+    {label:'Perímetro',     a:perimA,      b:perimB,      unit:'km',  fmt:'dec', better:'none'},
+    {label:'Compacidad',    a:compA,       b:compB,       unit:'',    fmt:'dec', better:'none', hint:'Polsby-Popper · 1 = círculo · ↓ = más alargada'},
+    {label:'Extensión N–S', a:nsA,         b:nsB,         unit:'m',   fmt:'int', better:'none'},
+    {label:'Extensión E–O', a:eoA,         b:eoB,         unit:'m',   fmt:'int', better:'none'},
+  ];
+
+  return(
+    <div className="cz-tech-sheet">
+      <div className="cz-table-head">
+        <i className="fa-solid fa-ruler-combined"/>Caracterización territorial
+      </div>
+      <table className="cz-table cz-table--compact">
+        <thead>
+          <tr>
+            <th>Métrica</th>
+            <th><span className="cz-zchip cz-zchip--a">A</span></th>
+            <th><span className="cz-zchip cz-zchip--b">B</span></th>
+            <th className="cz-th-delta">Δ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r,i)=>{
+            if(r.a==null&&r.b==null) return null;
+            const {arrow,sentiment,diff}=czDelta(r.a,r.b,r.better||'none');
+            const sc=sentColor(sentiment);
+            return(
+              <tr key={i}>
+                <td className="cz-td-label" title={r.hint||undefined}>{r.label}</td>
+                <td className="cz-td-num">{czFmt(r.a,r.fmt,r.unit)}</td>
+                <td className="cz-td-num">{czFmt(r.b,r.fmt,r.unit)}</td>
+                <td className="cz-td-delta" style={{color:sc}}>
+                  {r.a!=null&&r.b!=null?arrow+' '+czFmtDelta(diff,r.fmt,r.unit):'—'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* Mini-mapa schematic: dibuja los 2 polígonos centrados, a la MISMA escala */
+function ShapeMiniMap({zoneA,zoneB}){
+  const ref=useRef(null);
+
+  useEffect(()=>{
+    if(!ref.current) return;
+    const canvas=ref.current;
+    const ctx=canvas.getContext('2d');
+    const dpr=window.devicePixelRatio||1;
+    const rect=canvas.getBoundingClientRect();
+    canvas.width =rect.width *dpr;
+    canvas.height=rect.height*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const W=rect.width, H=rect.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Proyección local: cada polígono al sistema metros relativos a su propio centroide
+    const projZone=(zone)=>{
+      if(!zone||!zone.poly||zone.poly.length<3) return null;
+      let cLat=0,cLng=0;
+      zone.poly.forEach(p=>{cLat+=p[0];cLng+=p[1];});
+      cLat/=zone.poly.length; cLng/=zone.poly.length;
+      const mPerLng=111320*Math.cos(cLat*Math.PI/180);
+      return zone.poly.map(p=>({
+        x:(p[1]-cLng)*mPerLng,
+        y:(cLat-p[0])*111320,  // invertido (canvas Y crece hacia abajo)
+      }));
+    };
+
+    const pA=projZone(zoneA);
+    const pB=projZone(zoneB);
+    if(!pA&&!pB) return;
+
+    // Calcular bbox combinado en metros (todos los puntos)
+    const all=[...(pA||[]),...(pB||[])];
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    all.forEach(p=>{
+      if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x;
+      if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y;
+    });
+    const spanX=maxX-minX, spanY=maxY-minY;
+    const span=Math.max(spanX,spanY,1)*1.20;  // 20% padding
+
+    // Escala: que el mayor span entre en el lado más corto del canvas
+    const size=Math.min(W,H)-32;
+    const scale=size/span;
+    const cx=W/2, cy=H/2;
+
+    // Dibujar polígono con fill + stroke
+    const drawPoly=(pts,fillStyle,strokeStyle)=>{
+      if(!pts||pts.length<3) return;
+      ctx.beginPath();
+      pts.forEach((p,i)=>{
+        const x=cx+p.x*scale;
+        const y=cy+p.y*scale;
+        if(i===0) ctx.moveTo(x,y);
+        else      ctx.lineTo(x,y);
+      });
+      ctx.closePath();
+      ctx.fillStyle=fillStyle;
+      ctx.fill();
+      ctx.strokeStyle=strokeStyle;
+      ctx.lineWidth=1.6;
+      ctx.stroke();
+    };
+    if(pA) drawPoly(pA,'rgba(200,168,130,0.22)','#C8A882');
+    if(pB) drawPoly(pB,'rgba(106,170,53,0.22)','#6AAA35');
+
+    // Barra de escala (1/4 del span, redondeado a número agradable)
+    const targetMeters=span/4;
+    const scaleBarMeters=niceRound(targetMeters);
+    const scaleBarPx=scaleBarMeters*scale;
+    const sbX=14, sbY=H-16;
+    ctx.strokeStyle='rgba(242,245,239,0.55)';
+    ctx.lineWidth=1.2;
+    ctx.beginPath();
+    ctx.moveTo(sbX,sbY); ctx.lineTo(sbX+scaleBarPx,sbY);
+    ctx.moveTo(sbX,sbY-3); ctx.lineTo(sbX,sbY+3);
+    ctx.moveTo(sbX+scaleBarPx,sbY-3); ctx.lineTo(sbX+scaleBarPx,sbY+3);
+    ctx.stroke();
+    ctx.fillStyle='rgba(242,245,239,0.65)';
+    ctx.font='10px "DM Mono", monospace';
+    ctx.textBaseline='alphabetic';
+    ctx.fillText(formatMeters(scaleBarMeters), sbX, sbY-6);
+  },[zoneA?.id,zoneB?.id]);
+
+  return(
+    <div className="cz-shape-mini">
+      <div className="cz-table-head">
+        <i className="fa-solid fa-shapes"/>Diferencia de polígonos
+      </div>
+      <div className="cz-shape-mini-canvas"><canvas ref={ref}/></div>
+    </div>
+  );
+}
+
+function ZonesOverview({zoneA,zoneB}){
+  return(
+    <div className="cz-overview">
+      <ZonesTechSheet zoneA={zoneA} zoneB={zoneB}/>
+      <ShapeMiniMap zoneA={zoneA} zoneB={zoneB}/>
+    </div>
+  );
+}
+
 function KpiCard({kpi,dataA,dataB}){
   const get=d=>d&&d[kpi.mod]&&d[kpi.mod][kpi.key]!=null?d[kpi.mod][kpi.key]:null;
   const va=get(dataA),vb=get(dataB);
@@ -1403,39 +1699,144 @@ async function fetchArclimSerie(indId, arclimId){
   return j;
 }
 
-function ArclimChart({serieA,serieB,zoneA,zoneB,indicador}){
+function ArclimChart({serieA,serieB,zoneA,zoneB,indicador,showSims}){
   const ref=useRef(null);
   const chartRef=useRef(null);
   useEffect(()=>{
     if(!ref.current||typeof Chart==='undefined') return;
+    // Registrar plugin annotation (mismo patrón que workspace-arclim.js)
+    if(window['chartjs-plugin-annotation']&&!Chart.registry.plugins.get('annotation')){
+      Chart.register(window['chartjs-plugin-annotation']);
+    }
     if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+
     const years=(serieA&&serieA.years)||(serieB&&serieB.years)||[];
-    const ds=[];
+    const datasets=[];
+
+    // Helper: calcula índice de un año en el array (para las bandas annotation)
+    const yearIdx=(y)=>{
+      if(!years.length) return null;
+      let best=0, bestDiff=Infinity;
+      for(let i=0;i<years.length;i++){
+        const d=Math.abs(Number(years[i])-y);
+        if(d<bestDiff){bestDiff=d;best=i;}
+      }
+      return best;
+    };
+    const histStart=yearIdx(1980), histEnd=yearIdx(2010);
+    const futStart =yearIdx(2035), futEnd =yearIdx(2065);
+
+    // Simulaciones individuales (líneas finas) — solo si showSims=true
+    if(showSims){
+      if(serieA&&serieA.series){
+        serieA.series.forEach(s=>{
+          datasets.push({
+            data:s, borderColor:'rgba(200,168,130,0.18)', borderWidth:0.7,
+            pointRadius:0, pointHoverRadius:0, tension:0.2, fill:false, order:3,
+            label:'_simA', _isSim:true,
+          });
+        });
+      }
+      if(serieB&&serieB.series){
+        serieB.series.forEach(s=>{
+          datasets.push({
+            data:s, borderColor:'rgba(106,170,53,0.18)', borderWidth:0.7,
+            pointRadius:0, pointHoverRadius:0, tension:0.2, fill:false, order:3,
+            label:'_simB', _isSim:true,
+          });
+        });
+      }
+    }
+
+    // Líneas promedio (siempre visibles)
     if(serieA&&serieA.mean){
-      ds.push({label:zoneA?.name||'Zona A',data:serieA.mean,borderColor:'#C8A882',backgroundColor:'rgba(200,168,130,0.12)',borderWidth:2,pointRadius:0,tension:.25,fill:false});
+      datasets.push({
+        label:(zoneA&&zoneA.name)||'Zona A',
+        data:serieA.mean,
+        borderColor:'#C8A882', backgroundColor:'#C8A882',
+        borderWidth:2.4, pointRadius:1.4, pointHoverRadius:4,
+        tension:0.18, fill:false, order:1,
+      });
     }
     if(serieB&&serieB.mean){
-      ds.push({label:zoneB?.name||'Zona B',data:serieB.mean,borderColor:'#6AAA35',backgroundColor:'rgba(106,170,53,0.12)',borderWidth:2,pointRadius:0,tension:.25,fill:false});
+      datasets.push({
+        label:(zoneB&&zoneB.name)||'Zona B',
+        data:serieB.mean,
+        borderColor:'#6AAA35', backgroundColor:'#6AAA35',
+        borderWidth:2.4, pointRadius:1.4, pointHoverRadius:4,
+        tension:0.18, fill:false, order:1,
+      });
     }
+
     chartRef.current=new Chart(ref.current,{
       type:'line',
-      data:{labels:years,datasets:ds},
+      data:{labels:years,datasets:datasets},
       options:{
-        responsive:true,maintainAspectRatio:false,
+        responsive:true, maintainAspectRatio:false,
         interaction:{mode:'index',intersect:false},
-        scales:{
-          x:{ticks:{color:'rgba(242,245,239,0.5)',font:{family:'DM Mono',size:10},maxTicksLimit:10},grid:{color:'rgba(255,255,255,0.04)'}},
-          y:{ticks:{color:'rgba(242,245,239,0.5)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(255,255,255,0.04)'},title:{display:true,text:indicador?.unit||'',color:'rgba(242,245,239,0.4)',font:{family:'DM Mono',size:10}}}
-        },
         plugins:{
-          legend:{labels:{color:'rgba(242,245,239,0.75)',font:{family:'DM Mono',size:10.5},usePointStyle:true}},
-          tooltip:{titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono'},callbacks:{title:items=>'Año '+items[0].label}},
-          annotation:{}
+          legend:{
+            labels:{
+              color:'rgba(242,245,239,0.78)', font:{family:'DM Mono',size:10.5},
+              usePointStyle:true, boxWidth:8,
+              // Ocultar los datasets _isSim de la legend (no queremos 40 entradas)
+              filter:(item,chartData)=>{
+                const ds=chartData.datasets[item.datasetIndex];
+                return !ds._isSim;
+              }
+            }
+          },
+          tooltip:{
+            titleFont:{family:'DM Mono'}, bodyFont:{family:'DM Mono'},
+            callbacks:{
+              title:items=>'Año '+Math.round(items[0].label),
+              // No mostrar simulaciones individuales en el tooltip — saturan
+              label:function(ctx){
+                if(ctx.dataset._isSim) return null;
+                return ctx.dataset.label+': '+Number(ctx.parsed.y).toFixed(1)+(indicador?.unit?' '+indicador.unit:'');
+              }
+            }
+          },
+          annotation:{
+            annotations:{
+              histBand:histStart!=null&&histEnd!=null?{
+                type:'box', xMin:histStart, xMax:histEnd,
+                backgroundColor:'rgba(120,170,220,0.10)',
+                borderColor:'rgba(120,170,220,0.22)', borderWidth:1,
+                label:{display:true, content:'1980 – 2010', position:'start',
+                  font:{family:'DM Mono',size:9}, color:'rgba(120,170,220,0.7)',
+                  backgroundColor:'transparent', padding:4, yAdjust:-4}
+              }:null,
+              futBand:futStart!=null&&futEnd!=null?{
+                type:'box', xMin:futStart, xMax:futEnd,
+                backgroundColor:'rgba(240,170,90,0.10)',
+                borderColor:'rgba(240,170,90,0.22)', borderWidth:1,
+                label:{display:true, content:'2035 – 2065', position:'start',
+                  font:{family:'DM Mono',size:9}, color:'rgba(240,170,90,0.75)',
+                  backgroundColor:'transparent', padding:4, yAdjust:-4}
+              }:null,
+            }
+          }
+        },
+        scales:{
+          x:{
+            ticks:{
+              color:'rgba(242,245,239,0.5)', font:{family:'DM Mono',size:10},
+              maxTicksLimit:8,
+              callback:(val,idx)=>years[idx]?Math.round(years[idx]):''
+            },
+            grid:{color:'rgba(255,255,255,0.04)'}
+          },
+          y:{
+            ticks:{color:'rgba(242,245,239,0.5)',font:{family:'DM Mono',size:10}},
+            grid:{color:'rgba(255,255,255,0.04)'},
+            title:{display:true, text:indicador?.unit||'', color:'rgba(242,245,239,0.4)', font:{family:'DM Mono',size:10}}
+          }
         }
       }
     });
     return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
-  },[serieA,serieB,zoneA?.id,zoneB?.id]);
+  },[serieA,serieB,zoneA?.id,zoneB?.id,showSims,indicador]);
   return<div className="cz-arclim-chart-canvas"><canvas ref={ref}/></div>;
 }
 
@@ -1536,6 +1937,7 @@ function ArclimDashboard({mod,zoneA,zoneB}){
   const[serieA,setSerieA]=useState(null);
   const[serieB,setSerieB]=useState(null);
   const[loading,setLoading]=useState(false);
+  const[showSims,setShowSims]=useState(false);  // off por default: chart limpio
   const indicador=useMemo(()=>mod.indicadores.find(i=>i.id===indId),[indId,mod]);
 
   // detect comuna when zone changes
@@ -1582,15 +1984,22 @@ function ArclimDashboard({mod,zoneA,zoneB}){
             <div className="cz-arclim-chart-title">{indicador?.label}</div>
             <div className="cz-arclim-chart-sub">{grupos[indicador?.grupo]||''} · {indicador?.unit} · 1980 — 2065</div>
           </div>
-          <div className="cz-arclim-chart-legend">
-            <span><i style={{background:'#C8A882'}}/>Zona A</span>
-            <span><i style={{background:'#6AAA35'}}/>Zona B</span>
+          <div className="cz-arclim-chart-controls">
+            <label className="cz-sims-toggle" title="Muestra las 20+ simulaciones CMIP6 individuales detrás del promedio (nube de incertidumbre)">
+              <input type="checkbox" checked={showSims} onChange={e=>setShowSims(e.target.checked)}/>
+              <span className="cz-sims-track"><span className="cz-sims-dot"/></span>
+              <span className="cz-sims-label">Simulaciones individuales</span>
+            </label>
+            <div className="cz-arclim-chart-legend">
+              <span><i style={{background:'#C8A882'}}/>Zona A</span>
+              <span><i style={{background:'#6AAA35'}}/>Zona B</span>
+            </div>
           </div>
         </div>
         {loading
           ?<div className="cz-arclim-loading"><div className="cz-boot-spin"/>Cargando series climáticas…</div>
           :(serieA||serieB)
-            ?<ArclimChart serieA={serieA} serieB={serieB} zoneA={zoneA} zoneB={zoneB} indicador={indicador}/>
+            ?<ArclimChart serieA={serieA} serieB={serieB} zoneA={zoneA} zoneB={zoneB} indicador={indicador} showSims={showSims}/>
             :<div className="cz-nodata"><i className="fa-solid fa-triangle-exclamation"/>Sin datos ARClim para las comunas detectadas</div>
         }
       </div>
@@ -1857,10 +2266,8 @@ function App({session,plan,zones}){
 
         {/* CANVAS */}
         <main className="cz-canvas">
-          {/* KPIs */}
-          <div className="cz-kpis">
-            {KPIS.map(k=><KpiCard key={k.id} kpi={k} dataA={dataA} dataB={dataB}/>)}
-          </div>
+          {/* Overview: ficha técnica morfológica + mini-mapa de forma (reemplaza la tira de KPIs) */}
+          <ZonesOverview zoneA={zoneA} zoneB={zoneB}/>
 
           {/* Stage */}
           <div className="cz-stage">
