@@ -1204,9 +1204,26 @@ function MetricsRow({mod,dataA,dataB}){
 }
 
 /* ══ NUEVO: tabla + chart para índices espectrales ══ */
+/* Genera el label dinámico según el índice real usado.
+   Ej: si m.label='NDVI prom' y indice='SAVI' → 'SAVI prom'.
+   Solo aplica para módulos con index (vegetación, agua, etc.). */
+function _dynamicMetricLabel(originalLabel, mod, indiceReal){
+  if(!indiceReal || !mod || !mod.index) return originalLabel;
+  if(indiceReal === mod.index) return originalLabel;
+  // Reemplaza el índice default del módulo por el real
+  return originalLabel.replace(mod.index, indiceReal);
+}
+
 function MetricsCompareTable({mod,dataA,dataB,zoneA,zoneB}){
   const da=dataA&&dataA[mod.id];
   const db=dataB&&dataB[mod.id];
+  // Cuando A y B usan el mismo índice, lo aplicamos a todas las labels.
+  // Cuando difieren, mantenemos el label original (el warning ya advierte el mismatch).
+  const indA = da && da.indice;
+  const indB = db && db.indice;
+  const sameIdx = indA && indB && indA === indB;
+  const dynamicIdx = sameIdx ? indA : (indA || indB || null);
+
   return(
     <table className="cz-table cz-table--compact">
       <thead>
@@ -1223,9 +1240,11 @@ function MetricsCompareTable({mod,dataA,dataB,zoneA,zoneB}){
           const b=db&&db[m.key]!=null?db[m.key]:null;
           const{arrow,sentiment,diff}=czDelta(a,b,m.better||'none');
           const sc=sentColor(sentiment);
+          // Label dinámico: usa el índice real si A y B coinciden
+          const label = sameIdx ? _dynamicMetricLabel(m.label, mod, dynamicIdx) : m.label;
           return(
             <tr key={m.key}>
-              <td className="cz-td-label">{m.label}</td>
+              <td className="cz-td-label">{label}</td>
               <td className="cz-td-num">{czFmt(a,m.fmt||'dec',m.unit)}</td>
               <td className="cz-td-num">{czFmt(b,m.fmt||'dec',m.unit)}</td>
               <td className="cz-td-delta" style={{color:sc}}>
@@ -1247,7 +1266,12 @@ function MetricsBarsChart({mod,dataA,dataB,zoneA,zoneB}){
     const da=dataA&&dataA[mod.id];
     const db=dataB&&dataB[mod.id];
     const metrics=mod.metrics||[];
-    const labels=metrics.map(m=>m.label);
+    // Labels dinámicos según índice real (NDVI/SAVI/EVI...)
+    const indA = da && da.indice;
+    const indB = db && db.indice;
+    const sameIdx = indA && indB && indA === indB;
+    const dynIdx = sameIdx ? indA : (indA || indB || null);
+    const labels=metrics.map(m=>sameIdx ? _dynamicMetricLabel(m.label, mod, dynIdx) : m.label);
     const va=metrics.map(m=>da&&da[m.key]!=null?Number(da[m.key]):null);
     const vb=metrics.map(m=>db&&db[m.key]!=null?Number(db[m.key]):null);
     if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
@@ -2162,15 +2186,23 @@ function App({session,plan,zones}){
     if(!wsId||dataCache[wsId]) return;
     setDataCache(prev=>({...prev,[wsId]:{loading:true}}));
     try{
-      const{data:rows}=await supabase.from('results').select('tipo_indice,result_data').eq('workspace_id',wsId);
+      // Pedir también updated_at para poder ordenar por más reciente
+      const{data:rows}=await supabase.from('results')
+        .select('tipo_indice,result_data,updated_at')
+        .eq('workspace_id',wsId);
       const parsed={};
+      // Cuando hay múltiples rows del mismo módulo (ej. vegetacion_NDVI y vegetacion_SAVI),
+      // hay que quedarse con el MÁS RECIENTE (no con el último iterado de Supabase, que
+      // no garantiza orden). De lo contrario el comparador podía mostrar datos viejos
+      // bugueados aunque ya existiera un análisis nuevo.
       (rows||[]).forEach(row=>{
         const modDef=CZ.MODULES.find(m=>row.tipo_indice&&row.tipo_indice.startsWith(m.prefix));
         if(!modDef||!row.result_data||!row.result_data.length) return;
         const item=row.result_data.reduce((a,b)=>((a.ts||0)>(b.ts||0)?a:b));
-        // Extraer el índice específico usado en este análisis (NDVI, SAVI, EVI, etc.)
-        // — necesario para detectar mismatch en el comparador (Saval con NDVI vs Parque con SAVI).
-        // Fallback al sufijo del tipo_indice si no viene en el item (compatibilidad con data vieja).
+        const ts = item.ts || (row.updated_at ? Date.parse(row.updated_at) : 0);
+        // Si ya hay uno para este módulo, conservar el más reciente
+        const prev = parsed[modDef.id];
+        if(prev && (prev._ts||0) >= ts) return;
         const indiceUsado = item.indice
           || (row.tipo_indice.split('_').slice(1).join('_'))
           || null;
@@ -2180,6 +2212,8 @@ function App({session,plan,zones}){
           previewBounds:item.previewBounds,
           indice: indiceUsado,
           ts: item.ts || null,
+          _ts: ts,                     // interno: para tie-breaking entre rows
+          updated_at: row.updated_at,  // para mostrar "calculado el ..."
         };
       });
       setDataCache(prev=>({...prev,[wsId]:{loading:false,data:parsed}}));
