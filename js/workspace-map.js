@@ -160,8 +160,19 @@ function startNewZone() {
 // ---------------------------------------------------------
 var _cuencasVisible = false;
 
-function toggleCapasCuencas() {
+async function toggleCapasCuencas() {
+    // Lazy-load: si la capa no existe, descargarla la primera vez
+    if ((typeof cuencasLayer === 'undefined' || !cuencasLayer)
+        && typeof cargarCuencasDGA === 'function') {
+        try {
+            await cargarCuencasDGA();
+        } catch (e) {
+            console.warn('[Cuencas] no se pudo cargar:', e);
+            return;
+        }
+    }
     if (typeof cuencasLayer === 'undefined' || !cuencasLayer) return;
+
     _cuencasVisible = !_cuencasVisible;
     if (_cuencasVisible) {
         cuencasLayer.addTo(map);

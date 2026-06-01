@@ -1052,6 +1052,21 @@
     background: #b8956e;
 }
 
+.cuenca-popup-btn--disabled,
+.cuenca-popup-btn--disabled:hover {
+    background: rgba(136,136,136,0.20);
+    color: rgba(244,247,241,0.45);
+    cursor: not-allowed;
+    border: 1px solid rgba(136,136,136,0.35);
+}
+
+.cuenca-popup-warn {
+    color: #f5a623 !important;
+    font-size: 12px;
+    border-left: 2px solid #f5a623;
+    padding-left: 8px;
+}
+
 /* ── MODAL POST-DESCARGA ── */
 .modal-des-overlay {
     position: fixed;

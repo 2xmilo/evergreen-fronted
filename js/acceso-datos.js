@@ -58,8 +58,8 @@ function initMap() {
     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
 
-    // Cargar cuencas DGA
-    cargarCuencasDGA();
+    // Cuencas BNA: lazy-load — se descargan SOLO cuando el usuario activa el toggle
+    // (evita bajar 3MB al inicio si nunca se usa la capa)
 
     drawControl = new L.Control.Draw({
         draw: {
@@ -188,95 +188,107 @@ function limpiarTodo() {
 }
 
 // ========================================
-// 2. CARGA DE CUENCAS DGA (DESDE VERCEL)
+// 2. CARGA DE SUB-SUBCUENCAS BNA (LAZY-LOAD)
 // ========================================
+// El GeoJSON pesa ~3 MB. Se descarga la PRIMERA vez que el usuario
+// activa el toggle, y queda en memoria. Si nunca se activa, no se baja.
+let _cuencasLoadPromise = null;  // singleton para evitar requests duplicados
+
 async function cargarCuencasDGA() {
-    try {
-        console.log('🗺️ Cargando cuencas DGA desde Vercel...');
+    // Si ya hay una carga en curso, devolver esa promesa (singleton)
+    if (_cuencasLoadPromise) return _cuencasLoadPromise;
+    if (cuencasLayer) return cuencasLayer;
 
-        // Cargar desde el mismo dominio (Vercel)
-        const response = await fetch('./data/cuencas_chile_simplificado.geojson');
+    _cuencasLoadPromise = (async () => {
+        try {
+            console.log('🗺️ Cargando sub-subcuencas BNA (lazy)...');
+            const LIMITE_HA = 50000;  // límite del backend para zona de estudio
 
-        if (!response.ok) {
-            throw new Error('No se pudo cargar cuencas');
-        }
+            const response = await fetch('./data/sub_subcuencas_bna.geojson');
+            if (!response.ok) throw new Error('No se pudo cargar sub-subcuencas');
 
-        const geojson = await response.json();
+            const geojson = await response.json();
+            console.log(`✅ ${geojson.features.length} sub-subcuencas BNA cargadas`);
 
-        console.log(`✅ ${geojson.features.length} subcuencas BNA cargadas`);
+            cuencasLayer = L.geoJSON(geojson, {
+                style: (feature) => {
+                    const supera = (feature.properties.area_ha || 0) > LIMITE_HA;
+                    return {
+                        color: supera ? '#888' : '#0080FF',
+                        weight: 1.2,
+                        fillColor: supera ? '#888' : '#0080FF',
+                        fillOpacity: supera ? 0.02 : 0.05,
+                    };
+                },
+                onEachFeature: (feature, layer) => {
+                    const p = feature.properties;
+                    const ha = p.area_ha || 0;
+                    const supera = ha > LIMITE_HA;
+                    const haFmt = ha.toLocaleString('es-CL');
 
-        // Crear capa con estilo e interactividad
-        cuencasLayer = L.geoJSON(geojson, {
-            style: {
-                color: '#0080FF',
-                weight: 1.5,
-                fillColor: '#0080FF',
-                fillOpacity: 0.05
-            },
-            onEachFeature: (feature, layer) => {
-                const props = feature.properties;
+                    // Popup con info real + advertencia si supera límite
+                    const haRow = supera
+                        ? `<p class="cuenca-popup-warn"><strong>${haFmt} ha</strong> · supera el límite de ${LIMITE_HA.toLocaleString('es-CL')} ha</p>`
+                        : `<p><strong>Área:</strong> ${haFmt} ha</p>`;
+                    const btn = supera
+                        ? `<button class="cuenca-popup-btn cuenca-popup-btn--disabled" disabled title="Demasiado grande para análisis (máx ${LIMITE_HA.toLocaleString('es-CL')} ha)">⚠️ Excede límite</button>`
+                        : `<button class="cuenca-popup-btn" onclick="if(typeof usarCuencaEnWorkspace==='function'){usarCuencaEnWorkspace();map.closePopup();}">📍 Usar esta cuenca</button>`;
 
-                // Popup con información
-                const popupContent = `
-                    <div class="cuenca-popup">
-                        <h4>${props.nombre || 'Subcuenca'}</h4>
-                        <p><strong>Código Subcuenca:</strong> ${props.cod_subcuenca || 'N/A'}</p>
-                        <p><strong>Región:</strong> ${props.region || 'N/A'}</p>
-                        <button class="cuenca-popup-btn" onclick="if(typeof usarCuencaEnWorkspace==='function'){usarCuencaEnWorkspace();map.closePopup();}else{usarCuencaComoPoligono();}">
-                            📍 Usar esta cuenca
-                        </button>
-                    </div>
-                `;
+                    const popupContent = `
+                        <div class="cuenca-popup">
+                            <h4>${p.nombre || 'Sub-subcuenca'}</h4>
+                            ${haRow}
+                            <p><strong>Código:</strong> ${p.cod_ssubcuenca || 'N/A'}</p>
+                            <p><strong>Región:</strong> ${p.region || 'N/A'}</p>
+                            ${btn}
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent);
 
-                layer.bindPopup(popupContent);
-
-                // Hover effect
-                layer.on('mouseover', function () {
-                    this.setStyle({
-                        fillOpacity: 0.2,
-                        weight: 2
+                    // Hover
+                    layer.on('mouseover', function () {
+                        if (this === cuencaSeleccionada) return;
+                        this.setStyle({ fillOpacity: supera ? 0.10 : 0.20, weight: 2 });
                     });
-                });
-
-                layer.on('mouseout', function () {
-                    if (this !== cuencaSeleccionada) {
+                    layer.on('mouseout', function () {
+                        if (this === cuencaSeleccionada) return;
                         this.setStyle({
-                            fillOpacity: 0.05,
-                            weight: 1.5
+                            fillOpacity: supera ? 0.02 : 0.05,
+                            weight: 1.2,
+                            color: supera ? '#888' : '#0080FF',
                         });
-                    }
-                });
-
-                // Click
-                layer.on('click', function () {
-                    if (cuencaSeleccionada && cuencaSeleccionada !== this) {
-                        cuencaSeleccionada.setStyle({
-                            fillOpacity: 0.05,
-                            weight: 1.5,
-                            color: '#0080FF'
-                        });
-                    }
-
-                    this.setStyle({
-                        fillOpacity: 0.3,
-                        weight: 3,
-                        color: '#FF6B35'
                     });
 
-                    cuencaSeleccionada = this;
-                });
+                    // Click (solo selecciona si NO supera el límite)
+                    layer.on('click', function () {
+                        if (supera) {
+                            // permitir abrir popup pero no marcar como seleccionada
+                            return;
+                        }
+                        if (cuencaSeleccionada && cuencaSeleccionada !== this) {
+                            cuencaSeleccionada.setStyle({
+                                fillOpacity: 0.05, weight: 1.2, color: '#0080FF',
+                            });
+                        }
+                        this.setStyle({ fillOpacity: 0.3, weight: 3, color: '#FF6B35' });
+                        cuencaSeleccionada = this;
+                    });
+                }
+            });
+
+            console.log('✅ Capa de sub-subcuencas BNA lista');
+            return cuencasLayer;
+        } catch (error) {
+            console.error('❌ Error cargando cuencas:', error);
+            _cuencasLoadPromise = null;  // permite reintentar
+            if (typeof mostrarNotificacion === 'function') {
+                mostrarNotificacion('❌ No se pudieron cargar las sub-subcuencas. Reintenta más tarde.');
             }
-        });
+            throw error;
+        }
+    })();
 
-        // Capa cargada pero oculta por defecto — el usuario la activa desde el panel de capas
-        // cuencasLayer.addTo(map);  ← desactivado intencionalmente
-
-        console.log('✅ Capa de cuencas DGA renderizada');
-
-    } catch (error) {
-        console.error('❌ Error cargando cuencas:', error);
-        alert('No se pudieron cargar las cuencas. Intenta recargar la página.');
-    }
+    return _cuencasLoadPromise;
 }
 
 // ========================================
@@ -321,8 +333,8 @@ function usarCuencaComoPoligono() {
 
     poligonos.push({
         id: id,
-        nombre: `Cuenca: ${props.nombre || 'Subcuenca'}`,
-        codigo: props.cod_subcuenca || 'N/A',
+        nombre: `Cuenca: ${props.nombre || 'Sub-subcuenca'}`,
+        codigo: props.cod_ssubcuenca || props.cod_subcuenca || 'N/A',
         coordinates: coordinates,
         area_km2: parseFloat(area_km2),
         esCuenca: true,
