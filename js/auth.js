@@ -501,6 +501,13 @@ async function _renderUserMenu() {
         }).join('');
     }
 
+    // Comparador link — para planes con ≥2 zonas (pro / enterprise / admin)
+    var compareLink = document.getElementById('um-compare-link');
+    if (compareLink) {
+        var canCompare = (plan === 'pro' || plan === 'enterprise' || plan === 'admin');
+        compareLink.style.display = canCompare ? 'flex' : 'none';
+    }
+
     // Admin link — solo si es admin
     var adminLink = document.getElementById('um-admin-link');
     if (adminLink) adminLink.style.display = (plan === 'admin') ? 'flex' : 'none';

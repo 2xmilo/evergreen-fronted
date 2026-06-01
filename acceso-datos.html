@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=21">
+    <link rel="stylesheet" href="css/workspace.css?v=24">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -86,6 +86,9 @@
 
             <!-- Links -->
             <div class="um-links">
+                <a href="comparador.html" id="um-compare-link" class="um-link um-link-compare" style="display:none;">
+                    <i class="fas fa-columns"></i> Módulo Comparativo
+                </a>
                 <a href="admin.html" id="um-admin-link" class="um-link um-link-admin" style="display:none;">
                     <i class="fas fa-shield-alt"></i> Panel de Administración
                 </a>
@@ -304,6 +307,16 @@
                 <span id="rs-meta-vertices"     style="display:none;"></span>
                 <span id="rs-meta-gee"          style="display:none;"></span>
             </div>
+
+            <!-- CTA Comparador (solo pro / enterprise / admin con ≥2 zonas) -->
+            <a href="comparador.html" id="rs-compare-cta" class="rs-compare-cta" style="display:none;">
+                <i class="fas fa-columns"></i>
+                <span class="rs-compare-text">
+                    <span class="rs-compare-title">Módulo Comparativo</span>
+                    <span class="rs-compare-sub">Análisis lado a lado</span>
+                </span>
+                <i class="fas fa-arrow-right rs-compare-arrow"></i>
+            </a>
 
             <!-- Herramientas de dibujo y zona -->
             <button class="draw-tools-toggle" id="draw-toggle-btn" onclick="toggleDrawTools()">
@@ -1327,7 +1340,7 @@
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/auth.js?v=5"></script>
+<script src="js/auth.js?v=6"></script>
 
 <!-- OVERRIDES requeridos por acceso-datos.js -->
 <script>
@@ -1355,7 +1368,7 @@
 <script src="js/workspace-bosque.js?v=5"></script>
 <script src="js/workspace-summary.js?v=8"></script>
 <script src="js/workspace-gee-modules.js?v=8"></script>
-<script src="js/workspace-zones.js?v=4"></script>
+<script src="js/workspace-zones.js?v=7"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=5"></script>
 <script src="js/workspace-simbio.js?v=1"></script>

@@ -57,6 +57,17 @@ function renderZoneSelector(zones) {
     }
 
     dropdown.innerHTML = html;
+
+    // CTA "Comparar zonas" en el panel (fuera del dropdown) — solo si hay ≥2 zonas
+    var cta = document.getElementById('rs-compare-cta');
+    if (cta) {
+        var planSupportsCompare = maxZones === Infinity || maxZones >= 2;
+        cta.style.display = (planSupportsCompare && used >= 2) ? 'flex' : 'none';
+    }
+}
+
+function goToComparador() {
+    window.location.href = 'comparador.html';
 }
 
 function toggleZoneSelector() {

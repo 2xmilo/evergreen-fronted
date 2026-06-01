@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Módulo Comparativo — Monitor Pro</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #060E06; --bg2: #0A1409; --panel: #0F1C0E; --mapbg: #0a0a0a;
+  --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.05);
+  --card: rgba(242,245,239,0.045);
+  --white: #F2F5EF; --w90: rgba(242,245,239,0.90); --w70: rgba(242,245,239,0.68);
+  --w55: rgba(242,245,239,0.50); --w40: rgba(242,245,239,0.38); --w25: rgba(242,245,239,0.22);
+  --accent: #C8A882; --data: #6AAA35; --neg: #e05c5c;
+  --za: #C8A882; --zb: #6AAA35;
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--white); font-family: var(--sans); font-weight: 300; overflow: hidden; }
+#root { height: 100vh; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.cz-root { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── TOPBAR ── */
+.cz-topbar {
+  height: 56px; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 20px;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+}
+.cz-back { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--w55); transition: color .2s; }
+.cz-back:hover { color: var(--white); }
+.cz-back i { font-size: 13px; }
+.cz-logo { height: 26px; width: auto; opacity: .92; }
+.cz-title { text-align: center; display: flex; flex-direction: column; gap: 3px; line-height: 1.15; }
+.cz-title-main { font-family: var(--mono); font-size: 14px; letter-spacing: .26em; text-transform: uppercase; color: var(--white); font-weight: 500; }
+.cz-title-eyebrow { font-family: var(--mono); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+.cz-topbar-right { display: flex; align-items: center; gap: 10px; }
+.cz-plan-tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--w40); border: 1px solid var(--border); border-radius: 5px; padding: 4px 9px; }
+.cz-export {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500;
+  color: var(--bg); background: var(--accent); padding: 7px 14px; border-radius: 7px; transition: filter .2s; cursor: pointer;
+}
+.cz-export:hover { filter: brightness(1.08); }
+
+/* ── BODY ── */
+.cz-body { flex: 1; min-height: 0; display: flex; }
+
+/* ── SIDEBAR ── */
+.cz-sidebar {
+  width: 234px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 14px; padding: 18px 16px; overflow-y: auto;
+}
+.cz-side-group { display: flex; flex-direction: column; gap: 5px; }
+.cz-side-label { font-family: var(--mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--w40); }
+.cz-side-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+/* zone selector */
+.cz-zsel { position: relative; width: 100%; }
+.cz-zsel-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
+  background: var(--card); border: 1px solid var(--border); border-left-width: 3px; border-radius: 8px;
+  padding: 7px 9px; transition: border-color .2s, background .2s; cursor: pointer;
+}
+.cz-zsel--a .cz-zsel-btn { border-left-color: var(--za); }
+.cz-zsel--b .cz-zsel-btn { border-left-color: var(--zb); }
+.cz-zsel-btn:hover, .cz-zsel-btn.open { background: rgba(255,255,255,0.04); }
+.cz-zsel-name { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.cz-zsel-title { font-size: 12px; font-weight: 500; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cz-zsel-meta { font-family: var(--mono); font-size: 8.5px; letter-spacing: .04em; color: var(--w40); text-transform: uppercase; }
+.cz-zsel-caret { font-size: 10px; color: var(--w40); transition: transform .2s; flex-shrink: 0; }
+.cz-zsel-btn.open .cz-zsel-caret { transform: rotate(180deg); }
+.cz-zsel-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 1200;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 6px; box-shadow: 0 18px 44px rgba(0,0,0,0.55); max-height: 280px; overflow-y: auto;
+}
+.cz-zsel-item {
+  width: 100%; display: flex; flex-direction: column; gap: 2px; text-align: left;
+  padding: 9px 11px; border-radius: 8px; transition: background .15s; cursor: pointer;
+}
+.cz-zsel-item:hover { background: rgba(255,255,255,0.05); }
+.cz-zsel-item.sel { background: rgba(200,168,130,0.10); }
+.cz-zsel-item-title { font-size: 13px; font-weight: 500; color: var(--white); display: flex; align-items: center; gap: 8px; }
+.cz-zsel-dup { font-family: var(--mono); font-size: 8px; letter-spacing: .08em; text-transform: uppercase; color: var(--w40); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; }
+.cz-zsel-item-meta { font-family: var(--mono); font-size: 9px; color: var(--w40); text-transform: uppercase; }
+.cz-zchip {
+  width: 19px; height: 19px; flex-shrink: 0; border-radius: 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 10px; font-weight: 500; border: 1px solid;
+}
+.cz-zchip--a { color: var(--za); border-color: color-mix(in srgb, var(--za) 50%, transparent); background: color-mix(in srgb, var(--za) 12%, transparent); }
+.cz-zchip--b { color: var(--zb); border-color: color-mix(in srgb, var(--zb) 50%, transparent); background: color-mix(in srgb, var(--zb) 12%, transparent); }
+
+/* module rail */
+.cz-modrail { display: flex; flex-direction: column; gap: 3px; }
+.cz-modtab {
+  display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+  padding: 9px 11px; border-radius: 9px; color: var(--w55); font-size: 13px; font-weight: 400;
+  border: 1px solid transparent; transition: background .16s, color .16s, border-color .16s;
+}
+.cz-modtab-radio { width: 13px; height: 13px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid var(--w25); transition: all .16s; position: relative; }
+.cz-modtab i { font-size: 12.5px; width: 16px; text-align: center; color: var(--w40); transition: color .16s; }
+.cz-modtab:hover { background: rgba(255,255,255,0.03); color: var(--white); }
+.cz-modtab:hover i { color: var(--w70); }
+.cz-modtab.active { background: rgba(200,168,130,0.10); color: var(--white); border-color: rgba(200,168,130,0.26); }
+.cz-modtab.active i { color: var(--accent); }
+.cz-modtab.active .cz-modtab-radio { border-color: var(--accent); }
+.cz-modtab.active .cz-modtab-radio::after { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: var(--accent); }
+.cz-tab-dot { margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: .7; }
+
+/* ── CANVAS ── */
+.cz-canvas {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px 18px; overflow-y: auto; background: var(--bg);
+}
+
+/* KPI row */
+.cz-kpis { flex-shrink: 0; display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.cz-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 15px 17px; display: flex; flex-direction: column; gap: 11px; }
+.cz-kpi-head { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--w55); display: flex; align-items: center; gap: 8px; }
+.cz-kpi-head i { color: var(--accent); font-size: 12px; }
+.cz-kpi-flow { display: flex; align-items: baseline; gap: 10px; }
+.cz-kpi-num { font-family: var(--mono); font-weight: 400; letter-spacing: -.02em; font-size: 27px; }
+.cz-kpi-num--a { color: var(--w70); }
+.cz-kpi-num--b { color: var(--white); }
+.cz-kpi-arrow { font-size: 13px; color: var(--w40); align-self: center; }
+.cz-kpi-delta {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 12.5px; border: 1px solid; border-radius: 50px; padding: 3px 11px;
+}
+.cz-kpi-delta-tag { font-size: 8.5px; letter-spacing: .1em; color: var(--w40); border-left: 1px solid var(--border); padding-left: 7px; margin-left: 1px; }
+
+/* stage */
+.cz-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+
+/* map tiles */
+.cz-tiles { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 42vh; min-height: 260px; }
+.cz-tile { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.cz-tile-head { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; }
+.cz-tile-head--a { border-left-color: var(--za); }
+.cz-tile-head--b { border-left-color: var(--zb); }
+.cz-tile-name { font-family: var(--serif); font-size: 14px; font-weight: 500; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cz-tile-meta { font-family: var(--mono); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; color: var(--w40); margin-left: auto; white-space: nowrap; }
+.cz-tile-body { flex: 1; position: relative; min-height: 0; background: var(--mapbg); }
+.cz-map { position: absolute; inset: 0; background: var(--mapbg); }
+.cz-tile-empty {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 9px; color: var(--w40); font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+}
+.cz-tile-empty i { font-size: 22px; opacity: .35; }
+
+/* legend */
+.cz-legend {
+  position: absolute; bottom: 12px; left: 12px; z-index: 650; width: 172px;
+  background: rgba(4,14,4,0.78); backdrop-filter: blur(12px);
+  border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px;
+}
+.cz-legend-title { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--w55); margin-bottom: 7px; }
+.cz-legend-bar { height: 8px; border-radius: 3px; }
+.cz-legend-scale { display: flex; justify-content: space-between; margin-top: 5px; font-family: var(--mono); font-size: 9px; color: var(--w40); }
+
+/* detail */
+.cz-detail { flex: 0 0 auto; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px 16px; }
+.cz-detail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cz-detail-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
+.cz-detail-note { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; color: var(--w40); text-transform: uppercase; }
+
+/* metric cards */
+.cz-metrics-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+.cz-metric { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 16px 17px; }
+.cz-metric-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--w55); margin-bottom: 11px; }
+.cz-metric-vals { display: flex; flex-direction: column; gap: 5px; margin-bottom: 11px; }
+.cz-metric-row-v { display: flex; align-items: center; gap: 9px; }
+.cz-metric-num { font-family: var(--mono); font-size: 18px; font-weight: 400; letter-spacing: -.01em; }
+.cz-delta-line { font-family: var(--mono); font-size: 12px; letter-spacing: .02em; display: flex; align-items: center; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border2); }
+.cz-delta-glyph { font-size: 10px; }
+
+/* table */
+.cz-table-head { display: flex; align-items: center; gap: 10px; padding: 0 4px 12px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--w70); margin-bottom: 2px; }
+.cz-table-head i { color: var(--accent); font-size: 13px; }
+.cz-table { width: 100%; border-collapse: collapse; }
+.cz-table th { text-align: left; padding: 10px 14px; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--w55); font-weight: 400; border-bottom: 1px solid var(--border); }
+.cz-table th:first-child { padding-left: 4px; }
+.cz-table th .cz-zchip { margin-right: 7px; vertical-align: middle; }
+.cz-th-delta { text-align: center; width: 90px; }
+.cz-table td { padding: 10px 14px; border-bottom: 1px solid var(--border2); font-size: 13.5px; }
+.cz-table td:first-child { padding-left: 4px; }
+.cz-table tr:last-child td { border-bottom: none; }
+.cz-td-label { color: var(--w70); }
+.cz-td-num { font-family: var(--mono); font-size: 14px; color: var(--white); }
+.cz-td-delta { font-family: var(--mono); font-size: 12px; text-align: center; white-space: nowrap; }
+.cz-tr-accent td { background: rgba(200,168,130,0.05); }
+.cz-tr-accent .cz-td-label { color: var(--accent); font-weight: 500; }
+.cz-level { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid; border-radius: 50px; padding: 3px 12px; }
+
+/* ── LOADING ── */
+.cz-boot {
+  height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; background: var(--bg); color: var(--w40); font-family: var(--mono);
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+}
+.cz-boot-spin {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  animation: cz-spin .8s linear infinite;
+}
+@keyframes cz-spin { to { transform: rotate(360deg); } }
+
+/* ── UPGRADE ── */
+.cz-upgrade {
+  height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+.cz-upgrade-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 18px;
+  padding: 44px 40px; text-align: center; max-width: 380px; width: 90%;
+}
+.cz-upgrade-icon { font-size: 32px; color: var(--accent); margin-bottom: 18px; opacity: .85; }
+.cz-upgrade-title { font-family: var(--serif); font-size: 22px; margin-bottom: 10px; }
+.cz-upgrade-text { font-size: 13.5px; color: var(--w55); line-height: 1.7; margin-bottom: 26px; }
+.cz-upgrade-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent); color: var(--bg); padding: 10px 24px;
+  border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; transition: filter .2s;
+}
+.cz-upgrade-btn:hover { filter: brightness(1.08); }
+
+/* no-data state inside tile/detail */
+.cz-nodata {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 28px 16px; gap: 8px; color: var(--w40);
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+}
+.cz-nodata i { font-size: 20px; opacity: .35; }
+
+/* ── PISO VEGETACIONAL strip ── */
+.cz-piso { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.cz-piso-head { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 7px; }
+.cz-piso-head i { font-size: 10px; }
+.cz-piso-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cz-piso-row { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; line-height: 1.5; color: var(--w70); }
+.cz-piso-row .cz-zchip { flex-shrink: 0; margin-top: 1px; }
+.cz-piso-row em { font-style: italic; color: var(--w55); font-size: 11px; }
+
+/* ── ARCLIM dashboard ── */
+.cz-arclim { display: flex; flex-direction: column; gap: 14px; }
+.cz-arclim-comunas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cz-arclim-comuna { background: var(--card); border: 1px solid var(--border); border-left-width: 3px; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+.cz-arclim-comuna.za { border-left-color: var(--za); }
+.cz-arclim-comuna.zb { border-left-color: var(--zb); }
+.cz-arclim-comuna-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.cz-arclim-comuna-label { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--w40); }
+.cz-arclim-comuna-name { font-family: var(--serif); font-size: 15px; font-weight: 500; color: var(--white); }
+.cz-arclim-comuna-state { font-family: var(--mono); font-size: 10px; letter-spacing: .04em; color: var(--w55); }
+
+/* indicator dropdown (executive style) */
+.cz-arclim-picker { position: relative; }
+.cz-arclim-picker-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 16px; text-align: left; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.cz-arclim-picker-btn:hover { background: rgba(255,255,255,0.04); border-color: rgba(200,168,130,0.25); }
+.cz-arclim-picker-btn.open { border-color: rgba(200,168,130,0.35); background: rgba(255,255,255,0.04); }
+.cz-arclim-picker-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--w40); flex-shrink: 0;
+}
+.cz-arclim-picker-name {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.cz-arclim-picker-title {
+  font-family: var(--serif); font-size: 16px; font-weight: 500; color: var(--white);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cz-arclim-picker-sub {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--w40); text-transform: uppercase;
+}
+.cz-arclim-picker-caret { font-size: 11px; color: var(--w40); transition: transform .2s; flex-shrink: 0; }
+.cz-arclim-picker-btn.open .cz-arclim-picker-caret { transform: rotate(180deg); }
+
+.cz-arclim-picker-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 1300;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 6px; box-shadow: 0 18px 44px rgba(0,0,0,0.55);
+  max-height: 360px; overflow-y: auto;
+}
+.cz-arclim-picker-group { padding: 8px 8px 2px; }
+.cz-arclim-picker-group-label {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--w40); padding-bottom: 6px; border-bottom: 1px solid var(--border2); margin-bottom: 4px;
+}
+.cz-arclim-picker-item {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 7px; background: transparent; border: none;
+  text-align: left; cursor: pointer; transition: background .12s; color: var(--w70);
+  font-size: 12.5px;
+}
+.cz-arclim-picker-item:hover { background: rgba(255,255,255,0.04); color: var(--white); }
+.cz-arclim-picker-item.sel { background: rgba(200,168,130,0.10); color: var(--white); }
+.cz-arclim-picker-radio {
+  width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--w25); flex-shrink: 0; position: relative;
+}
+.cz-arclim-picker-item.sel .cz-arclim-picker-radio { border-color: var(--accent); }
+.cz-arclim-picker-item.sel .cz-arclim-picker-radio::after {
+  content: ''; position: absolute; inset: 2px; border-radius: 50%; background: var(--accent);
+}
+.cz-arclim-picker-item-name { flex: 1; min-width: 0; }
+.cz-arclim-picker-item-unit { font-family: var(--mono); font-size: 9.5px; color: var(--w40); }
+
+.cz-arclim-chart-wrap {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.cz-arclim-chart-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.cz-arclim-chart-title { font-family: var(--serif); font-size: 17px; color: var(--white); }
+.cz-arclim-chart-sub { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; color: var(--w40); text-transform: uppercase; }
+.cz-arclim-chart-legend { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 10.5px; color: var(--w55); }
+.cz-arclim-chart-legend i { font-style: normal; display: inline-block; width: 22px; height: 2px; vertical-align: middle; margin-right: 6px; }
+.cz-arclim-chart-canvas { position: relative; height: 320px; }
+.cz-arclim-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 60px 20px; color: var(--w55); font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.cz-arclim-loading .cz-boot-spin { width: 18px; height: 18px; border-width: 2px; }
+
+.cz-arclim-deltas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.cz-arclim-delta {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.cz-arclim-delta-lbl { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--w40); display: flex; align-items: center; gap: 7px; }
+.cz-arclim-delta-vals { font-family: var(--mono); font-size: 16px; display: flex; align-items: baseline; gap: 8px; }
+.cz-arclim-delta-vals span:nth-child(1) { color: var(--w70); }
+.cz-arclim-delta-vals i { font-size: 10px; color: var(--w40); }
+.cz-arclim-delta-vals span:nth-child(3) { color: var(--white); }
+.cz-arclim-delta-diff { font-family: var(--mono); font-size: 11px; padding-top: 4px; border-top: 1px solid var(--border2); }
+
+/* ── BIO charts ── */
+.cz-bio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+.cz-bio-card { background: var(--card); border: 1px solid var(--border); border-left-width: 3px; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.cz-bio-card.za { border-left-color: var(--za); }
+.cz-bio-card.zb { border-left-color: var(--zb); }
+.cz-bio-card-head { display: flex; align-items: center; gap: 9px; }
+.cz-bio-card-name { font-family: var(--serif); font-size: 14px; color: var(--white); }
+.cz-bio-card-meta { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; color: var(--w40); margin-left: auto; text-transform: uppercase; }
+.cz-bio-card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.cz-bio-stat { background: rgba(255,255,255,0.02); border-radius: 7px; padding: 8px 9px; }
+.cz-bio-stat-val { font-family: var(--mono); font-size: 19px; color: var(--white); letter-spacing: -.02em; }
+.cz-bio-stat-lbl { font-family: var(--mono); font-size: 8.5px; letter-spacing: .08em; color: var(--w40); text-transform: uppercase; margin-top: 2px; }
+.cz-bio-stat.cr .cz-bio-stat-val { color: var(--neg); }
+.cz-bio-stat.en .cz-bio-stat-val { color: #d9a441; }
+.cz-bio-stat.vu .cz-bio-stat-val { color: #d9a441; }
+
+.cz-bio-chart-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.cz-bio-chart-canvas { position: relative; height: 220px; }
+.cz-bio-toplist { display: flex; flex-direction: column; gap: 6px; }
+.cz-bio-toplist-title { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--w40); margin-bottom: 4px; }
+.cz-bio-toplist-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; padding: 5px 0; border-bottom: 1px solid var(--border2); }
+.cz-bio-toplist-row:last-child { border-bottom: none; }
+.cz-bio-toplist-cat { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 50px; border: 1px solid; letter-spacing: .06em; }
+.cz-bio-toplist-cat.CR { color: var(--neg); border-color: var(--neg); background: rgba(224,92,92,0.08); }
+.cz-bio-toplist-cat.EN { color: #d9a441; border-color: #d9a441; background: rgba(217,164,65,0.08); }
+.cz-bio-toplist-cat.VU { color: #d9a441; border-color: rgba(217,164,65,0.5); background: rgba(217,164,65,0.05); }
+.cz-bio-toplist-cat.NT { color: var(--w55); border-color: var(--border); }
+.cz-bio-toplist-name { color: var(--white); font-style: italic; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cz-bio-toplist-obs { font-family: var(--mono); font-size: 10px; color: var(--w55); }
+
+.cz-bio-reanalyze {
+  display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+  background: rgba(200,168,130,0.08); border: 1px solid rgba(200,168,130,0.3);
+  border-radius: 7px; padding: 8px 14px; cursor: pointer; transition: all .15s;
+}
+.cz-bio-reanalyze:hover { background: rgba(200,168,130,0.16); }
+.cz-bio-reanalyze i { font-size: 11px; }
+
+/* Leaflet dark tweaks */
+.leaflet-container { background: var(--mapbg); font-family: var(--mono); }
+.leaflet-control-zoom a { background: rgba(4,14,4,0.88) !important; color: var(--w70) !important; border-color: var(--border) !important; }
+.leaflet-control-zoom a:hover { background: rgba(15,28,14,0.95) !important; color: var(--white) !important; }
+.leaflet-control-attribution { background: rgba(4,14,4,0.7) !important; color: var(--w40) !important; font-size: 9px !important; }
+
+@media (max-width: 1100px) { .cz-kpis { grid-template-columns: repeat(2,1fr); } .cz-metrics-row { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 860px) { .cz-body { flex-direction: column; } .cz-sidebar { width: auto; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; } .cz-tiles { grid-template-columns: 1fr; height: auto; } .cz-tile { height: 280px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+  // Expose the initialized client as `supabase` for the rest of this page.
+  // (supabase-client.js creates the client in `_sb`; the CDN script also defines
+  //  a global `supabase` that we no longer need once the client is built.)
+  window.supabase = _sb;
+</script>
+
+<!-- ══ Data model ══ -->
+<script>
+(function(){
+  'use strict';
+  const COLORMAPS = {
+    ndvi:  ['#6b4f2a','#a98f3e','#c9c24a','#7fae3a','#3d7a2e','#1c4d12'],
+    ndwi:  ['#b9a06a','#d8c48f','#7fae9a','#3d9ec4','#2a6fad','#13315f'],
+    bosque:['#2a2a24','#56583f','#7e8a4e','#4f8a34','#2f6b23','#16400f'],
+    elev:  ['#1c4d12','#3d7a2e','#a98f3e','#b07a45','#8c6a52','#e7e3da'],
+    clima: ['#2a6fad','#3d9ec4','#7fae6a','#c9c24a','#d98a3a','#c0392b'],
+  };
+  const MODULES = [
+    { id:'vegetacion', label:'Vegetación',    icon:'fa-seedling',             type:'map',
+      prefix:'vegetacion_', index:'NDVI', cmap:'ndvi', legendMin:'0.0', legendMax:'1.0',
+      metrics:[
+        {key:'mean',   label:'NDVI prom',  fmt:'dec', better:'high'},
+        {key:'max',    label:'NDVI máx',   fmt:'dec', better:'high'},
+        {key:'min',    label:'NDVI mín',   fmt:'dec', better:'none'},
+        {key:'stdDev', label:'Desv. est.', fmt:'dec', better:'none'},
+      ]},
+    { id:'agua', label:'Agua', icon:'fa-droplet', type:'map',
+      prefix:'agua_', index:'NDWI', cmap:'ndwi', legendMin:'-0.3', legendMax:'0.6',
+      metrics:[
+        {key:'mean', label:'NDWI prom', fmt:'dec', better:'high'},
+        {key:'max',  label:'NDWI máx',  fmt:'dec', better:'high'},
+        {key:'min',  label:'NDWI mín',  fmt:'dec', better:'none'},
+      ]},
+    { id:'elevacion', label:'Elevación', icon:'fa-mountain', type:'map',
+      prefix:'dem_', index:'Elevación', cmap:'elev', legendMin:'baja', legendMax:'alta',
+      metrics:[
+        {key:'mean', label:'Elev. media', fmt:'int', unit:'m', better:'none'},
+        {key:'max',  label:'Cota máxima', fmt:'int', unit:'m', better:'none'},
+        {key:'min',  label:'Cota mínima', fmt:'int', unit:'m', better:'none'},
+      ]},
+    { id:'bosque', label:'Bosque', icon:'fa-tree', type:'map',
+      prefix:'bosque_', index:'Cobertura', cmap:'bosque', legendMin:'0%', legendMax:'100%',
+      metrics:[
+        {key:'mean', label:'Cobertura prom', fmt:'dec', better:'high'},
+        {key:'max',  label:'Cobertura máx',  fmt:'dec', better:'high'},
+      ]},
+    { id:'biodiversidad', label:'Biodiversidad', icon:'fa-paw', type:'bio',
+      prefix:'biodiversidad_',
+      tableTitle:'Riqueza de especies · GBIF + RCE Chile',
+      rows:[
+        {key:'n_especies', label:'Total especies',        fmt:'int', better:'high'},
+        {key:'n_cr',       label:'En Peligro Crítico',    fmt:'int', better:'low'},
+        {key:'n_en',       label:'En Peligro',            fmt:'int', better:'low'},
+        {key:'n_vu',       label:'Vulnerables',           fmt:'int', better:'low'},
+        {key:'n_rce',      label:'Catálogo RCE Chile',    fmt:'int', better:'high', accent:true},
+      ]},
+    { id:'riesgos', label:'Riesgos', icon:'fa-triangle-exclamation', type:'arclim',
+      tableTitle:'Riesgos climáticos proyectados · ARClim · MMA / CR2 · UC',
+      indicadores:[
+        {id:'hot_days',             grupo:'calor',  icon:'fa-sun',              label:'Días calurosos',           unit:'días/año'},
+        {id:'summer_days',          grupo:'calor',  icon:'fa-thermometer-full', label:'Días de verano',           unit:'días/año'},
+        {id:'tropical_nights',      grupo:'calor',  icon:'fa-moon',             label:'Noches tropicales',        unit:'noches/año'},
+        {id:'frost_days',           grupo:'frio',   icon:'fa-snowflake',        label:'Días de helada',           unit:'días/año'},
+        {id:'cool_days',            grupo:'frio',   icon:'fa-wind',             label:'Días frescos',             unit:'días/año'},
+        {id:'consecutive_dry_days', grupo:'sequia', icon:'fa-tint-slash',       label:'Días secos consecutivos',  unit:'días'},
+        {id:'consecutive_wet_days', grupo:'lluvia', icon:'fa-cloud-rain',       label:'Días húmedos consecutivos',unit:'días'},
+      ]},
+  ];
+  function polyFromGeoJSON(geo){
+    if(!geo||!geo.geometry||geo.geometry.type!=='Polygon') return [];
+    return geo.geometry.coordinates[0].map(function(c){return[c[1],c[0]];});
+  }
+  function boundsOfPoly(poly){
+    if(!poly.length) return null;
+    var lats=poly.map(function(p){return p[0];}), lngs=poly.map(function(p){return p[1];});
+    return [[Math.min.apply(null,lats),Math.min.apply(null,lngs)],[Math.max.apply(null,lats),Math.max.apply(null,lngs)]];
+  }
+  function centroid(poly){
+    if(!poly.length) return {lat:-35,lng:-71};
+    var sumLat=0,sumLng=0;
+    poly.forEach(function(p){sumLat+=p[0];sumLng+=p[1];});
+    return {lat:sumLat/poly.length, lng:sumLng/poly.length};
+  }
+  function wsToZone(ws){
+    var poly=polyFromGeoJSON(ws.polygon_geojson);
+    var bounds=boundsOfPoly(poly);
+    var c=centroid(poly);
+    var d=new Date(ws.created_at);
+    return {
+      id:ws.id, name:ws.zone_name||'Zona sin nombre',
+      region:'', date:d.toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'}),
+      area:parseFloat(ws.zona_ha)||0, lat:c.lat, lng:c.lng, zoom:11, poly:poly, bounds:bounds,
+    };
+  }
+  window.CZ={ZONES:[],MODULES,COLORMAPS,wsToZone};
+})();
+</script>
+
+<!-- ══ Map helpers ══ -->
+<script>
+(function(){
+  'use strict';
+  function hexToRgb(h){var n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
+  function rampColor(stops,t){
+    t=Math.max(0,Math.min(1,t));
+    var seg=t*(stops.length-1),i=Math.floor(seg),f=seg-i;
+    var a=hexToRgb(stops[i]),b=hexToRgb(stops[Math.min(i+1,stops.length-1)]);
+    return[Math.round(a[0]+(b[0]-a[0])*f),Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f)];
+  }
+  function legendGradient(cmapKey){
+    var stops=CZ.COLORMAPS[cmapKey];
+    var parts=stops.map(function(c,i){return c+' '+Math.round(i/(stops.length-1)*100)+'%';});
+    return'linear-gradient(90deg,'+parts.join(',')+')';
+  }
+  function createBaseMap(el,zone){
+    var center=zone&&zone.lat?[zone.lat,zone.lng]:[-37.5,-71];
+    var zoom=zone&&zone.zoom?zone.zoom:9;
+    var map=L.map(el,{center:center,zoom:zoom,zoomControl:true,attributionControl:true,zoomSnap:0.5,maxZoom:17,minZoom:5,fadeAnimation:false});
+    // ESRI World Dark Gray Canvas — neutral oscuro, sin etiquetas distractoras
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{
+      attribution:'© Esri',
+      opacity:1, maxZoom:16
+    }).addTo(map);
+    map.zoomControl.setPosition('topright');
+    map.attributionControl.setPrefix('');
+    return map;
+  }
+  async function drawZone(map,handles,zone,mod,accent,opacity,zoneData){
+    if(handles.overlay){try{map.removeLayer(handles.overlay);}catch(e){}handles.overlay=null;}
+    if(handles.poly){try{map.removeLayer(handles.poly);}catch(e){}handles.poly=null;}
+    if(zone&&zone.poly&&zone.poly.length){
+      handles.poly=L.polygon(zone.poly,{color:accent,weight:2,opacity:0.9,fillColor:accent,fillOpacity:0.05}).addTo(map);
+    }
+    if(mod&&mod.type==='map'&&zoneData&&zoneData[mod.id]){
+      var md=zoneData[mod.id];
+      if(md.previewPath&&md.previewBounds){
+        try{
+          var res=await supabase.storage.from('result-previews').createSignedUrl(md.previewPath,3600);
+          if(res.data&&res.data.signedUrl){
+            handles.overlay=L.imageOverlay(res.data.signedUrl,md.previewBounds,{opacity:opacity,interactive:false}).addTo(map);
+          }
+        }catch(e){console.warn('overlay error',e);}
+      }
+    }
+  }
+  function fitZone(map,zone,zoneData,modId){
+    var b=null;
+    if(zoneData&&modId&&zoneData[modId]&&zoneData[modId].previewBounds) b=zoneData[modId].previewBounds;
+    else if(zone&&zone.bounds) b=zone.bounds;
+    if(b) map.fitBounds(b,{padding:[18,18],animate:false});
+    else if(zone&&zone.lat) map.setView([zone.lat,zone.lng],zone.zoom||10,{animate:false});
+  }
+  function linkSync(mapA,mapB,gate){
+    var lock=false;
+    function sync(src,dst){
+      return function(){
+        if(lock||!gate.enabled) return;
+        lock=true;
+        dst.setView(src.getCenter(),src.getZoom(),{animate:false});
+        lock=false;
+      };
+    }
+    var hA=sync(mapA,mapB),hB=sync(mapB,mapA);
+    mapA.on('moveend',hA); mapB.on('moveend',hB);
+    return function(){mapA.off('moveend',hA);mapB.off('moveend',hB);};
+  }
+  window.CZMap={legendGradient,createBaseMap,drawZone,fitZone,linkSync};
+})();
+</script>
+
+<!-- ══ React app ══ -->
+<script type="text/babel">
+'use strict';
+const {useState,useEffect,useRef,useMemo,useCallback}=React;
+
+/* ── formatters ── */
+function czFmt(v,fmt,unit){
+  if(v==null||typeof v!=='number') return '—';
+  if(fmt==='dec') return v.toFixed(2);
+  if(fmt==='pct') return v+'%';
+  if(fmt==='ha')  return Math.round(v).toLocaleString('es-CL')+' ha';
+  if(fmt==='int') return Math.round(v).toLocaleString('es-CL')+(unit?' '+unit:'');
+  return String(v);
+}
+function czFmtDelta(d,fmt,unit){
+  var s=d>0?'+':d<0?'−':'';
+  var a=Math.abs(d);
+  if(fmt==='dec') return s+a.toFixed(2);
+  if(fmt==='pct') return s+a+'%';
+  if(fmt==='ha')  return s+Math.round(a).toLocaleString('es-CL')+' ha';
+  if(fmt==='int') return s+Math.round(a).toLocaleString('es-CL')+(unit?' '+unit:'');
+  return s+a;
+}
+function czDelta(a,b,better){
+  if(a==null||b==null) return{arrow:'—',sentiment:'neutral',diff:0};
+  var diff=b-a;
+  var arrow=diff>0.0001?'▲':diff<-0.0001?'▼':'▬';
+  var sentiment='neutral';
+  if(better==='high') sentiment=diff>0?'good':diff<0?'bad':'neutral';
+  if(better==='low')  sentiment=diff<0?'good':diff>0?'bad':'neutral';
+  return{arrow,sentiment,diff};
+}
+const sentColor=s=>s==='good'?'var(--data)':s==='bad'?'var(--neg)':'var(--w55)';
+
+/* ── zone selector ── */
+function ZoneSelect({side,zone,otherId,onPick,zones}){
+  const[open,setOpen]=useState(false);
+  const ref=useRef(null);
+  useEffect(()=>{
+    function h(e){if(ref.current&&!ref.current.contains(e.target))setOpen(false);}
+    document.addEventListener('mousedown',h);
+    return()=>document.removeEventListener('mousedown',h);
+  },[]);
+  return(
+    <div className={'cz-zsel cz-zsel--'+side} ref={ref}>
+      <button className={'cz-zsel-btn'+(open?' open':'')} onClick={()=>setOpen(!open)}>
+        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+        <span className="cz-zsel-name">
+          <span className="cz-zsel-title">{zone?zone.name:'Seleccionar zona'}</span>
+          {zone&&<span className="cz-zsel-meta">{zone.area.toLocaleString('es-CL')} ha</span>}
+        </span>
+        <i className="fa-solid fa-chevron-down cz-zsel-caret"/>
+      </button>
+      {open&&(
+        <div className="cz-zsel-menu">
+          {zones.length===0&&<div className="cz-nodata" style={{padding:'16px'}}><i className="fa-solid fa-map-marked-alt"/>Sin zonas disponibles</div>}
+          {zones.map(z=>(
+            <button key={z.id} className={'cz-zsel-item'+(z.id===zone?.id?' sel':'')}
+              onClick={()=>{onPick(z.id);setOpen(false);}}>
+              <span className="cz-zsel-item-title">
+                {z.name}
+                {z.id===otherId&&<span className="cz-zsel-dup">en uso</span>}
+              </span>
+              <span className="cz-zsel-item-meta">{z.area.toLocaleString('es-CL')} ha · {z.date}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── KPI card ── */
+const KPIS=[
+  {id:'ndvi',label:'NDVI prom',icon:'fa-seedling',mod:'vegetacion',key:'mean',fmt:'dec',better:'high'},
+  {id:'ndwi',label:'NDWI prom',icon:'fa-droplet', mod:'agua',      key:'mean',fmt:'dec',better:'high'},
+  {id:'elev',label:'Elevación', icon:'fa-mountain',mod:'elevacion', key:'mean',fmt:'int',unit:'m',better:'none'},
+  {id:'esp', label:'Especies',  icon:'fa-paw',     mod:'biodiversidad',key:'n_especies',fmt:'int',better:'high'},
+];
+function KpiCard({kpi,dataA,dataB}){
+  const get=d=>d&&d[kpi.mod]&&d[kpi.mod][kpi.key]!=null?d[kpi.mod][kpi.key]:null;
+  const va=get(dataA),vb=get(dataB);
+  const pct=va&&vb!=null?Math.round((vb-va)/Math.abs(va)*100):null;
+  const arrow=va==null||vb==null?null:vb>va?'▲':vb<va?'▼':'▬';
+  const {sentiment}=czDelta(va,vb,kpi.better);
+  const col=sentColor(sentiment);
+  return(
+    <div className="cz-kpi">
+      <div className="cz-kpi-head"><i className={'fa-solid '+kpi.icon}/>{kpi.label}</div>
+      <div className="cz-kpi-flow">
+        <span className="cz-kpi-num cz-kpi-num--a">{czFmt(va,kpi.fmt,kpi.unit)}</span>
+        <i className="fa-solid fa-arrow-right-long cz-kpi-arrow"/>
+        <span className="cz-kpi-num cz-kpi-num--b">{czFmt(vb,kpi.fmt,kpi.unit)}</span>
+      </div>
+      {arrow!=null&&pct!=null&&(
+        <div className="cz-kpi-delta" style={{color:col,borderColor:col}}>
+          <span style={{fontSize:'0.82em'}}>{arrow}</span>{pct>0?'+':''}{pct}%
+          <span className="cz-kpi-delta-tag">A → B</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── legend ── */
+function MapLegend({mod}){
+  if(!mod||!mod.cmap) return null;
+  return(
+    <div className="cz-legend">
+      <div className="cz-legend-title">{mod.index}</div>
+      <div className="cz-legend-bar" style={{background:CZMap.legendGradient(mod.cmap)}}/>
+      <div className="cz-legend-scale"><span>{mod.legendMin}</span><span>{mod.legendMax}</span></div>
+    </div>
+  );
+}
+
+/* ── metric card ── */
+function MetricCard({m,va,vb}){
+  const{arrow,sentiment,diff}=czDelta(va,vb,m.better);
+  const aLead=m.better==='high'?va>=vb:m.better==='low'?va<=vb:null;
+  const valCol=isLead=>m.better==='none'?'var(--white)':isLead?'var(--data)':'var(--w70)';
+  const sc=sentColor(sentiment);
+  return(
+    <div className="cz-metric">
+      <div className="cz-metric-label">{m.label}</div>
+      <div className="cz-metric-vals">
+        <div className="cz-metric-row-v">
+          <span className="cz-zchip cz-zchip--a">A</span>
+          <span className="cz-metric-num" style={{color:valCol(aLead===true)}}>{czFmt(va,m.fmt,m.unit)}</span>
+        </div>
+        <div className="cz-metric-row-v">
+          <span className="cz-zchip cz-zchip--b">B</span>
+          <span className="cz-metric-num" style={{color:valCol(aLead===false)}}>{czFmt(vb,m.fmt,m.unit)}</span>
+        </div>
+      </div>
+      {va!=null&&vb!=null&&(
+        <div className="cz-delta-line" style={{color:sc}}>
+          <span className="cz-delta-glyph">{arrow}</span> Δ {czFmtDelta(diff,m.fmt,m.unit)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricsRow({mod,dataA,dataB}){
+  const da=dataA&&dataA[mod.id];
+  const db=dataB&&dataB[mod.id];
+  if(!da&&!db) return<div className="cz-nodata"><i className={'fa-solid '+mod.icon}/>Sin datos para este módulo</div>;
+  return(
+    <div className="cz-metrics-row">
+      {mod.metrics.map(m=>(
+        <MetricCard key={m.key} m={m} va={da&&da[m.key]!=null?da[m.key]:null} vb={db&&db[m.key]!=null?db[m.key]:null}/>
+      ))}
+    </div>
+  );
+}
+
+/* ── compare table (bio) ── */
+function CompareTable({mod,zoneA,zoneB,dataA,dataB}){
+  const da=dataA&&dataA[mod.id];
+  const db=dataB&&dataB[mod.id];
+  return(
+    <div>
+      <div className="cz-table-head">
+        <i className={'fa-solid '+mod.icon}/>{mod.tableTitle}
+      </div>
+      <table className="cz-table">
+        <thead>
+          <tr>
+            <th>Indicador</th>
+            <th><span className="cz-zchip cz-zchip--a">A</span> {zoneA?zoneA.name:'—'}</th>
+            <th><span className="cz-zchip cz-zchip--b">B</span> {zoneB?zoneB.name:'—'}</th>
+            <th className="cz-th-delta">Δ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {mod.rows.map(r=>{
+            const a=da&&da[r.key]!=null?da[r.key]:null;
+            const b=db&&db[r.key]!=null?db[r.key]:null;
+            const{arrow,sentiment,diff}=czDelta(a,b,r.better||'high');
+            const sc=sentColor(sentiment);
+            return(
+              <tr key={r.key} className={r.accent?'cz-tr-accent':''}>
+                <td className="cz-td-label">{r.label}</td>
+                <td className="cz-td-num">{czFmt(a,r.fmt||'int',r.unit)}</td>
+                <td className="cz-td-num">{czFmt(b,r.fmt||'int',r.unit)}</td>
+                <td className="cz-td-delta" style={{color:sc}}>
+                  {a!=null&&b!=null?arrow+' '+czFmtDelta(diff,r.fmt||'int',r.unit):'—'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ══ PISO VEGETACIONAL strip (Vegetación + Biodiversidad) ══ */
+function PisoStrip({dataA,dataB}){
+  const pisoA=dataA&&dataA.biodiversidad&&dataA.biodiversidad.piso;
+  const pisoB=dataB&&dataB.biodiversidad&&dataB.biodiversidad.piso;
+  if(!pisoA&&!pisoB) return null;
+  return(
+    <div className="cz-piso">
+      <div className="cz-piso-head"><i className="fa-solid fa-layer-group"/>Piso vegetacional</div>
+      <div className="cz-piso-rows">
+        <div className="cz-piso-row">
+          <span className="cz-zchip cz-zchip--a">A</span>
+          {pisoA?<em>{pisoA}</em>:<em style={{opacity:.5}}>Sin dato — corre Biodiversidad en esta zona</em>}
+        </div>
+        <div className="cz-piso-row">
+          <span className="cz-zchip cz-zchip--b">B</span>
+          {pisoB?<em>{pisoB}</em>:<em style={{opacity:.5}}>Sin dato — corre Biodiversidad en esta zona</em>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══ BIODIVERSIDAD compare (cards + amenazas chart + top list) ══ */
+function BioStatCard({side,zone,data}){
+  if(!data) return(
+    <div className={'cz-bio-card '+(side==='a'?'za':'zb')}>
+      <div className="cz-bio-card-head">
+        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+        <span className="cz-bio-card-name">{zone?zone.name:'—'}</span>
+      </div>
+      <div className="cz-nodata" style={{padding:'14px 0'}}>
+        <i className="fa-solid fa-paw"/>Sin análisis de biodiversidad
+      </div>
+    </div>
+  );
+  return(
+    <div className={'cz-bio-card '+(side==='a'?'za':'zb')}>
+      <div className="cz-bio-card-head">
+        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+        <span className="cz-bio-card-name">{zone?zone.name:'—'}</span>
+        <span className="cz-bio-card-meta">{data.n_rce||0} en RCE Chile</span>
+      </div>
+      <div className="cz-bio-card-stats">
+        <div className="cz-bio-stat"><div className="cz-bio-stat-val">{data.n_especies||0}</div><div className="cz-bio-stat-lbl">Especies</div></div>
+        <div className="cz-bio-stat cr"><div className="cz-bio-stat-val">{data.n_cr||0}</div><div className="cz-bio-stat-lbl">Crítico</div></div>
+        <div className="cz-bio-stat en"><div className="cz-bio-stat-val">{data.n_en||0}</div><div className="cz-bio-stat-lbl">Peligro</div></div>
+      </div>
+      {data.top_amenazadas&&data.top_amenazadas.length>0&&(
+        <div className="cz-bio-toplist">
+          <div className="cz-bio-toplist-title">Especies amenazadas destacadas</div>
+          {data.top_amenazadas.slice(0,4).map((s,i)=>(
+            <div className="cz-bio-toplist-row" key={i}>
+              <span className={'cz-bio-toplist-cat '+(s.cat||s.iucn||'NT')}>{s.cat||s.iucn||'NT'}</span>
+              <span className="cz-bio-toplist-name">{s.comun?s.comun.split(',')[0]:s.nombre}</span>
+              <span className="cz-bio-toplist-obs">{s.obs||0} obs</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BioBarsChart({dataA,dataB,zoneA,zoneB}){
+  const ref=useRef(null);
+  const chartRef=useRef(null);
+  useEffect(()=>{
+    if(!ref.current||typeof Chart==='undefined') return;
+    const labels=['Total especies','RCE Chile','Crítico','Peligro','Vulnerables'];
+    const va=[dataA?.n_especies||0, dataA?.n_rce||0, dataA?.n_cr||0, dataA?.n_en||0, dataA?.n_vu||0];
+    const vb=[dataB?.n_especies||0, dataB?.n_rce||0, dataB?.n_cr||0, dataB?.n_en||0, dataB?.n_vu||0];
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    chartRef.current=new Chart(ref.current,{
+      type:'bar',
+      data:{labels,datasets:[
+        {label:zoneA?.name||'Zona A',data:va,backgroundColor:'rgba(200,168,130,0.72)',borderColor:'#C8A882',borderWidth:1,borderRadius:4},
+        {label:zoneB?.name||'Zona B',data:vb,backgroundColor:'rgba(106,170,53,0.72)',borderColor:'#6AAA35',borderWidth:1,borderRadius:4},
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        scales:{
+          x:{ticks:{color:'rgba(242,245,239,0.55)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+          y:{ticks:{color:'rgba(242,245,239,0.55)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(255,255,255,0.05)'},beginAtZero:true}
+        },
+        plugins:{
+          legend:{labels:{color:'rgba(242,245,239,0.7)',font:{family:'DM Mono',size:10},usePointStyle:true,pointStyle:'rectRounded'}},
+          tooltip:{titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono'}}
+        }
+      }
+    });
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
+  },[dataA,dataB]);
+  return<div className="cz-bio-chart-canvas"><canvas ref={ref}/></div>;
+}
+
+function BioCompare({mod,zoneA,zoneB,dataA,dataB,onReanalyze}){
+  const da=dataA&&dataA.biodiversidad;
+  const db=dataB&&dataB.biodiversidad;
+  return(
+    <div>
+      <div className="cz-detail-head">
+        <span className="cz-detail-eyebrow">
+          <i className={'fa-solid '+mod.icon}/>{mod.label} · GBIF + RCE Chile
+        </span>
+        <button className="cz-bio-reanalyze" onClick={onReanalyze} title="Re-analizar zonas en el workspace">
+          <i className="fa-solid fa-arrows-rotate"/>Volver a analizar
+        </button>
+      </div>
+      <div className="cz-bio-grid">
+        <BioStatCard side="a" zone={zoneA} data={da}/>
+        <BioStatCard side="b" zone={zoneB} data={db}/>
+      </div>
+      {(da||db)&&(
+        <div className="cz-bio-chart-wrap" style={{marginTop:12}}>
+          <div className="cz-arclim-chart-head">
+            <div>
+              <div className="cz-arclim-chart-title">Riqueza por categoría</div>
+              <div className="cz-arclim-chart-sub">comparación directa A vs B</div>
+            </div>
+          </div>
+          <BioBarsChart dataA={da} dataB={db} zoneA={zoneA} zoneB={zoneB}/>
+        </div>
+      )}
+      <PisoStrip dataA={dataA} dataB={dataB}/>
+    </div>
+  );
+}
+
+/* ══ ARCLIM dashboard (Riesgos) ══ */
+const ARCLIM_BASE='https://evergreen-backend-awv1.onrender.com';
+const _arclimCache={comunas:null, series:{}};
+
+function _normalizarTxt(s){
+  return String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+async function fetchArclimComunas(){
+  if(_arclimCache.comunas) return _arclimCache.comunas;
+  const r=await fetch(ARCLIM_BASE+'/api/arclim/comunas');
+  const j=await r.json();
+  _arclimCache.comunas=j.comunas||[];
+  return _arclimCache.comunas;
+}
+
+async function detectComunaForZone(zone){
+  if(!zone||!zone.poly||!zone.poly.length) return null;
+  let lat=0,lng=0;
+  zone.poly.forEach(p=>{lat+=p[0];lng+=p[1];});
+  lat/=zone.poly.length; lng/=zone.poly.length;
+  try{
+    const nom=await fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json&accept-language=es&zoom=10',{headers:{'User-Agent':'Evergreen/1.0'}}).then(r=>r.json());
+    const a=nom.address||{};
+    const nombre=a.city||a.town||a.village||a.municipality||(a.county||'').replace(/^Provincia\s+de\s+/i,'');
+    if(!nombre) return null;
+    const lista=await fetchArclimComunas();
+    const norm=_normalizarTxt(nombre);
+    let hit=lista.find(c=>_normalizarTxt(c.nombre)===norm);
+    if(!hit) hit=lista.find(c=>_normalizarTxt(c.nombre).indexOf(norm)>=0||norm.indexOf(_normalizarTxt(c.nombre))>=0);
+    return hit?{arclim_id:hit.arclim_id,nombre:hit.nombre,raw:nombre}:{arclim_id:null,nombre:nombre,raw:nombre};
+  }catch(e){return null;}
+}
+
+async function fetchArclimSerie(indId, arclimId){
+  const key=indId+'|'+arclimId;
+  if(_arclimCache.series[key]) return _arclimCache.series[key];
+  const url=ARCLIM_BASE+'/api/arclim/serie?id='+indId+'&key='+arclimId+'&scenario=ssp585&season=annual';
+  const r=await fetch(url);
+  if(!r.ok) throw new Error('arclim '+r.status);
+  const j=await r.json();
+  _arclimCache.series[key]=j;
+  return j;
+}
+
+function ArclimChart({serieA,serieB,zoneA,zoneB,indicador}){
+  const ref=useRef(null);
+  const chartRef=useRef(null);
+  useEffect(()=>{
+    if(!ref.current||typeof Chart==='undefined') return;
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    const years=(serieA&&serieA.years)||(serieB&&serieB.years)||[];
+    const ds=[];
+    if(serieA&&serieA.mean){
+      ds.push({label:zoneA?.name||'Zona A',data:serieA.mean,borderColor:'#C8A882',backgroundColor:'rgba(200,168,130,0.12)',borderWidth:2,pointRadius:0,tension:.25,fill:false});
+    }
+    if(serieB&&serieB.mean){
+      ds.push({label:zoneB?.name||'Zona B',data:serieB.mean,borderColor:'#6AAA35',backgroundColor:'rgba(106,170,53,0.12)',borderWidth:2,pointRadius:0,tension:.25,fill:false});
+    }
+    chartRef.current=new Chart(ref.current,{
+      type:'line',
+      data:{labels:years,datasets:ds},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        scales:{
+          x:{ticks:{color:'rgba(242,245,239,0.5)',font:{family:'DM Mono',size:10},maxTicksLimit:10},grid:{color:'rgba(255,255,255,0.04)'}},
+          y:{ticks:{color:'rgba(242,245,239,0.5)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(255,255,255,0.04)'},title:{display:true,text:indicador?.unit||'',color:'rgba(242,245,239,0.4)',font:{family:'DM Mono',size:10}}}
+        },
+        plugins:{
+          legend:{labels:{color:'rgba(242,245,239,0.75)',font:{family:'DM Mono',size:10.5},usePointStyle:true}},
+          tooltip:{titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono'},callbacks:{title:items=>'Año '+items[0].label}},
+          annotation:{}
+        }
+      }
+    });
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
+  },[serieA,serieB,zoneA?.id,zoneB?.id]);
+  return<div className="cz-arclim-chart-canvas"><canvas ref={ref}/></div>;
+}
+
+function ArclimDeltaCard({side,zone,comuna,serie,indicador}){
+  const tag=side==='a'?'A':'B';
+  const cls=side==='a'?'za':'zb';
+  if(!serie){
+    return(
+      <div className={'cz-arclim-comuna '+cls}>
+        <span className={'cz-zchip cz-zchip--'+side}>{tag}</span>
+        <div className="cz-arclim-comuna-info">
+          <span className="cz-arclim-comuna-label">Zona {tag}</span>
+          <span className="cz-arclim-comuna-name">{zone?zone.name:'—'}</span>
+          <span className="cz-arclim-comuna-state">
+            {comuna?(comuna.arclim_id?('Comuna: '+comuna.nombre):('Comuna ARClim no encontrada · '+comuna.raw)):'Detectando…'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  const years=serie.years||[];
+  const mean=serie.mean||[];
+  const histIdx=years.map((y,i)=>y>=1980&&y<=2010?i:-1).filter(i=>i>=0);
+  const futIdx =years.map((y,i)=>y>=2035&&y<=2065?i:-1).filter(i=>i>=0);
+  const avg=arr=>arr.length?arr.reduce((s,v)=>s+v,0)/arr.length:null;
+  const hist=avg(histIdx.map(i=>mean[i]));
+  const fut =avg(futIdx.map(i=>mean[i]));
+  const diff=hist!=null&&fut!=null?fut-hist:null;
+  const fmt=v=>v==null?'—':v.toFixed(1);
+  return(
+    <div className={'cz-arclim-comuna '+cls}>
+      <span className={'cz-zchip cz-zchip--'+side}>{tag}</span>
+      <div className="cz-arclim-comuna-info">
+        <span className="cz-arclim-comuna-label">Zona {tag} · {comuna?.nombre||'—'}</span>
+        <span className="cz-arclim-comuna-name">{indicador?.label}</span>
+        <div className="cz-arclim-delta-vals" style={{marginTop:4}}>
+          <span>{fmt(hist)}</span>
+          <i className="fa-solid fa-arrow-right-long"/>
+          <span>{fmt(fut)}</span>
+          <span style={{marginLeft:'auto',color:diff>0?'var(--neg)':diff<0?'var(--data)':'var(--w55)',fontSize:11}}>
+            {diff==null?'':(diff>0?'▲ +':'▼ ')+Math.abs(diff).toFixed(1)+' '+(indicador?.unit||'')}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const GRUPO_LABELS={calor:'Temperatura — Calor',frio:'Temperatura — Frío',sequia:'Precipitación — Sequía',lluvia:'Precipitación — Lluvia'};
+const GRUPO_ORDER=['calor','frio','sequia','lluvia'];
+
+function IndicadorPicker({indicadores,value,onChange}){
+  const[open,setOpen]=useState(false);
+  const ref=useRef(null);
+  useEffect(()=>{
+    function h(e){if(ref.current&&!ref.current.contains(e.target))setOpen(false);}
+    document.addEventListener('mousedown',h);
+    return()=>document.removeEventListener('mousedown',h);
+  },[]);
+  const sel=indicadores.find(i=>i.id===value);
+  const grupos=GRUPO_ORDER.map(g=>({key:g,label:GRUPO_LABELS[g],items:indicadores.filter(i=>i.grupo===g)})).filter(g=>g.items.length);
+  return(
+    <div className="cz-arclim-picker" ref={ref}>
+      <button className={'cz-arclim-picker-btn'+(open?' open':'')} onClick={()=>setOpen(!open)}>
+        <span className="cz-arclim-picker-tag">Indicador</span>
+        <span className="cz-arclim-picker-name">
+          <span className="cz-arclim-picker-title">{sel?sel.label:'—'}</span>
+          <span className="cz-arclim-picker-sub">{sel?(GRUPO_LABELS[sel.grupo]+' · '+sel.unit):''}</span>
+        </span>
+        <i className="fa-solid fa-chevron-down cz-arclim-picker-caret"/>
+      </button>
+      {open&&(
+        <div className="cz-arclim-picker-menu">
+          {grupos.map(g=>(
+            <div className="cz-arclim-picker-group" key={g.key}>
+              <div className="cz-arclim-picker-group-label">{g.label}</div>
+              {g.items.map(ind=>(
+                <button key={ind.id}
+                  className={'cz-arclim-picker-item'+(ind.id===value?' sel':'')}
+                  onClick={()=>{onChange(ind.id);setOpen(false);}}>
+                  <span className="cz-arclim-picker-radio"/>
+                  <span className="cz-arclim-picker-item-name">{ind.label}</span>
+                  <span className="cz-arclim-picker-item-unit">{ind.unit}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ArclimDashboard({mod,zoneA,zoneB}){
+  const[indId,setIndId]=useState('hot_days');
+  const[comunaA,setComunaA]=useState(null);
+  const[comunaB,setComunaB]=useState(null);
+  const[serieA,setSerieA]=useState(null);
+  const[serieB,setSerieB]=useState(null);
+  const[loading,setLoading]=useState(false);
+  const indicador=useMemo(()=>mod.indicadores.find(i=>i.id===indId),[indId,mod]);
+
+  // detect comuna when zone changes
+  useEffect(()=>{(async()=>{if(zoneA){const c=await detectComunaForZone(zoneA);setComunaA(c);}else setComunaA(null);})();},[zoneA?.id]);
+  useEffect(()=>{(async()=>{if(zoneB){const c=await detectComunaForZone(zoneB);setComunaB(c);}else setComunaB(null);})();},[zoneB?.id]);
+
+  // fetch series when indicator or comuna changes
+  useEffect(()=>{
+    let cancel=false;
+    (async()=>{
+      setLoading(true);
+      setSerieA(null);setSerieB(null);
+      try{
+        const tasks=[];
+        if(comunaA&&comunaA.arclim_id) tasks.push(fetchArclimSerie(indId,comunaA.arclim_id).then(s=>{if(!cancel)setSerieA(s);}).catch(()=>{}));
+        if(comunaB&&comunaB.arclim_id) tasks.push(fetchArclimSerie(indId,comunaB.arclim_id).then(s=>{if(!cancel)setSerieB(s);}).catch(()=>{}));
+        await Promise.all(tasks);
+      }finally{ if(!cancel) setLoading(false); }
+    })();
+    return()=>{cancel=true;};
+  },[indId,comunaA?.arclim_id,comunaB?.arclim_id]);
+
+  const grupos={calor:'Calor',frio:'Frío',sequia:'Sequía',lluvia:'Lluvia'};
+
+  return(
+    <div className="cz-arclim">
+      <div className="cz-detail-head">
+        <span className="cz-detail-eyebrow">
+          <i className={'fa-solid '+mod.icon}/>{mod.label} · ARClim (MMA · CR2 · UC)
+        </span>
+        <span className="cz-detail-note">Escenario SSP5-8.5 · serie anual</span>
+      </div>
+
+      <div className="cz-arclim-comunas">
+        <ArclimDeltaCard side="a" zone={zoneA} comuna={comunaA} serie={serieA} indicador={indicador}/>
+        <ArclimDeltaCard side="b" zone={zoneB} comuna={comunaB} serie={serieB} indicador={indicador}/>
+      </div>
+
+      <IndicadorPicker indicadores={mod.indicadores} value={indId} onChange={setIndId}/>
+
+      <div className="cz-arclim-chart-wrap">
+        <div className="cz-arclim-chart-head">
+          <div>
+            <div className="cz-arclim-chart-title">{indicador?.label}</div>
+            <div className="cz-arclim-chart-sub">{grupos[indicador?.grupo]||''} · {indicador?.unit} · 1980 — 2065</div>
+          </div>
+          <div className="cz-arclim-chart-legend">
+            <span><i style={{background:'#C8A882'}}/>Zona A</span>
+            <span><i style={{background:'#6AAA35'}}/>Zona B</span>
+          </div>
+        </div>
+        {loading
+          ?<div className="cz-arclim-loading"><div className="cz-boot-spin"/>Cargando series climáticas…</div>
+          :(serieA||serieB)
+            ?<ArclimChart serieA={serieA} serieB={serieB} zoneA={zoneA} zoneB={zoneB} indicador={indicador}/>
+            :<div className="cz-nodata"><i className="fa-solid fa-triangle-exclamation"/>Sin datos ARClim para las comunas detectadas</div>
+        }
+      </div>
+    </div>
+  );
+}
+
+/* ══ MAP TILE (imperative Leaflet, managed with refs) ══ */
+function MapTile({side,zone,mod,zoneData,syncGate}){
+  const elRef=useRef(null);
+  const mapRef=useRef(null);
+  const handlesRef=useRef({});
+  const built=useRef(false);
+
+  // init map once
+  useEffect(()=>{
+    if(!elRef.current||built.current) return;
+    mapRef.current=CZMap.createBaseMap(elRef.current,zone);
+    built.current=true;
+    setTimeout(()=>{if(mapRef.current)mapRef.current.invalidateSize();},200);
+    setTimeout(()=>{if(mapRef.current)mapRef.current.invalidateSize();},600);
+    return()=>{
+      if(mapRef.current){try{mapRef.current.remove();}catch(e){}}
+      mapRef.current=null; built.current=false;
+    };
+  },[]);
+
+  // expose map ref for sync
+  useEffect(()=>{
+    if(syncGate&&mapRef.current) syncGate.setMap(side,mapRef.current);
+    return()=>{if(syncGate) syncGate.setMap(side,null);};
+  },[syncGate]);
+
+  // update zone + overlay when zone / mod / data changes
+  useEffect(()=>{
+    if(!mapRef.current||!built.current) return;
+    const accent=side==='a'?'#C8A882':'#6AAA35';
+    (async()=>{
+      await CZMap.drawZone(mapRef.current,handlesRef.current,zone,mod,accent,0.82,zoneData);
+      CZMap.fitZone(mapRef.current,zone,zoneData,mod&&mod.id);
+      setTimeout(()=>{if(mapRef.current)mapRef.current.invalidateSize();},100);
+    })();
+  },[zone?.id,mod?.id,zoneData]);
+
+  const hasMap=mod&&mod.type==='map';
+  const hasData=zoneData&&mod&&zoneData[mod.id];
+
+  return(
+    <section className="cz-tile">
+      <header className={'cz-tile-head cz-tile-head--'+side}>
+        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+        <span className="cz-tile-name">{zone?zone.name:'Sin zona seleccionada'}</span>
+        {zone&&<span className="cz-tile-meta">{zone.area.toLocaleString('es-CL')} ha · {zone.date}</span>}
+      </header>
+      <div className="cz-tile-body">
+        {!zone&&(
+          <div className="cz-tile-empty">
+            <i className="fa-solid fa-map-marked-alt"/>
+            Selecciona una zona
+          </div>
+        )}
+        {zone&&hasMap&&!hasData&&(
+          <div className="cz-tile-empty">
+            <i className="fa-solid fa-image-slash"/>
+            Sin imagen para este módulo
+          </div>
+        )}
+        <div className="cz-map" ref={elRef} style={{display:zone?undefined:'none'}}/>
+        {zone&&hasMap&&hasData&&<MapLegend mod={mod}/>}
+      </div>
+    </section>
+  );
+}
+
+/* ══ MAIN APP ══ */
+function App({session,plan,zones}){
+  const[zoneAId,setZoneAId]=useState(zones[0]?.id||null);
+  const[zoneBId,setZoneBId]=useState(zones[1]?.id||null);
+  const[modId,setModId]=useState('vegetacion');
+  const[dataCache,setDataCache]=useState({});
+  const syncMapsRef=useRef({a:null,b:null,unlink:null});
+
+  const zoneA=useMemo(()=>zones.find(z=>z.id===zoneAId)||null,[zoneAId,zones]);
+  const zoneB=useMemo(()=>zones.find(z=>z.id===zoneBId)||null,[zoneBId,zones]);
+  const mod=useMemo(()=>CZ.MODULES.find(m=>m.id===modId),[modId]);
+  const dataA=zoneAId?dataCache[zoneAId]?.data||null:null;
+  const dataB=zoneBId?dataCache[zoneBId]?.data||null:null;
+
+  // load zone results from Supabase
+  const loadZoneData=useCallback(async(wsId)=>{
+    if(!wsId||dataCache[wsId]) return;
+    setDataCache(prev=>({...prev,[wsId]:{loading:true}}));
+    try{
+      const{data:rows}=await supabase.from('results').select('tipo_indice,result_data').eq('workspace_id',wsId);
+      const parsed={};
+      (rows||[]).forEach(row=>{
+        const modDef=CZ.MODULES.find(m=>row.tipo_indice&&row.tipo_indice.startsWith(m.prefix));
+        if(!modDef||!row.result_data||!row.result_data.length) return;
+        const item=row.result_data.reduce((a,b)=>((a.ts||0)>(b.ts||0)?a:b));
+        parsed[modDef.id]={...(item.stats||{}),previewPath:item.previewPath,previewBounds:item.previewBounds};
+      });
+      setDataCache(prev=>({...prev,[wsId]:{loading:false,data:parsed}}));
+    }catch(e){
+      console.error('loadZoneData',e);
+      setDataCache(prev=>({...prev,[wsId]:{loading:false,data:{}}}));
+    }
+  },[dataCache]);
+
+  useEffect(()=>{if(zoneAId) loadZoneData(zoneAId);},[zoneAId]);
+  useEffect(()=>{if(zoneBId) loadZoneData(zoneBId);},[zoneBId]);
+
+  // map sync gate
+  const syncGate=useMemo(()=>({
+    enabled:true,
+    setMap:(side,map)=>{
+      syncMapsRef.current[side]=map;
+      if(syncMapsRef.current.unlink){syncMapsRef.current.unlink();syncMapsRef.current.unlink=null;}
+      if(syncMapsRef.current.a&&syncMapsRef.current.b){
+        syncMapsRef.current.unlink=CZMap.linkSync(syncMapsRef.current.a,syncMapsRef.current.b,syncGate);
+      }
+    }
+  }),[]);
+
+  const isMapMode=mod&&mod.type==='map';
+  const isBio=mod&&mod.type==='bio';
+  const isArclim=mod&&mod.type==='arclim';
+
+  const goReanalyze=useCallback(()=>{window.open('acceso-datos.html','_self');},[]);
+
+  return(
+    <div className="cz-root">
+      {/* TOPBAR */}
+      <header className="cz-topbar">
+        <a className="cz-back" href="acceso-datos.html">
+          <i className="fa-solid fa-arrow-left"/>
+          <img src="img/logo3.png" alt="Monitor Pro" className="cz-logo"/>
+        </a>
+        <div className="cz-title">
+          <span className="cz-title-main">MONITOR PRO</span>
+          <span className="cz-title-eyebrow">Módulo Comparativo</span>
+        </div>
+        <div className="cz-topbar-right">
+          <span className="cz-plan-tag">{plan}</span>
+        </div>
+      </header>
+
+      {/* BODY */}
+      <div className="cz-body">
+        {/* SIDEBAR */}
+        <aside className="cz-sidebar">
+          <div className="cz-side-group">
+            <div className="cz-side-label">Zona A</div>
+            <ZoneSelect side="a" zone={zoneA} otherId={zoneBId} onPick={setZoneAId} zones={zones}/>
+          </div>
+          <div className="cz-side-group">
+            <div className="cz-side-label">Zona B</div>
+            <ZoneSelect side="b" zone={zoneB} otherId={zoneAId} onPick={setZoneBId} zones={zones}/>
+          </div>
+          <div className="cz-side-divider"/>
+          <nav className="cz-modrail">
+            <div className="cz-side-label">Módulo de análisis</div>
+            {CZ.MODULES.map(m=>(
+              <button key={m.id} className={'cz-modtab'+(m.id===modId?' active':'')} onClick={()=>setModId(m.id)}>
+                <span className="cz-modtab-radio"/>
+                <i className={'fa-solid '+m.icon}/>
+                <span>{m.label}</span>
+                {m.type!=='map'&&<span className="cz-tab-dot" title="Datos no-raster"/>}
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        {/* CANVAS */}
+        <main className="cz-canvas">
+          {/* KPIs */}
+          <div className="cz-kpis">
+            {KPIS.map(k=><KpiCard key={k.id} kpi={k} dataA={dataA} dataB={dataB}/>)}
+          </div>
+
+          {/* Stage */}
+          <div className="cz-stage">
+            {isMapMode&&(
+              <div className="cz-tiles">
+                <MapTile side="a" zone={zoneA} mod={mod} zoneData={dataA} syncGate={syncGate}/>
+                <MapTile side="b" zone={zoneB} mod={mod} zoneData={dataB} syncGate={syncGate}/>
+              </div>
+            )}
+
+            <div className="cz-detail">
+              {isArclim
+                ?<ArclimDashboard mod={mod} zoneA={zoneA} zoneB={zoneB}/>
+                :isBio
+                  ?<BioCompare mod={mod} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} onReanalyze={goReanalyze}/>
+                  :(
+                    <>
+                      <div className="cz-detail-head">
+                        <span className="cz-detail-eyebrow">
+                          <i className={'fa-solid '+mod.icon}/>{mod.label}{mod.index?' · '+mod.index:''}
+                        </span>
+                        <span className="cz-detail-note">Δ = Zona B − Zona A</span>
+                      </div>
+                      <MetricsRow mod={mod} dataA={dataA} dataB={dataB}/>
+                      {mod.id==='vegetacion'&&<PisoStrip dataA={dataA} dataB={dataB}/>}
+                    </>
+                  )
+              }
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function UpgradeWall(){
+  return(
+    <div className="cz-upgrade">
+      <div className="cz-upgrade-card">
+        <div className="cz-upgrade-icon"><i className="fa-solid fa-layer-group"/></div>
+        <div className="cz-upgrade-title">Disponible en Plan Pro</div>
+        <div className="cz-upgrade-text">
+          El Módulo Comparativo requiere plan <strong>Pro</strong> o <strong>Enterprise</strong> para acceder a múltiples zonas de estudio.
+        </div>
+        <a href="acceso-datos.html" className="cz-upgrade-btn">
+          <i className="fa-solid fa-arrow-left"/> Volver al Workspace
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function Loading({msg}){
+  return(
+    <div className="cz-boot">
+      <div className="cz-boot-spin"/>
+      {msg||'Cargando…'}
+    </div>
+  );
+}
+
+/* ══ Bootstrap ══ */
+const rootEl=ReactDOM.createRoot(document.getElementById('root'));
+
+async function bootstrap(){
+  rootEl.render(<Loading msg="Iniciando sesión…"/>);
+  document.body.style.visibility='visible';
+
+  const{data:{session}}=await supabase.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+
+  rootEl.render(<Loading msg="Verificando acceso…"/>);
+  const{data:quota}=await supabase.from('user_quotas').select('plan,is_active').eq('user_id',session.user.id).single();
+  const plan=(quota&&quota.plan)||'free';
+
+  if(plan==='free'){rootEl.render(<UpgradeWall/>);return;}
+
+  rootEl.render(<Loading msg="Cargando zonas de estudio…"/>);
+  const{data:wsList}=await supabase.from('workspaces').select('id,zone_name,zona_ha,created_at,polygon_geojson').eq('user_id',session.user.id).eq('is_active',true).order('created_at',{ascending:false});
+
+  CZ.ZONES=(wsList||[]).map(CZ.wsToZone);
+  rootEl.render(<App session={session} plan={plan} zones={CZ.ZONES}/>);
+}
+
+bootstrap().catch(err=>{
+  console.error(err);
+  rootEl.render(<div style={{color:'var(--neg)',padding:'40px',fontFamily:'var(--mono)',fontSize:'12px'}}>Error: {String(err)}</div>);
+});
+</script>
+</body>
+</html>
