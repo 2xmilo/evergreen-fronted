@@ -101,11 +101,15 @@ async function initComparador() {
 /* ── Workspaces ─────────────────────────────────────────────────────────────── */
 
 async function loadWorkspaces() {
+    // FIX: cargar TODAS las zonas del usuario con polígono, no solo la activa.
+    // El constraint UNIQUE idx_workspaces_one_active_per_user permite solo
+    // 1 zona is_active=true por user_id; filtrar por is_active hacía que el
+    // comparador nunca pudiera ver más de 1 zona.
     var res = await supabase
         .from('workspaces')
-        .select('id, zone_name, zona_ha, created_at, polygon_geojson')
+        .select('id, zone_name, zona_ha, created_at, polygon_geojson, is_active')
         .eq('user_id', _session.user.id)
-        .eq('is_active', true)
+        .not('polygon_geojson', 'is', null)
         .order('created_at', { ascending: false });
 
     _workspaces = res.data || [];

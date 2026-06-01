@@ -455,7 +455,7 @@ function usarCuencaEnWorkspace() {
 
     // Primera zona: verificar cuota usando _sbUserZones local (evita race condition)
     if (window._sbUserId) {
-        var _LIMITS2  = { 'free': 1, 'pro': 3, 'admin': Infinity };
+        var _LIMITS2  = { 'free': 1, 'pro': 3, 'enterprise': 10, 'admin': Infinity };
         var plan2     = window._sbUserPlan || 'free';
         var maxZones2 = _LIMITS2[plan2] !== undefined ? _LIMITS2[plan2] : 1;
         var zones2    = (typeof getValidStoredZones === 'function')

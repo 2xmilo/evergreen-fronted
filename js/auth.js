@@ -8,7 +8,8 @@ window._sbUserEmail = null;
 window._sbUserPlan  = 'free';
 window._sbUserZones = [];
 
-var PLAN_LIMITS = { 'free': 1, 'pro': 3, 'enterprise': Infinity, 'admin': Infinity };
+// PLAN_LIMITS — debe coincidir con private.enforce_workspace_zone_quota() en Supabase
+var PLAN_LIMITS = { 'free': 1, 'pro': 3, 'enterprise': 10, 'admin': Infinity };
 
 async function getBackendAuthHeaders(baseHeaders) {
     var headers = Object.assign({}, baseHeaders || {});

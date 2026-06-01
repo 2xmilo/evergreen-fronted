@@ -113,7 +113,7 @@ function startDrawingZone() {
     // Primera zona: verificar cuota usando _sbUserZones local (evita race condition
     // cuando el delete async aún no confirmó en Supabase)
     if (window._sbUserId) {
-        var _LIMITS  = { 'free': 1, 'pro': 3, 'admin': Infinity };
+        var _LIMITS  = { 'free': 1, 'pro': 3, 'enterprise': 10, 'admin': Infinity };
         var plan     = window._sbUserPlan || 'free';
         var maxZones = _LIMITS[plan] !== undefined ? _LIMITS[plan] : 1;
         var zones    = (typeof getValidStoredZones === 'function')

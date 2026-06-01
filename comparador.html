@@ -1395,7 +1395,10 @@ async function bootstrap(){
   if(plan==='free'){rootEl.render(<UpgradeWall/>);return;}
 
   rootEl.render(<Loading msg="Cargando zonas de estudio…"/>);
-  const{data:wsList}=await supabase.from('workspaces').select('id,zone_name,zona_ha,created_at,polygon_geojson').eq('user_id',session.user.id).eq('is_active',true).order('created_at',{ascending:false});
+  // FIX: cargar TODAS las zonas del usuario con polígono, no solo la activa.
+  // El constraint UNIQUE idx_workspaces_one_active_per_user permite solo
+  // 1 zona is_active=true por user_id; filtrar por is_active bloqueaba la comparación.
+  const{data:wsList}=await supabase.from('workspaces').select('id,zone_name,zona_ha,created_at,polygon_geojson,is_active').eq('user_id',session.user.id).not('polygon_geojson','is',null).order('created_at',{ascending:false});
 
   CZ.ZONES=(wsList||[]).map(CZ.wsToZone);
   rootEl.render(<App session={session} plan={plan} zones={CZ.ZONES}/>);
