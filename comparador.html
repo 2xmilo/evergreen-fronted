@@ -238,6 +238,116 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-tr-accent .cz-td-label { color: var(--accent); font-weight: 500; }
 .cz-level { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid; border-radius: 50px; padding: 3px 12px; }
 
+/* Compact table variant — para módulos de comparación */
+.cz-table--compact th { padding: 8px 12px; font-size: 9.5px; }
+.cz-table--compact td { padding: 8px 12px; font-size: 12.5px; }
+.cz-table--compact .cz-td-num { font-size: 13px; }
+.cz-table--compact .cz-td-delta { font-size: 11.5px; }
+
+/* Metrics section — tabla + chart lado a lado */
+.cz-metrics-section {
+  display: grid; grid-template-columns: 1.05fr 1fr;
+  gap: 18px; margin-top: 6px;
+}
+.cz-metrics-table-wrap, .cz-metrics-chart-wrap {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 14px 12px;
+}
+.cz-metrics-chart-canvas { position: relative; height: 220px; padding-top: 6px; }
+@media (max-width: 980px) {
+  .cz-metrics-section { grid-template-columns: 1fr; }
+  .cz-metrics-chart-canvas { height: 200px; }
+}
+
+/* Biodiversidad — donuts comparativos */
+.cz-bio-donuts {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  margin-top: 14px;
+}
+.cz-bio-donut {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px 10px;
+  border-left: 3px solid var(--za);
+}
+.cz-bio-donut.zb { border-left-color: var(--zb); }
+.cz-bio-donut-head {
+  display: flex; align-items: center; gap: 9px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border2);
+  margin-bottom: 10px;
+}
+.cz-bio-donut-name {
+  flex: 1; font-size: 13px; color: var(--white);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cz-bio-donut-total {
+  font-family: var(--mono); font-size: 10px; color: var(--w55);
+  letter-spacing: .04em;
+}
+.cz-bio-donut-canvas { position: relative; height: 200px; }
+@media (max-width: 760px) {
+  .cz-bio-donuts { grid-template-columns: 1fr; }
+}
+
+/* Biodiversidad — top amenazadas comparativa */
+.cz-bio-top-section { margin-top: 14px; }
+.cz-bio-shared-pill {
+  font-family: var(--mono); font-size: 9.5px;
+  background: rgba(106,170,53,0.14); color: var(--data);
+  border: 1px solid rgba(106,170,53,0.3); border-radius: 50px;
+  padding: 2px 9px; letter-spacing: .06em; margin-left: 8px;
+}
+.cz-bio-top-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  margin-top: 10px;
+}
+.cz-bio-top-col {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+}
+.cz-bio-top-col-head {
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border2);
+  margin-bottom: 6px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--w70);
+  letter-spacing: .04em;
+}
+.cz-bio-top-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 2px; font-size: 12.5px; color: var(--white);
+  border-bottom: 1px solid var(--border2);
+}
+.cz-bio-top-row:last-child { border-bottom: none; }
+.cz-bio-top-row.shared { background: rgba(106,170,53,0.04); }
+.cz-bio-top-cat {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+  padding: 2px 5px; border-radius: 3px; color: #fff;
+  letter-spacing: .04em; flex-shrink: 0; min-width: 26px; text-align: center;
+}
+.cz-bio-top-cat.CR { background: #e74c3c; }
+.cz-bio-top-cat.EN { background: #e67e22; }
+.cz-bio-top-cat.VU { background: #f1c40f; color: #333; }
+.cz-bio-top-cat.NT { background: #7bed9f; color: #333; }
+.cz-bio-top-cat.LC { background: #4a7c2e; }
+.cz-bio-top-name {
+  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-style: italic;
+}
+.cz-bio-top-share { color: var(--data); font-size: 10px; }
+.cz-bio-top-empty {
+  font-family: var(--mono); font-size: 11px; color: var(--w40);
+  padding: 14px 4px; text-align: center;
+}
+@media (max-width: 760px) {
+  .cz-bio-top-grid { grid-template-columns: 1fr; }
+}
+
+/* ARClim — tabla resumen */
+.cz-arclim-summary {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 14px 12px;
+  margin-top: 14px;
+}
+
 /* ── LOADING ── */
 .cz-boot {
   height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -758,6 +868,7 @@ function MetricCard({m,va,vb}){
 }
 
 function MetricsRow({mod,dataA,dataB}){
+  // (Componente legacy mantenido por compatibilidad; el nuevo es MetricsCompareSection)
   const da=dataA&&dataA[mod.id];
   const db=dataB&&dataB[mod.id];
   if(!da&&!db) return<div className="cz-nodata"><i className={'fa-solid '+mod.icon}/>Sin datos para este módulo</div>;
@@ -766,6 +877,102 @@ function MetricsRow({mod,dataA,dataB}){
       {mod.metrics.map(m=>(
         <MetricCard key={m.key} m={m} va={da&&da[m.key]!=null?da[m.key]:null} vb={db&&db[m.key]!=null?db[m.key]:null}/>
       ))}
+    </div>
+  );
+}
+
+/* ══ NUEVO: tabla + chart para índices espectrales ══ */
+function MetricsCompareTable({mod,dataA,dataB,zoneA,zoneB}){
+  const da=dataA&&dataA[mod.id];
+  const db=dataB&&dataB[mod.id];
+  return(
+    <table className="cz-table cz-table--compact">
+      <thead>
+        <tr>
+          <th>Métrica</th>
+          <th><span className="cz-zchip cz-zchip--a">A</span></th>
+          <th><span className="cz-zchip cz-zchip--b">B</span></th>
+          <th className="cz-th-delta">Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {mod.metrics.map(m=>{
+          const a=da&&da[m.key]!=null?da[m.key]:null;
+          const b=db&&db[m.key]!=null?db[m.key]:null;
+          const{arrow,sentiment,diff}=czDelta(a,b,m.better||'none');
+          const sc=sentColor(sentiment);
+          return(
+            <tr key={m.key}>
+              <td className="cz-td-label">{m.label}</td>
+              <td className="cz-td-num">{czFmt(a,m.fmt||'dec',m.unit)}</td>
+              <td className="cz-td-num">{czFmt(b,m.fmt||'dec',m.unit)}</td>
+              <td className="cz-td-delta" style={{color:sc}}>
+                {a!=null&&b!=null?arrow+' '+czFmtDelta(diff,m.fmt||'dec',m.unit):'—'}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function MetricsBarsChart({mod,dataA,dataB,zoneA,zoneB}){
+  const ref=useRef(null);
+  const chartRef=useRef(null);
+  useEffect(()=>{
+    if(!ref.current||typeof Chart==='undefined') return;
+    const da=dataA&&dataA[mod.id];
+    const db=dataB&&dataB[mod.id];
+    const metrics=mod.metrics||[];
+    const labels=metrics.map(m=>m.label);
+    const va=metrics.map(m=>da&&da[m.key]!=null?Number(da[m.key]):null);
+    const vb=metrics.map(m=>db&&db[m.key]!=null?Number(db[m.key]):null);
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    chartRef.current=new Chart(ref.current,{
+      type:'bar',
+      data:{labels,datasets:[
+        {label:(zoneA&&zoneA.name)||'Zona A',data:va,backgroundColor:'rgba(200,168,130,0.78)',borderColor:'#C8A882',borderWidth:1,borderRadius:4},
+        {label:(zoneB&&zoneB.name)||'Zona B',data:vb,backgroundColor:'rgba(106,170,53,0.78)',borderColor:'#6AAA35',borderWidth:1,borderRadius:4},
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        indexAxis:'y',
+        scales:{
+          x:{ticks:{color:'rgba(242,245,239,0.55)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+          y:{ticks:{color:'rgba(242,245,239,0.65)',font:{family:'DM Mono',size:10}},grid:{display:false}}
+        },
+        plugins:{
+          legend:{position:'bottom',labels:{color:'rgba(242,245,239,0.7)',font:{family:'DM Mono',size:10},usePointStyle:true,pointStyle:'rectRounded',boxWidth:8,padding:14}},
+          tooltip:{titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono'}}
+        }
+      }
+    });
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
+  },[mod,dataA,dataB,zoneA,zoneB]);
+  return<div className="cz-metrics-chart-canvas"><canvas ref={ref}/></div>;
+}
+
+function MetricsCompareSection({mod,dataA,dataB,zoneA,zoneB}){
+  const da=dataA&&dataA[mod.id];
+  const db=dataB&&dataB[mod.id];
+  if(!da&&!db) return<div className="cz-nodata"><i className={'fa-solid '+mod.icon}/>Sin datos para este módulo</div>;
+  return(
+    <div className="cz-metrics-section">
+      <div className="cz-metrics-table-wrap">
+        <div className="cz-table-head">
+          <i className={'fa-solid '+mod.icon}/>{mod.label}{mod.index?' · '+mod.index:''} · estadísticas
+        </div>
+        <MetricsCompareTable mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
+      </div>
+      {(da&&db)&&(
+        <div className="cz-metrics-chart-wrap">
+          <div className="cz-table-head">
+            <i className="fa-solid fa-chart-column"/>Comparación visual
+          </div>
+          <MetricsBarsChart mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
+        </div>
+      )}
     </div>
   );
 }
@@ -906,6 +1113,153 @@ function BioBarsChart({dataA,dataB,zoneA,zoneB}){
   return<div className="cz-bio-chart-canvas"><canvas ref={ref}/></div>;
 }
 
+/* ── NUEVO: tabla resumen biodiversidad con delta ── */
+function BioSummaryTable({mod,dataA,dataB,zoneA,zoneB}){
+  const da=dataA&&dataA.biodiversidad;
+  const db=dataB&&dataB.biodiversidad;
+  return(
+    <table className="cz-table cz-table--compact">
+      <thead>
+        <tr>
+          <th>Indicador</th>
+          <th><span className="cz-zchip cz-zchip--a">A</span></th>
+          <th><span className="cz-zchip cz-zchip--b">B</span></th>
+          <th className="cz-th-delta">Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {mod.rows.map(r=>{
+          const a=da&&da[r.key]!=null?da[r.key]:null;
+          const b=db&&db[r.key]!=null?db[r.key]:null;
+          const{arrow,sentiment,diff}=czDelta(a,b,r.better||'high');
+          const sc=sentColor(sentiment);
+          return(
+            <tr key={r.key} className={r.accent?'cz-tr-accent':''}>
+              <td className="cz-td-label">{r.label}</td>
+              <td className="cz-td-num">{czFmt(a,r.fmt||'int',r.unit)}</td>
+              <td className="cz-td-num">{czFmt(b,r.fmt||'int',r.unit)}</td>
+              <td className="cz-td-delta" style={{color:sc}}>
+                {a!=null&&b!=null?arrow+' '+czFmtDelta(diff,r.fmt||'int',r.unit):'—'}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/* ── NUEVO: donut de proporciones de amenazas (lado a lado) ── */
+function BioThreatDonut({data,side,zoneName}){
+  const ref=useRef(null);
+  const chartRef=useRef(null);
+  useEffect(()=>{
+    if(!ref.current||typeof Chart==='undefined'||!data) return;
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    const total=data.n_especies||0;
+    const cr=data.n_cr||0, en=data.n_en||0, vu=data.n_vu||0;
+    const sinThreat=Math.max(0,total-(cr+en+vu));
+    chartRef.current=new Chart(ref.current,{
+      type:'doughnut',
+      data:{
+        labels:['Crítico','Peligro','Vulnerable','Otras'],
+        datasets:[{
+          data:[cr,en,vu,sinThreat],
+          backgroundColor:['#e74c3c','#e67e22','#f1c40f','rgba(106,170,53,0.45)'],
+          borderColor:'rgba(10,16,10,0.85)',
+          borderWidth:2
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        cutout:'68%',
+        plugins:{
+          legend:{position:'bottom',labels:{color:'rgba(242,245,239,0.7)',font:{family:'DM Mono',size:9.5},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:10}},
+          tooltip:{titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono'},
+            callbacks:{label:function(ctx){
+              const v=ctx.parsed;
+              const pct=total>0?((v/total)*100).toFixed(1):0;
+              return ctx.label+': '+v+' ('+pct+'%)';
+            }}
+          }
+        }
+      }
+    });
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
+  },[data]);
+  if(!data) return(
+    <div className={'cz-bio-donut '+(side==='a'?'za':'zb')}>
+      <div className="cz-bio-donut-head">
+        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+        <span className="cz-bio-donut-name">{zoneName||'—'}</span>
+      </div>
+      <div className="cz-nodata" style={{minHeight:160}}><i className="fa-solid fa-paw"/>Sin datos</div>
+    </div>
+  );
+  return(
+    <div className={'cz-bio-donut '+(side==='a'?'za':'zb')}>
+      <div className="cz-bio-donut-head">
+        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+        <span className="cz-bio-donut-name">{zoneName||'—'}</span>
+        <span className="cz-bio-donut-total">{data.n_especies||0} spp</span>
+      </div>
+      <div className="cz-bio-donut-canvas"><canvas ref={ref}/></div>
+    </div>
+  );
+}
+
+/* ── NUEVO: top amenazadas comparativa (qué hay en cada zona, qué se comparte) ── */
+function BioTopComparison({dataA,dataB,zoneA,zoneB}){
+  const topA=(dataA&&dataA.top_amenazadas)||[];
+  const topB=(dataB&&dataB.top_amenazadas)||[];
+  if(topA.length===0&&topB.length===0) return null;
+
+  // Normaliza nombre para encontrar especies compartidas
+  const norm=s=>String(s||'').toLowerCase().trim();
+  const setA=new Set(topA.map(s=>norm(s.nombre)));
+  const setB=new Set(topB.map(s=>norm(s.nombre)));
+  const shared=topA.filter(s=>setB.has(norm(s.nombre))).map(s=>s.nombre);
+
+  return(
+    <div className="cz-bio-top-section">
+      <div className="cz-table-head">
+        <i className="fa-solid fa-shield-cat"/>Top especies amenazadas
+        {shared.length>0&&<span className="cz-bio-shared-pill">{shared.length} compartida{shared.length>1?'s':''}</span>}
+      </div>
+      <div className="cz-bio-top-grid">
+        <div className="cz-bio-top-col">
+          <div className="cz-bio-top-col-head"><span className="cz-zchip cz-zchip--a">A</span>{zoneA?.name||'—'}</div>
+          {topA.slice(0,5).map((s,i)=>{
+            const isShared=setB.has(norm(s.nombre));
+            return(
+              <div key={i} className={'cz-bio-top-row'+(isShared?' shared':'')}>
+                <span className={'cz-bio-top-cat '+(s.cat||s.iucn||'NT')}>{s.cat||s.iucn||'NT'}</span>
+                <span className="cz-bio-top-name">{s.comun?s.comun.split(',')[0]:s.nombre}</span>
+                {isShared&&<i className="fa-solid fa-link cz-bio-top-share" title="También en Zona B"/>}
+              </div>
+            );
+          })}
+          {topA.length===0&&<div className="cz-bio-top-empty">Sin amenazadas</div>}
+        </div>
+        <div className="cz-bio-top-col">
+          <div className="cz-bio-top-col-head"><span className="cz-zchip cz-zchip--b">B</span>{zoneB?.name||'—'}</div>
+          {topB.slice(0,5).map((s,i)=>{
+            const isShared=setA.has(norm(s.nombre));
+            return(
+              <div key={i} className={'cz-bio-top-row'+(isShared?' shared':'')}>
+                <span className={'cz-bio-top-cat '+(s.cat||s.iucn||'NT')}>{s.cat||s.iucn||'NT'}</span>
+                <span className="cz-bio-top-name">{s.comun?s.comun.split(',')[0]:s.nombre}</span>
+                {isShared&&<i className="fa-solid fa-link cz-bio-top-share" title="También en Zona A"/>}
+              </div>
+            );
+          })}
+          {topB.length===0&&<div className="cz-bio-top-empty">Sin amenazadas</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BioCompare({mod,zoneA,zoneB,dataA,dataB,onReanalyze}){
   const da=dataA&&dataA.biodiversidad;
   const db=dataB&&dataB.biodiversidad;
@@ -919,21 +1273,36 @@ function BioCompare({mod,zoneA,zoneB,dataA,dataB,onReanalyze}){
           <i className="fa-solid fa-arrows-rotate"/>Volver a analizar
         </button>
       </div>
-      <div className="cz-bio-grid">
-        <BioStatCard side="a" zone={zoneA} data={da}/>
-        <BioStatCard side="b" zone={zoneB} data={db}/>
-      </div>
-      {(da||db)&&(
-        <div className="cz-bio-chart-wrap" style={{marginTop:12}}>
-          <div className="cz-arclim-chart-head">
-            <div>
-              <div className="cz-arclim-chart-title">Riqueza por categoría</div>
-              <div className="cz-arclim-chart-sub">comparación directa A vs B</div>
-            </div>
+
+      {/* Sección 1: tabla resumen + barras agrupadas (lado a lado) */}
+      <div className="cz-metrics-section">
+        <div className="cz-metrics-table-wrap">
+          <div className="cz-table-head">
+            <i className={'fa-solid '+mod.icon}/>Riqueza por categoría
           </div>
-          <BioBarsChart dataA={da} dataB={db} zoneA={zoneA} zoneB={zoneB}/>
+          <BioSummaryTable mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
+        </div>
+        {(da||db)&&(
+          <div className="cz-metrics-chart-wrap">
+            <div className="cz-table-head">
+              <i className="fa-solid fa-chart-column"/>Comparación visual
+            </div>
+            <BioBarsChart dataA={da} dataB={db} zoneA={zoneA} zoneB={zoneB}/>
+          </div>
+        )}
+      </div>
+
+      {/* Sección 2: donuts de composición de amenazas */}
+      {(da||db)&&(
+        <div className="cz-bio-donuts">
+          <BioThreatDonut data={da} side="a" zoneName={zoneA?.name}/>
+          <BioThreatDonut data={db} side="b" zoneName={zoneB?.name}/>
         </div>
       )}
+
+      {/* Sección 3: top amenazadas comparativa */}
+      <BioTopComparison dataA={da} dataB={db} zoneA={zoneA} zoneB={zoneB}/>
+
       <PisoStrip dataA={dataA} dataB={dataB}/>
     </div>
   );
@@ -1175,6 +1544,75 @@ function ArclimDashboard({mod,zoneA,zoneB}){
             :<div className="cz-nodata"><i className="fa-solid fa-triangle-exclamation"/>Sin datos ARClim para las comunas detectadas</div>
         }
       </div>
+
+      {/* NUEVO: tabla resumen presente vs ~2050 + delta por indicador */}
+      {(serieA||serieB)&&<ArclimSummaryTable serieA={serieA} serieB={serieB} zoneA={zoneA} zoneB={zoneB} indicador={indicador}/>}
+    </div>
+  );
+}
+
+/* ── NUEVO: tabla resumen ARClim (presente vs ~2050, A vs B) ── */
+function ArclimSummaryTable({serieA,serieB,zoneA,zoneB,indicador}){
+  // Calcula promedio del período histórico (1980-2010) y futuro (2035-2065)
+  const stat=(serie)=>{
+    if(!serie||!serie.years||!serie.mean) return {hist:null,fut:null,delta:null,deltaPct:null};
+    const years=serie.years; const mean=serie.mean;
+    let sumH=0,nH=0,sumF=0,nF=0;
+    for(let i=0;i<years.length;i++){
+      const y=Number(years[i]); const v=Number(mean[i]);
+      if(!isFinite(v)) continue;
+      if(y>=1980&&y<=2010){ sumH+=v; nH++; }
+      else if(y>=2035&&y<=2065){ sumF+=v; nF++; }
+    }
+    const hist=nH>0?sumH/nH:null;
+    const fut =nF>0?sumF/nF:null;
+    const delta=(hist!=null&&fut!=null)?fut-hist:null;
+    const deltaPct=(hist!=null&&fut!=null&&hist!==0)?((fut-hist)/Math.abs(hist))*100:null;
+    return {hist,fut,delta,deltaPct};
+  };
+  const sA=stat(serieA);
+  const sB=stat(serieB);
+  const unit=indicador?.unit||'';
+  const fmt=(v)=>v==null?'—':v.toFixed(1);
+  const fmtDelta=(v,pct)=>{
+    if(v==null) return '—';
+    const sign=v>0?'+':v<0?'−':'';
+    return sign+Math.abs(v).toFixed(1)+(pct!=null?' ('+sign+Math.abs(pct).toFixed(0)+'%)':'');
+  };
+  const colorDelta=(v)=>{
+    if(v==null) return 'var(--w55)';
+    if(Math.abs(v)<0.05) return 'var(--w55)';
+    return v>0?'#e07b5c':'#6dc6dd';
+  };
+  return(
+    <div className="cz-arclim-summary">
+      <div className="cz-table-head">
+        <i className="fa-solid fa-table-list"/>Resumen tabular · presente (1980-2010) vs futuro (2035-2065)
+      </div>
+      <table className="cz-table cz-table--compact">
+        <thead>
+          <tr>
+            <th>Zona</th>
+            <th>Presente</th>
+            <th>~2050</th>
+            <th className="cz-th-delta">Δ ({unit})</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="cz-td-label"><span className="cz-zchip cz-zchip--a">A</span> {zoneA?.name||'—'}</td>
+            <td className="cz-td-num">{fmt(sA.hist)} {unit}</td>
+            <td className="cz-td-num">{fmt(sA.fut)} {unit}</td>
+            <td className="cz-td-delta" style={{color:colorDelta(sA.delta)}}>{fmtDelta(sA.delta,sA.deltaPct)}</td>
+          </tr>
+          <tr>
+            <td className="cz-td-label"><span className="cz-zchip cz-zchip--b">B</span> {zoneB?.name||'—'}</td>
+            <td className="cz-td-num">{fmt(sB.hist)} {unit}</td>
+            <td className="cz-td-num">{fmt(sB.fut)} {unit}</td>
+            <td className="cz-td-delta" style={{color:colorDelta(sB.delta)}}>{fmtDelta(sB.delta,sB.deltaPct)}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -1384,7 +1822,7 @@ function App({session,plan,zones}){
                         </span>
                         <span className="cz-detail-note">Δ = Zona B − Zona A</span>
                       </div>
-                      <MetricsRow mod={mod} dataA={dataA} dataB={dataB}/>
+                      <MetricsCompareSection mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
                       {mod.id==='vegetacion'&&<PisoStrip dataA={dataA} dataB={dataB}/>}
                     </>
                   )
