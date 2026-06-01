@@ -238,6 +238,32 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-tr-accent .cz-td-label { color: var(--accent); font-weight: 500; }
 .cz-level { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid; border-radius: 50px; padding: 3px 12px; }
 
+/* Warning banner — mismatch de índices entre zonas */
+.cz-warn-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: linear-gradient(90deg, rgba(241,196,15,0.10), rgba(241,196,15,0.04));
+  border: 1px solid rgba(241,196,15,0.30);
+  border-left: 3px solid #f1c40f;
+  border-radius: 8px; padding: 11px 14px;
+  margin: 0 0 12px;
+}
+.cz-warn-icon {
+  color: #f1c40f; font-size: 16px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+}
+.cz-warn-body { flex: 1; min-width: 0; }
+.cz-warn-title {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+  text-transform: uppercase; color: #f1c40f; font-weight: 600;
+  margin-bottom: 4px;
+}
+.cz-warn-text {
+  font-size: 12.5px; color: var(--w70); line-height: 1.55;
+}
+.cz-warn-text strong { color: var(--white); font-weight: 600; }
+.cz-warn-text .cz-zchip { margin: 0 2px; vertical-align: middle; }
+
 /* Compact table variant — para módulos de comparación */
 .cz-table--compact th { padding: 8px 12px; font-size: 9.5px; }
 .cz-table--compact td { padding: 8px 12px; font-size: 12.5px; }
@@ -953,27 +979,51 @@ function MetricsBarsChart({mod,dataA,dataB,zoneA,zoneB}){
   return<div className="cz-metrics-chart-canvas"><canvas ref={ref}/></div>;
 }
 
+/* ── Warning cuando ambas zonas usan índices distintos ── */
+function IndexMismatchWarning({indiceA, indiceB, zoneA, zoneB}){
+  if(!indiceA||!indiceB||indiceA===indiceB) return null;
+  return(
+    <div className="cz-warn-banner">
+      <div className="cz-warn-icon"><i className="fa-solid fa-triangle-exclamation"/></div>
+      <div className="cz-warn-body">
+        <div className="cz-warn-title">Comparación entre índices distintos</div>
+        <div className="cz-warn-text">
+          <span className="cz-zchip cz-zchip--a">A</span> {zoneA?.name||'Zona A'} fue calculada con <strong>{indiceA}</strong>,
+          mientras que <span className="cz-zchip cz-zchip--b">B</span> {zoneB?.name||'Zona B'} usa <strong>{indiceB}</strong>.
+          Los valores no son directamente comparables. Para obtener una comparación válida, re-calcula ambas zonas con el mismo índice en el workspace.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MetricsCompareSection({mod,dataA,dataB,zoneA,zoneB}){
   const da=dataA&&dataA[mod.id];
   const db=dataB&&dataB[mod.id];
   if(!da&&!db) return<div className="cz-nodata"><i className={'fa-solid '+mod.icon}/>Sin datos para este módulo</div>;
   return(
-    <div className="cz-metrics-section">
-      <div className="cz-metrics-table-wrap">
-        <div className="cz-table-head">
-          <i className={'fa-solid '+mod.icon}/>{mod.label}{mod.index?' · '+mod.index:''} · estadísticas
-        </div>
-        <MetricsCompareTable mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
-      </div>
-      {(da&&db)&&(
-        <div className="cz-metrics-chart-wrap">
+    <>
+      <IndexMismatchWarning indiceA={da&&da.indice} indiceB={db&&db.indice} zoneA={zoneA} zoneB={zoneB}/>
+      <div className="cz-metrics-section">
+        <div className="cz-metrics-table-wrap">
           <div className="cz-table-head">
-            <i className="fa-solid fa-chart-column"/>Comparación visual
+            <i className={'fa-solid '+mod.icon}/>
+            {mod.label}
+            {(da||db)?(' · '+(da&&da.indice||db&&db.indice||mod.index||'')):(mod.index?' · '+mod.index:'')}
+            {' · estadísticas'}
           </div>
-          <MetricsBarsChart mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
+          <MetricsCompareTable mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
         </div>
-      )}
-    </div>
+        {(da&&db)&&(
+          <div className="cz-metrics-chart-wrap">
+            <div className="cz-table-head">
+              <i className="fa-solid fa-chart-column"/>Comparación visual
+            </div>
+            <MetricsBarsChart mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -1709,7 +1759,19 @@ function App({session,plan,zones}){
         const modDef=CZ.MODULES.find(m=>row.tipo_indice&&row.tipo_indice.startsWith(m.prefix));
         if(!modDef||!row.result_data||!row.result_data.length) return;
         const item=row.result_data.reduce((a,b)=>((a.ts||0)>(b.ts||0)?a:b));
-        parsed[modDef.id]={...(item.stats||{}),previewPath:item.previewPath,previewBounds:item.previewBounds};
+        // Extraer el índice específico usado en este análisis (NDVI, SAVI, EVI, etc.)
+        // — necesario para detectar mismatch en el comparador (Saval con NDVI vs Parque con SAVI).
+        // Fallback al sufijo del tipo_indice si no viene en el item (compatibilidad con data vieja).
+        const indiceUsado = item.indice
+          || (row.tipo_indice.split('_').slice(1).join('_'))
+          || null;
+        parsed[modDef.id]={
+          ...(item.stats||{}),
+          previewPath:item.previewPath,
+          previewBounds:item.previewBounds,
+          indice: indiceUsado,
+          ts: item.ts || null,
+        };
       });
       setDataCache(prev=>({...prev,[wsId]:{loading:false,data:parsed}}));
     }catch(e){
