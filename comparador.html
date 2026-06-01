@@ -48,8 +48,38 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-title { text-align: center; display: flex; flex-direction: column; gap: 3px; line-height: 1.15; }
 .cz-title-main { font-family: var(--mono); font-size: 14px; letter-spacing: .26em; text-transform: uppercase; color: var(--white); font-weight: 500; }
 .cz-title-eyebrow { font-family: var(--mono); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
-.cz-topbar-right { display: flex; align-items: center; gap: 10px; }
+.cz-topbar-right { display: flex; align-items: center; gap: 14px; }
 .cz-plan-tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--w40); border: 1px solid var(--border); border-radius: 5px; padding: 4px 9px; }
+
+/* Toggle sincronizar mapas */
+.cz-sync-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--w70);
+}
+.cz-sync-toggle input { display: none; }
+.cz-sync-track {
+  position: relative; width: 30px; height: 16px;
+  border-radius: 999px; background: rgba(244,247,241,0.08);
+  border: 1px solid var(--border); transition: background .2s, border-color .2s;
+  flex-shrink: 0;
+}
+.cz-sync-dot {
+  position: absolute; top: 1px; left: 1px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--w40); transition: transform .2s, background .2s;
+}
+.cz-sync-toggle input:checked + .cz-sync-track {
+  background: rgba(106,170,53,0.22);
+  border-color: rgba(106,170,53,0.45);
+}
+.cz-sync-toggle input:checked + .cz-sync-track .cz-sync-dot {
+  transform: translateX(14px);
+  background: var(--accent);
+}
+.cz-sync-toggle:hover .cz-sync-track { border-color: var(--w40); }
+.cz-sync-label { white-space: nowrap; }
 .cz-export {
   display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500;
   color: var(--bg); background: var(--accent); padding: 7px 14px; border-radius: 7px; transition: filter .2s; cursor: pointer;
@@ -526,11 +556,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   function createBaseMap(el,zone){
     var center=zone&&zone.lat?[zone.lat,zone.lng]:[-37.5,-71];
     var zoom=zone&&zone.zoom?zone.zoom:9;
-    var map=L.map(el,{center:center,zoom:zoom,zoomControl:true,attributionControl:true,zoomSnap:0.5,maxZoom:17,minZoom:5,fadeAnimation:false});
-    // ESRI World Dark Gray Canvas — neutral oscuro, sin etiquetas distractoras
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{
-      attribution:'© Esri',
-      opacity:1, maxZoom:16
+    var map=L.map(el,{center:center,zoom:zoom,zoomControl:true,attributionControl:true,zoomSnap:0.5,maxZoom:18,minZoom:5,fadeAnimation:false});
+    // ESRI World Imagery (satélite) — mismo base que acceso-datos.html (consistencia)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+      attribution:'Tiles © Esri',
+      maxZoom:18
+    }).addTo(map);
+    // Etiquetas semitransparentes sobre el satélite (ciudades, ríos, calles)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{
+      opacity:0.7, maxZoom:18
     }).addTo(map);
     map.zoomControl.setPosition('topright');
     map.attributionControl.setPrefix('');
@@ -1249,9 +1283,11 @@ function App({session,plan,zones}){
   useEffect(()=>{if(zoneAId) loadZoneData(zoneAId);},[zoneAId]);
   useEffect(()=>{if(zoneBId) loadZoneData(zoneBId);},[zoneBId]);
 
-  // map sync gate
+  // map sync gate — default OFF (cada mapa se mueve independiente).
+  // Se puede activar con el toggle "Sincronizar mapas" en la topbar.
+  const [syncOn,setSyncOn]=useState(false);
   const syncGate=useMemo(()=>({
-    enabled:true,
+    enabled:false,  // se sobrescribe abajo con useEffect
     setMap:(side,map)=>{
       syncMapsRef.current[side]=map;
       if(syncMapsRef.current.unlink){syncMapsRef.current.unlink();syncMapsRef.current.unlink=null;}
@@ -1260,6 +1296,8 @@ function App({session,plan,zones}){
       }
     }
   }),[]);
+  // Sincronizar estado React con el gate (sin re-crear los listeners)
+  useEffect(()=>{ syncGate.enabled=syncOn; },[syncOn,syncGate]);
 
   const isMapMode=mod&&mod.type==='map';
   const isBio=mod&&mod.type==='bio';
@@ -1280,6 +1318,13 @@ function App({session,plan,zones}){
           <span className="cz-title-eyebrow">Módulo Comparativo</span>
         </div>
         <div className="cz-topbar-right">
+          {isMapMode&&(
+            <label className="cz-sync-toggle" title="Sincroniza pan/zoom entre ambos mapas">
+              <input type="checkbox" checked={syncOn} onChange={e=>setSyncOn(e.target.checked)}/>
+              <span className="cz-sync-track"><span className="cz-sync-dot"/></span>
+              <span className="cz-sync-label">Sincronizar mapas</span>
+            </label>
+          )}
           <span className="cz-plan-tag">{plan}</span>
         </div>
       </header>
