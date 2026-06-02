@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=25">
+    <link rel="stylesheet" href="css/workspace.css?v=26">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -40,6 +40,7 @@
         <button class="tab-btn"        id="tab-btn-biodiversidad" onclick="switchWorkspaceTab('biodiversidad')">Biodiversidad</button>
         <button class="tab-btn"        id="tab-btn-clima"         onclick="switchWorkspaceTab('clima')">Clima</button>
         <button class="tab-btn"        id="tab-btn-riesgos"       onclick="switchWorkspaceTab('riesgos'); arclimLoadTab()">Riesgos</button>
+        <button class="tab-btn"        id="tab-btn-hidromorfologia" onclick="switchWorkspaceTab('hidromorfologia')">Hidromorfología</button>
     </div>
 
     <div class="topbar-right" style="display:flex;align-items:center;gap:8px;position:relative;">
@@ -330,6 +331,11 @@
                     </button>
                     <button class="draw-btn" onclick="usarCuencaEnWorkspace()">
                         <i class="fas fa-water"></i> Usar cuenca
+                    </button>
+                    <button class="draw-btn draw-btn--pro" id="btn-outlet-cuenca"
+                            onclick="hidroIniciarOutletClick()" title="Click en el mapa para delinear cuenca aguas arriba">
+                        <i class="fas fa-bullseye"></i> Cuenca desde outlet
+                        <span class="draw-btn-tag">PRO</span>
                     </button>
                     <button class="draw-btn" id="btn-edit" onclick="activarEdicion()">
                         <i class="fas fa-edit"></i> Editar / Eliminar
@@ -1166,6 +1172,93 @@
 
         </div><!-- /tab-riesgos-content -->
 
+        <!-- ═══════════════════════════════════════
+             TAB HIDROMORFOLOGÍA: Delineación + métricas (PySheds)
+        ════════════════════════════════════════ -->
+        <div class="ws-module-content" id="tab-hidromorfologia-content">
+
+            <!-- Header dinámico -->
+            <div class="hidro-header" id="hidro-header">
+                <span class="hidro-no-zone">
+                    <i class="fas fa-bullseye" style="margin-right:5px;opacity:.55;"></i>
+                    Click en "Cuenca desde outlet" en herramientas para delinear una cuenca.
+                </span>
+            </div>
+
+            <!-- Meta info -->
+            <div class="hidro-meta-row" id="hidro-meta-row" style="display:none;">
+                <span class="hidro-meta-label">DEM: COPERNICUS/DEM/GLO30 · 30 m</span>
+                <span class="hidro-meta-period" id="hidro-meta-tc">—</span>
+            </div>
+
+            <!-- Spinner -->
+            <div id="hidro-loading" class="hidro-loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span id="hidro-loading-msg">Delineando cuenca…</span>
+            </div>
+
+            <!-- Resultado -->
+            <div id="hidro-body" style="display:none;">
+
+                <!-- Bloque de métricas (grupos) -->
+                <div class="hidro-group-label">Forma</div>
+                <div class="hidro-metric-grid" id="hidro-forma"></div>
+
+                <div class="hidro-group-label">Relieve</div>
+                <div class="hidro-metric-grid" id="hidro-relieve"></div>
+
+                <div class="hidro-group-label">Drenaje</div>
+                <div class="hidro-metric-grid" id="hidro-drenaje"></div>
+
+                <div class="hidro-group-label">Tiempo de concentración</div>
+                <div class="hidro-metric-grid" id="hidro-tiempos"></div>
+
+                <!-- Gráficos -->
+                <div class="hidro-chart-section">
+                    <div class="hidro-chart-head">
+                        <i class="fas fa-chart-area"/>Curva hipsométrica
+                    </div>
+                    <div class="hidro-chart-wrap">
+                        <canvas id="hidro-chart-hipso"></canvas>
+                    </div>
+                </div>
+
+                <div class="hidro-chart-section">
+                    <div class="hidro-chart-head">
+                        <i class="fas fa-chart-line"/>Perfil del cauce principal
+                    </div>
+                    <div class="hidro-chart-wrap">
+                        <canvas id="hidro-chart-perfil"></canvas>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="hidro-actions">
+                    <button class="hidro-action-btn" onclick="hidroUsarComoZona()" id="hidro-btn-usar">
+                        <i class="fas fa-check"></i> Usar esta cuenca como zona de estudio
+                    </button>
+                    <button class="hidro-action-btn hidro-action-btn--alt" onclick="hidroExportCSV()">
+                        <i class="fas fa-download"></i> Exportar métricas CSV
+                    </button>
+                </div>
+
+                <!-- Warning si excede límite -->
+                <div id="hidro-limit-warn" class="hidro-limit-warn" style="display:none;">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <span>La cuenca delineada excede el límite de 50.000 ha. Puedes visualizar el análisis pero no establecerla como zona. Refresca con un outlet más aguas abajo.</span>
+                </div>
+            </div>
+
+            <!-- Footer fuente -->
+            <div class="hidro-footer">
+                <span class="hidro-source-link">
+                    <i class="fas fa-cube" style="font-size:8px;margin-right:3px;"></i>
+                    PySheds · COPERNICUS/DEM/GLO30 · GEE
+                </span>
+            </div>
+
+        </div><!-- /tab-hidromorfologia-content -->
+
     </aside>
 
     <!-- ── MINI PANEL (bottom-right · Leyenda + Bosque) ── -->
@@ -1373,6 +1466,7 @@
 <script src="js/workspace-dmc.js?v=5"></script>
 <script src="js/workspace-simbio.js?v=1"></script>
 <script src="js/workspace-arclim.js?v=4"></script>
+<script src="js/workspace-hidro.js?v=1"></script>
 <script src="js/workspace-resize.js?v=1"></script>
 
 <!-- CONTACTO -->

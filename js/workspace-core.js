@@ -643,7 +643,8 @@ var TAB_META = {
     'bosque':        { icon: 'fas fa-tree',        title: 'Bosque' },
     'biodiversidad': { icon: 'fas fa-leaf',        title: 'Biodiversidad' },
     'clima':         { icon: 'fas fa-cloud',              title: 'Clima' },
-    'riesgos':       { icon: 'fas fa-exclamation-triangle', title: 'Riesgos Climáticos' }
+    'riesgos':       { icon: 'fas fa-exclamation-triangle', title: 'Riesgos Climáticos' },
+    'hidromorfologia':{ icon: 'fas fa-water',              title: 'Hidromorfología' }
 };
 
 // Cambiar de Módulo (Tab)
