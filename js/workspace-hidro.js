@@ -391,20 +391,24 @@
             map.fitBounds(_cuencaLayer.getBounds(), { padding: [40, 40] });
         } catch (e) { console.warn('[Hidro] cuenca:', e); }
 
-        // Stream network (celeste)
+        // Stream network (celeste, más visible)
         if (data.streams && data.streams.features && data.streams.features.length) {
             try {
+                console.log('[Hidro] Dibujando ' + data.streams.features.length + ' streams');
                 _streamsLayer = L.geoJSON(data.streams, {
-                    style: { color: '#4fc3f7', weight: 1.2, opacity: 0.85 },
+                    style: { color: '#29b6f6', weight: 2.5, opacity: 0.95 },
                 }).addTo(map);
             } catch (e) { console.warn('[Hidro] streams:', e); }
+        } else {
+            console.warn('[Hidro] Sin streams en respuesta:', data.streams);
         }
 
-        // Cauce principal (azul fuerte)
+        // Cauce principal (azul fuerte, más grueso)
         if (data.cauce_principal && data.cauce_principal.coordinates && data.cauce_principal.coordinates.length) {
             try {
+                console.log('[Hidro] Dibujando cauce principal: ' + data.cauce_principal.coordinates.length + ' puntos');
                 _cauceLayer = L.geoJSON(data.cauce_principal, {
-                    style: { color: '#1565c0', weight: 3, opacity: 0.95 },
+                    style: { color: '#0d47a1', weight: 4, opacity: 1.0 },
                 }).addTo(map);
             } catch (e) { console.warn('[Hidro] cauce:', e); }
         }
