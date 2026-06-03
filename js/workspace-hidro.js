@@ -59,6 +59,12 @@
         return Math.round(n).toLocaleString('es-CL');
     }
 
+    function _getStreamThreshold() {
+        var el = document.getElementById('hidro-stream-thr');
+        if (el) return parseInt(el.value, 10) || 50;
+        return 50;
+    }
+
     function _fmtTime(s) {
         if (s == null || isNaN(s)) return '—';
         var h = Math.floor(s / 3600);
@@ -158,7 +164,7 @@
         // Mensajes progresivos
         var msgTimers = [];
         msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Consultando GEE y descargando DEM…'; }, 4000));
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Procesando hidrología con PySheds…'; }, 15000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Procesando hidrología (D8 flow direction)…'; }, 15000));
         msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Calculando red hídrica y cuenca…'; }, 30000));
         msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Extrayendo métricas morfométricas…'; }, 50000));
         msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Casi listo, finalizando…'; }, 70000));
@@ -166,7 +172,7 @@
         fetch(API_BASE + '/api/hidromorfologia/delinear', {
             method: 'POST',
             headers: _authHeaders(),
-            body: JSON.stringify({ lat: lat, lng: lng }),
+            body: JSON.stringify({ lat: lat, lng: lng, stream_threshold: _getStreamThreshold() }),
             signal: controller.signal,
         })
         .then(function (r) {

@@ -1191,6 +1191,14 @@
                 <span class="hidro-meta-period" id="hidro-meta-tc">—</span>
             </div>
 
+            <!-- Config -->
+            <div class="hidro-meta-row" style="gap:10px;">
+                <label style="font-size:10px;color:var(--muted);white-space:nowrap;">Umbral streams (celdas):</label>
+                <input type="number" id="hidro-stream-thr" value="50" min="5" max="500" step="5"
+                       style="width:60px;padding:3px 6px;border:1px solid var(--panel-border);border-radius:5px;font-size:11px;font-family:inherit;background:#fff;">
+                <span style="font-size:9px;color:var(--muted2);">Menor = más streams</span>
+            </div>
+
             <!-- Spinner -->
             <div id="hidro-loading" class="hidro-loading" style="display:none;">
                 <i class="fas fa-spinner fa-spin"></i>
@@ -1253,7 +1261,7 @@
             <div class="hidro-footer">
                 <span class="hidro-source-link">
                     <i class="fas fa-cube" style="font-size:8px;margin-right:3px;"></i>
-                    PySheds · COPERNICUS/DEM/GLO30 · GEE
+                    D8 · COPERNICUS/DEM/GLO30 · GEE
                 </span>
             </div>
 
