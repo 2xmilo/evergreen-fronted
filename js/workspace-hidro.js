@@ -151,15 +151,17 @@
             }).addTo(map);
         } catch (e) {}
 
-        // AbortController con timeout de 28s (Render proxy ~30s)
+        // AbortController con timeout de 90s
         var controller = new AbortController();
-        var timeoutId = setTimeout(function () { controller.abort(); }, 28000);
+        var timeoutId = setTimeout(function () { controller.abort(); }, 90000);
 
         // Mensajes progresivos
         var msgTimers = [];
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Consultando GEE y descargando DEM…'; }, 3000));
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Calculando red hídrica y cuenca (casi listo)…'; }, 10000));
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Finalizando métricas morfométricas…'; }, 18000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Consultando GEE y descargando DEM…'; }, 4000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Procesando hidrología con PySheds…'; }, 15000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Calculando red hídrica y cuenca…'; }, 30000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Extrayendo métricas morfométricas…'; }, 50000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Casi listo, finalizando…'; }, 70000));
 
         fetch(API_BASE + '/api/hidromorfologia/delinear', {
             method: 'POST',
