@@ -151,10 +151,21 @@
             }).addTo(map);
         } catch (e) {}
 
+        // AbortController con timeout de 28s (Render proxy ~30s)
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function () { controller.abort(); }, 28000);
+
+        // Mensajes progresivos
+        var msgTimers = [];
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Consultando GEE y descargando DEM…'; }, 3000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Calculando red hídrica y cuenca (casi listo)…'; }, 10000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Finalizando métricas morfométricas…'; }, 18000));
+
         fetch(API_BASE + '/api/hidromorfologia/delinear', {
             method: 'POST',
             headers: _authHeaders(),
             body: JSON.stringify({ lat: lat, lng: lng }),
+            signal: controller.signal,
         })
         .then(function (r) {
             return r.json().then(function (j) {
@@ -167,13 +178,21 @@
             if (loading) loading.style.display = 'none';
             _renderResultado(data);
             _dibujarEnMapa(data);
+            if (data.tiempo_proceso_s) console.log('[Hidro] Backend procesó en ' + data.tiempo_proceso_s + 's');
         })
         .catch(function (err) {
             if (loading) loading.style.display = 'none';
-            if (header) header.innerHTML = '<span class="hidro-no-zone"><i class="fas fa-times-circle" style="margin-right:5px;color:#e57373;"></i>Error: ' + err.message + '</span>';
+            var errMsg = err.name === 'AbortError'
+                ? 'Timeout (28s). El servidor tardó demasiado — reintenta.'
+                : err.message;
+            if (header) header.innerHTML = '<span class="hidro-no-zone"><i class="fas fa-times-circle" style="margin-right:5px;color:#e57373;"></i>Error: ' + errMsg + '</span>';
             console.warn('[Hidro] delinear:', err);
-            _toast('❌ Error en delineación: ' + err.message);
+            _toast('❌ ' + errMsg);
             try { if (_outletMarker) map.removeLayer(_outletMarker); } catch (e) {}
+        })
+        .finally(function () {
+            clearTimeout(timeoutId);
+            msgTimers.forEach(function (t) { clearTimeout(t); });
         });
     }
 
