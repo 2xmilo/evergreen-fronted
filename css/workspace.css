@@ -2388,19 +2388,57 @@ body.workspace-mode {
    PySheds + GEE delineation desde outlet
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Reset hidro: sin uppercase heredado, colores legibles */
-#tab-hidromorfologia-content { text-transform: none !important; }
-#tab-hidromorfologia-content * { text-transform: none; }
-#tab-hidromorfologia-content .hidro-metric-lbl,
-#tab-hidromorfologia-content .hidro-metric-val,
-#tab-hidromorfologia-content .hidro-chart-head,
-#tab-hidromorfologia-content .hidro-action-btn,
-#tab-hidromorfologia-content .hidro-action-btn--alt {
+/* ── Reset hidro: forzar estilos correctos en todo el tab ────────── */
+#tab-hidromorfologia-content,
+#tab-hidromorfologia-content * {
     text-transform: none !important;
-    color: inherit;
+    font-family: 'Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;
 }
-.hidro-action-btn { color: #fff !important; }
-.hidro-action-btn--alt { color: var(--text) !important; }
+#tab-hidromorfologia-content .hidro-metric-lbl {
+    color: var(--muted) !important;
+    font-size: 10px !important; font-weight: 500 !important;
+}
+#tab-hidromorfologia-content .hidro-metric-val {
+    color: var(--text) !important;
+    font-size: 13px !important; font-weight: 700 !important;
+}
+#tab-hidromorfologia-content .hidro-metric-unit {
+    color: var(--muted) !important;
+}
+#tab-hidromorfologia-content .hidro-chart-head {
+    color: var(--text) !important;
+    font-size: 11px !important; font-weight: 600 !important;
+}
+#tab-hidromorfologia-content .hidro-chart-head i {
+    font-family: 'Font Awesome 6 Free' !important;
+    color: var(--accent-dark) !important;
+}
+#tab-hidromorfologia-content .hidro-group-label {
+    color: var(--muted) !important;
+    font-size: 10px !important; font-weight: 600 !important;
+}
+#tab-hidromorfologia-content .hidro-action-btn {
+    color: #fff !important;
+    font-size: 12.5px !important; font-weight: 600 !important;
+}
+#tab-hidromorfologia-content .hidro-action-btn--alt {
+    color: var(--text) !important;
+}
+#tab-hidromorfologia-content .hidro-meta-label {
+    color: var(--muted) !important;
+}
+#tab-hidromorfologia-content .hidro-loading {
+    color: var(--muted) !important;
+}
+#tab-hidromorfologia-content .hidro-loading i {
+    font-family: 'Font Awesome 6 Free' !important;
+}
+/* Permitir FontAwesome en todos los íconos del tab */
+#tab-hidromorfologia-content i.fas,
+#tab-hidromorfologia-content i.far,
+#tab-hidromorfologia-content i.fa {
+    font-family: 'Font Awesome 6 Free' !important;
+}
 
 .hidro-header {
     display: flex; align-items: center; gap: 7px;
