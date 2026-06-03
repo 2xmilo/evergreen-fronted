@@ -924,6 +924,8 @@ body.workspace-mode {
   z-index:200; overflow:hidden;
   transition:opacity .25s, transform .25s;
   backdrop-filter:blur(12px);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  text-transform:none;
 }
 .mini-panel.hidden { opacity:0; transform:translateY(8px); pointer-events:none; }
 .mini-header { display:flex; align-items:center; gap:6px; padding:10px 12px 6px; }
@@ -2539,7 +2541,8 @@ body.workspace-mode {
 }
 .hidro-source-link {
     font-size: 9px; color: var(--muted2);
-    font-family: inherit;
+    font-family: 'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    letter-spacing: .2px;
 }
 
 /* Botón "Cuenca desde outlet" — herramientas de dibujo */
