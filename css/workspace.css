@@ -2452,58 +2452,88 @@ body.workspace-mode {
 }
 .hidro-no-zone { font-size: 12px; color: var(--muted); font-weight: 500; }
 
+/* ── Hidro: panel de configuración (4 pasos) ──────────────── */
+.hidro-config { padding: 0; }
+.hidro-step-row {
+    display: flex; gap: 10px; padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-border);
+}
+.hidro-step-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent-light); color: var(--accent-dark);
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+}
+.hidro-step-body { flex: 1; min-width: 0; }
+.hidro-step-label { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.hidro-step-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hidro-step-hint { font-size: 9px; color: var(--muted2); }
+.hidro-input {
+    width: 60px; padding: 4px 6px; border: 1px solid var(--panel-border);
+    border-radius: 5px; font-size: 11px; font-family: inherit;
+    background: #fff; color: var(--text);
+}
+.hidro-step-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border: 1px solid var(--panel-border);
+    border-radius: 6px; background: #fff; color: var(--text);
+    font-size: 11px; font-weight: 500; font-family: inherit;
+    cursor: pointer; transition: all .15s;
+}
+.hidro-step-btn:hover { border-color: var(--accent); background: var(--hover); }
+.hidro-step-btn.active { border-color: var(--accent); background: var(--accent-light); color: var(--accent-dark); }
+.hidro-step-info {
+    display: flex; align-items: center; gap: 5px; margin-top: 4px;
+    font-size: 10px; color: var(--accent-dark);
+}
+.hidro-step-info i { font-size: 11px; }
+.hidro-step-clear {
+    background: none; border: none; color: var(--muted2); cursor: pointer;
+    font-size: 10px; padding: 2px 4px;
+}
+.hidro-step-clear:hover { color: #e57373; }
+.hidro-config-hint {
+    font-size: 9.5px; color: var(--muted2); line-height: 1.5;
+    padding: 8px 16px 12px; margin: 0;
+}
+
+/* ── Hidro: meta row + loading ───────────────────────────── */
 .hidro-meta-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 7px 18px 8px;
+    padding: 6px 16px;
     border-bottom: 1px solid var(--panel-border);
-    background: rgba(0,0,0,0.012);
+    background: rgba(0,0,0,0.015); font-size: 10px; color: var(--muted);
 }
-.hidro-meta-label  { font-size: 10px; color: var(--muted); }
-.hidro-meta-period { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted2); }
 
 .hidro-loading {
     display: flex; align-items: center; justify-content: center;
     gap: 9px; padding: 32px 22px;
     font-size: 12px; color: var(--muted);
-    flex-direction: column;
-    text-align: center;
+    flex-direction: column; text-align: center;
 }
 .hidro-loading i { color: var(--accent); font-size: 18px; }
 .hidro-loading span { max-width: 280px; line-height: 1.5; }
 
-.hidro-group-label {
-    padding: 12px 18px 4px;
-    font-size: 10px; font-weight: 600;
-    letter-spacing: .01em;
-    color: var(--muted);
-    border-top: 1px solid var(--panel-border);
-    background: rgba(0,0,0,0.012);
+/* ── Hidro: tabla compacta de métricas ───────────────────── */
+.hidro-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 11px; color: var(--text);
 }
-.hidro-group-label:first-of-type { border-top: none; }
-
-.hidro-metric-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr);
-    gap: 6px; padding: 8px 12px 8px;
+.hidro-table th {
+    text-align: left; font-size: 9.5px; font-weight: 700;
+    color: var(--muted); padding: 8px 12px 4px;
+    background: rgba(0,0,0,0.015); letter-spacing: .02em;
 }
-.hidro-metric {
-    padding: 8px 10px;
-    background: #fff;
-    border: 1px solid var(--panel-border);
-    border-radius: 7px;
-    display: flex; flex-direction: column; gap: 3px;
+.hidro-table td {
+    padding: 4px 12px; border-bottom: 1px solid rgba(0,0,0,0.04);
+    vertical-align: middle;
 }
-.hidro-metric-lbl {
-    font-size: 10px; font-weight: 500; color: var(--muted);
-    letter-spacing: -.01em;
-}
-.hidro-metric-val {
-    font-family: inherit; font-size: 13px;
-    font-weight: 700; color: var(--text);
-    letter-spacing: -.01em;
-}
-.hidro-metric-unit {
-    font-size: 10px; font-weight: 500; color: var(--muted);
-    margin-left: 2px;
+.hidro-table td:first-child { color: var(--muted); font-size: 10.5px; }
+.hidro-table td:nth-child(2) { font-weight: 600; text-align: right; white-space: nowrap; }
+.hidro-table td:nth-child(3) { color: var(--muted2); font-size: 10px; width: 45px; }
+.hidro-table tr.hidro-table-sep td {
+    padding: 0; border-bottom: none;
 }
 
 .hidro-chart-section {
@@ -2583,9 +2613,10 @@ body.workspace-mode {
     letter-spacing: .2px;
 }
 
-/* Botón "Cuenca desde outlet" — herramientas de dibujo */
+/* Botón "Delimitar Cuenca" — herramientas de dibujo */
 .draw-btn--pro {
     position: relative;
+    justify-content: center;
 }
 .draw-btn--pro .draw-btn-tag {
     font-family: 'DM Mono', monospace;

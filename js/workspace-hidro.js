@@ -1,11 +1,13 @@
 /* ==========================================================================
-   WORKSPACE HIDROMORFOLOGÍA - Delineación de cuenca desde outlet + métricas
-   - Backend: POST /api/hidromorfologia/delinear
-   - Solo Pro/Enterprise/Admin (gateado en el handler de click)
-   - Flujo:
-     1. Usuario click "Cuenca desde outlet" → cursor crosshair + toast guía
-     2. Usuario hace click en el mapa → POST al backend
-     3. Renderiza tabla de métricas + gráficos + capa de stream network
+   WORKSPACE HIDROMORFOLOGÍA — Delimitación de cuenca + métricas
+   Backend: POST /api/hidromorfologia/delinear
+   Solo Pro/Enterprise/Admin
+
+   Flujo de 4 pasos:
+     1. Configurar umbral de streams
+     2. Dibujar rectángulo tentativo en mapa (área de estudio)
+     3. Marcar punto outlet dentro del rectángulo
+     4. Click "Ejecutar" → POST al backend con rect + outlet + threshold
    ========================================================================== */
 (function () {
     'use strict';
@@ -15,15 +17,22 @@
         : 'https://evergreen-backend-awv1.onrender.com';
 
     /* ── Estado interno ────────────────────────────────────── */
-    var _waitingOutletClick = false;
-    var _lastResult         = null;
-    var _streamsLayer       = null;
-    var _cauceLayer         = null;
-    var _cuencaLayer        = null;
-    var _outletMarker       = null;
-    var _hipsoChart         = null;
-    var _perfilChart        = null;
-    var _originalCursor     = '';
+    var _lastResult     = null;
+    var _streamsLayer   = null;
+    var _cauceLayer     = null;
+    var _cuencaLayer    = null;
+    var _outletMarker   = null;
+    var _rectLayer      = null;   // rectángulo tentativo
+    var _hipsoChart     = null;
+    var _perfilChart    = null;
+    var _originalCursor = '';
+
+    // Estado del flujo de 4 pasos
+    var _outletLatLng   = null;   // {lat, lng}
+    var _rectBounds     = null;   // L.LatLngBounds
+    var _waitingRect    = false;
+    var _waitingOutlet  = false;
+    var _rectStartLL    = null;   // para dibujar arrastrando
 
     /* ── Helpers ───────────────────────────────────────────── */
 
@@ -39,9 +48,7 @@
         console.log('[Hidro]', msg);
     }
 
-    function _userPlan() {
-        return window._sbUserPlan || 'free';
-    }
+    function _userPlan() { return window._sbUserPlan || 'free'; }
 
     function _isProPlus() {
         var p = _userPlan();
@@ -75,87 +82,200 @@
         return sec + 's';
     }
 
-    /* ── Inicio del flujo: usuario click "Cuenca desde outlet" ── */
+    function _updateEjecutarBtn() {
+        var btn = document.getElementById('hidro-btn-ejecutar');
+        if (!btn) return;
+        var ready = _rectBounds && _outletLatLng;
+        btn.disabled = !ready;
+        btn.style.opacity = ready ? '' : '0.4';
+        btn.style.cursor = ready ? '' : 'not-allowed';
+    }
+
+    /* ── Botón principal: "Delimitar Cuenca" en herramientas ── */
 
     window.hidroIniciarOutletClick = function () {
         if (!_isProPlus()) {
             _toast('🔒 Función disponible en plan Pro o superior.');
             return;
         }
-        if (typeof map === 'undefined' || !map) {
-            _toast('Mapa no inicializado.');
-            return;
-        }
-        if (_waitingOutletClick) {
-            _cancelarOutletClick();
-            return;
-        }
-        _waitingOutletClick = true;
-        _originalCursor = document.getElementById('map').style.cursor;
-        document.getElementById('map').style.cursor = 'crosshair';
-
-        var btn = document.getElementById('btn-outlet-cuenca');
-        if (btn) btn.classList.add('active');
-
-        _toast('📍 Click en el mapa sobre un curso de agua para delimitar la cuenca.');
-        map.once('click', _onMapClickOutlet);
-        // Esc para cancelar
-        document.addEventListener('keydown', _onEscape);
+        // Cambiar al tab Hidromorfología
+        if (typeof switchWorkspaceTab === 'function') switchWorkspaceTab('hidromorfologia');
+        // Mostrar panel config, ocultar resultado
+        var cfg = document.getElementById('hidro-config-panel');
+        var body = document.getElementById('hidro-body');
+        if (cfg) cfg.style.display = '';
+        if (body) body.style.display = 'none';
     };
 
-    function _onEscape(e) {
-        if (e.key === 'Escape' && _waitingOutletClick) _cancelarOutletClick();
-    }
+    /* ── Paso 2: Dibujar rectángulo tentativo ─────────────── */
 
-    function _cancelarOutletClick() {
-        _waitingOutletClick = false;
-        document.getElementById('map').style.cursor = _originalCursor || '';
-        try { map.off('click', _onMapClickOutlet); } catch (e) {}
-        document.removeEventListener('keydown', _onEscape);
-        var btn = document.getElementById('btn-outlet-cuenca');
+    window.hidroDibujarRect = function () {
+        if (typeof map === 'undefined' || !map) return;
+        if (_waitingRect) { _cancelarRect(); return; }
+        _waitingRect = true;
+        _rectStartLL = null;
+        var btn = document.getElementById('hidro-btn-rect');
+        if (btn) btn.classList.add('active');
+        document.getElementById('map').style.cursor = 'crosshair';
+        _toast('Arrastra en el mapa para dibujar el rectángulo del área tentativa.');
+        map.dragging.disable();
+        map.on('mousedown', _onRectMouseDown);
+        document.addEventListener('keydown', _onEscapeRect);
+    };
+
+    function _onEscapeRect(e) { if (e.key === 'Escape') _cancelarRect(); }
+
+    function _cancelarRect() {
+        _waitingRect = false;
+        _rectStartLL = null;
+        document.getElementById('map').style.cursor = '';
+        var btn = document.getElementById('hidro-btn-rect');
         if (btn) btn.classList.remove('active');
+        map.dragging.enable();
+        map.off('mousedown', _onRectMouseDown);
+        map.off('mousemove', _onRectMouseMove);
+        map.off('mouseup', _onRectMouseUp);
+        document.removeEventListener('keydown', _onEscapeRect);
     }
 
-    function _onMapClickOutlet(e) {
-        _waitingOutletClick = false;
-        document.getElementById('map').style.cursor = _originalCursor || '';
-        document.removeEventListener('keydown', _onEscape);
-        var btn = document.getElementById('btn-outlet-cuenca');
+    function _onRectMouseDown(e) {
+        _rectStartLL = e.latlng;
+        if (_rectLayer) { map.removeLayer(_rectLayer); _rectLayer = null; }
+        map.on('mousemove', _onRectMouseMove);
+        map.on('mouseup', _onRectMouseUp);
+    }
+
+    function _onRectMouseMove(e) {
+        if (!_rectStartLL) return;
+        var bounds = L.latLngBounds(_rectStartLL, e.latlng);
+        if (_rectLayer) map.removeLayer(_rectLayer);
+        _rectLayer = L.rectangle(bounds, {
+            color: '#FF9800', weight: 2, fillOpacity: 0.08, dashArray: '6 4'
+        }).addTo(map);
+    }
+
+    function _onRectMouseUp(e) {
+        if (!_rectStartLL) return;
+        _rectBounds = L.latLngBounds(_rectStartLL, e.latlng);
+        // Asegurar rectángulo mínimo (~500m)
+        var sw = _rectBounds.getSouthWest();
+        var ne = _rectBounds.getNorthEast();
+        var dlat = Math.abs(ne.lat - sw.lat);
+        var dlng = Math.abs(ne.lng - sw.lng);
+        if (dlat < 0.005 || dlng < 0.005) {
+            _toast('Rectángulo muy pequeño — dibuja un área más grande.');
+            _rectBounds = null;
+            if (_rectLayer) { map.removeLayer(_rectLayer); _rectLayer = null; }
+            _cancelarRect();
+            _updateEjecutarBtn();
+            return;
+        }
+        // Dibujar rectángulo final
+        if (_rectLayer) map.removeLayer(_rectLayer);
+        _rectLayer = L.rectangle(_rectBounds, {
+            color: '#FF9800', weight: 2, fillOpacity: 0.06, dashArray: '6 4'
+        }).addTo(map);
+        // Mostrar info
+        var info = document.getElementById('hidro-rect-info');
+        var coords = document.getElementById('hidro-rect-coords');
+        if (info) info.style.display = 'flex';
+        if (coords) {
+            var w = (dlng * 111.32 * Math.cos(sw.lat * Math.PI / 180)).toFixed(1);
+            var h = (dlat * 111.32).toFixed(1);
+            coords.textContent = w + ' × ' + h + ' km';
+        }
+        _cancelarRect();
+        _updateEjecutarBtn();
+    }
+
+    window.hidroLimpiarRect = function () {
+        _rectBounds = null;
+        if (_rectLayer) { map.removeLayer(_rectLayer); _rectLayer = null; }
+        var info = document.getElementById('hidro-rect-info');
+        if (info) info.style.display = 'none';
+        _updateEjecutarBtn();
+    };
+
+    /* ── Paso 3: Marcar outlet ────────────────────────────── */
+
+    window.hidroMarcarOutlet = function () {
+        if (typeof map === 'undefined' || !map) return;
+        if (_waitingOutlet) { _cancelarOutlet(); return; }
+        _waitingOutlet = true;
+        var btn = document.getElementById('hidro-btn-outlet');
+        if (btn) btn.classList.add('active');
+        document.getElementById('map').style.cursor = 'crosshair';
+        _toast('Click en el mapa sobre un curso de agua para marcar el outlet.');
+        map.once('click', _onOutletClick);
+        document.addEventListener('keydown', _onEscapeOutlet);
+    };
+
+    function _onEscapeOutlet(e) { if (e.key === 'Escape') _cancelarOutlet(); }
+
+    function _cancelarOutlet() {
+        _waitingOutlet = false;
+        document.getElementById('map').style.cursor = '';
+        var btn = document.getElementById('hidro-btn-outlet');
         if (btn) btn.classList.remove('active');
-
-        var lat = e.latlng.lat;
-        var lng = e.latlng.lng;
-        _delinear(lat, lng);
+        try { map.off('click', _onOutletClick); } catch (e) {}
+        document.removeEventListener('keydown', _onEscapeOutlet);
     }
+
+    function _onOutletClick(e) {
+        _outletLatLng = { lat: e.latlng.lat, lng: e.latlng.lng };
+        // Dibujar marker
+        if (_outletMarker) map.removeLayer(_outletMarker);
+        _outletMarker = L.circleMarker([e.latlng.lat, e.latlng.lng], {
+            radius: 7, color: '#FF6B35', fillColor: '#FF6B35', fillOpacity: 0.9, weight: 2
+        }).addTo(map).bindTooltip('Outlet', { permanent: false });
+        // Mostrar info
+        var info = document.getElementById('hidro-outlet-info');
+        var coords = document.getElementById('hidro-outlet-coords');
+        if (info) info.style.display = 'flex';
+        if (coords) coords.textContent = e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5);
+        _cancelarOutlet();
+        _updateEjecutarBtn();
+    }
+
+    window.hidroLimpiarOutlet = function () {
+        _outletLatLng = null;
+        if (_outletMarker) { map.removeLayer(_outletMarker); _outletMarker = null; }
+        var info = document.getElementById('hidro-outlet-info');
+        if (info) info.style.display = 'none';
+        _updateEjecutarBtn();
+    };
+
+    /* ── Paso 4: Ejecutar análisis ────────────────────────── */
+
+    window.hidroEjecutar = function () {
+        if (!_rectBounds || !_outletLatLng) {
+            _toast('Dibuja el rectángulo y marca el outlet primero.');
+            return;
+        }
+        _delinear(_outletLatLng.lat, _outletLatLng.lng);
+    };
 
     /* ── Llamada al backend + renderizado ──────────────────── */
 
     function _delinear(lat, lng) {
-        // Switch al tab Hidromorfología si no está activo
-        if (typeof switchWorkspaceTab === 'function') switchWorkspaceTab('hidromorfologia');
+        _clearResultLayers();
 
-        // Limpiar resultado anterior
-        _clearMapLayers();
+        var cfg     = document.getElementById('hidro-config-panel');
+        var header  = document.getElementById('hidro-header');
+        var body    = document.getElementById('hidro-body');
+        var loading = document.getElementById('hidro-loading');
+        var msg     = document.getElementById('hidro-loading-msg');
 
-        var header = document.getElementById('hidro-header');
-        var body   = document.getElementById('hidro-body');
-        var meta   = document.getElementById('hidro-meta-row');
-        var loading= document.getElementById('hidro-loading');
-        var msg    = document.getElementById('hidro-loading-msg');
-
-        if (header) header.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--accent);margin-right:6px;"></i> <span style="color:var(--text);">Delimitando cuenca…</span>';
-        if (body) body.style.display = 'none';
-        if (meta) meta.style.display = 'none';
+        if (cfg)     cfg.style.display = 'none';
+        if (header)  header.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--accent);margin-right:6px;"></i> <span style="color:var(--text);">Delimitando cuenca…</span>';
+        if (body)    body.style.display = 'none';
         if (loading) loading.style.display = 'flex';
-        if (msg) msg.textContent = 'Descargando DEM (puede tardar 15-30s)…';
+        if (msg)     msg.textContent = 'Descargando DEM…';
 
-        // Pin temporal en el click
-        try {
-            if (_outletMarker) map.removeLayer(_outletMarker);
-            _outletMarker = L.circleMarker([lat, lng], {
-                radius: 6, color: '#FFB300', fillColor: '#FFB300', fillOpacity: 0.8, weight: 2,
-            }).addTo(map);
-        } catch (e) {}
+        // Construir bbox desde el rectángulo dibujado
+        var sw = _rectBounds.getSouthWest();
+        var ne = _rectBounds.getNorthEast();
+        var bbox = [sw.lng, sw.lat, ne.lng, ne.lat]; // [W, S, E, N]
 
         // AbortController con timeout de 90s
         var controller = new AbortController();
@@ -163,16 +283,19 @@
 
         // Mensajes progresivos
         var msgTimers = [];
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Consultando GEE y descargando DEM…'; }, 4000));
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Procesando hidrología (D8 flow direction)…'; }, 15000));
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Calculando red hídrica y cuenca…'; }, 30000));
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Extrayendo métricas morfométricas…'; }, 50000));
-        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Casi listo, finalizando…'; }, 70000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Procesando hidrología D8…'; }, 5000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Calculando red hídrica…'; }, 15000));
+        msgTimers.push(setTimeout(function () { if (msg) msg.textContent = 'Extrayendo métricas…'; }, 25000));
 
         fetch(API_BASE + '/api/hidromorfologia/delinear', {
             method: 'POST',
             headers: _authHeaders(),
-            body: JSON.stringify({ lat: lat, lng: lng, stream_threshold: _getStreamThreshold() }),
+            body: JSON.stringify({
+                lat: lat,
+                lng: lng,
+                stream_threshold: _getStreamThreshold(),
+                bbox: bbox
+            }),
             signal: controller.signal,
         })
         .then(function (r) {
@@ -186,17 +309,18 @@
             if (loading) loading.style.display = 'none';
             _renderResultado(data);
             _dibujarEnMapa(data);
+            // Quitar rectángulo tentativo
+            if (_rectLayer) { map.removeLayer(_rectLayer); _rectLayer = null; }
             if (data.tiempo_proceso_s) console.log('[Hidro] Backend procesó en ' + data.tiempo_proceso_s + 's');
         })
         .catch(function (err) {
             if (loading) loading.style.display = 'none';
+            if (cfg) cfg.style.display = '';
             var errMsg = err.name === 'AbortError'
-                ? 'Timeout (28s). El servidor tardó demasiado — reintenta.'
+                ? 'Timeout — el servidor tardó demasiado. Dibuja un rectángulo más pequeño.'
                 : err.message;
             if (header) header.innerHTML = '<span class="hidro-no-zone"><i class="fas fa-times-circle" style="margin-right:5px;color:#e57373;"></i>Error: ' + errMsg + '</span>';
-            console.warn('[Hidro] delinear:', err);
             _toast('❌ ' + errMsg);
-            try { if (_outletMarker) map.removeLayer(_outletMarker); } catch (e) {}
         })
         .finally(function () {
             clearTimeout(timeoutId);
@@ -204,125 +328,111 @@
         });
     }
 
-    /* ── Render del resultado en el panel ──────────────────── */
+    /* ── Render del resultado ──────────────────────────────── */
 
     function _renderResultado(data) {
         var m = data.metricas || {};
         var header = document.getElementById('hidro-header');
         if (header) {
             header.innerHTML =
-                '<i class="fas fa-bullseye" style="color:var(--accent);font-size:11px;margin-right:6px;"></i>' +
+                '<i class="fas fa-water" style="color:var(--accent);font-size:12px;margin-right:6px;"></i>' +
                 '<span class="hidro-comuna-name">Cuenca delimitada · ' + _fmtInt(m.area_ha) + ' ha</span>';
         }
-        var meta = document.getElementById('hidro-meta-row');
-        if (meta) {
-            meta.style.display = '';
-            var tcEl = document.getElementById('hidro-meta-tc');
-            if (tcEl && m.tc_kirpich_segundos) {
-                tcEl.textContent = 'Tc Kirpich: ' + _fmtTime(m.tc_kirpich_segundos);
-            }
-        }
+
+        // Meta: resolución + Tc
+        var demEl = document.getElementById('hidro-meta-dem');
+        var tcEl = document.getElementById('hidro-meta-tc');
+        if (demEl) demEl.textContent = 'DEM: Copernicus GLO-30 · ' + (data.resolucion_m || 30) + ' m';
+        if (tcEl) tcEl.textContent = m.tc_kirpich_segundos ? 'Tc: ' + _fmtTime(m.tc_kirpich_segundos) : '';
+
         var body = document.getElementById('hidro-body');
         if (body) body.style.display = '';
 
-        // Grupos de métricas
-        _renderGrupo('hidro-forma', [
-            { label: 'Área',                  val: _fmtInt(m.area_ha),                unit: 'ha' },
-            { label: 'Perímetro',             val: _fmt(m.perimetro_km, 2),           unit: 'km' },
-            { label: 'Compacidad (Kc Gravelius)', val: _fmt(m.compacidad_kc, 2),     unit: '',  hint: '1 = círculo · >1 = más alargada → respuesta hidrológica más lenta' },
-            { label: 'Forma (Kf Horton)',     val: _fmt(m.forma_kf, 2),               unit: '',  hint: 'A/L² · valores bajos = cuenca alargada' },
-            { label: 'Circularidad',          val: _fmt(m.circularidad, 2),           unit: '',  hint: '4πA/P² · 1 = círculo' },
-            { label: 'Elongación (Schumm)',   val: _fmt(m.elongacion, 2),             unit: '' },
-            { label: 'Longitud axial',        val: _fmt(m.longitud_axial_km, 2),      unit: 'km' },
-        ]);
-        _renderGrupo('hidro-relieve', [
-            { label: 'Cota mínima',  val: _fmtInt(m.elev_min_m),   unit: 'm' },
-            { label: 'Cota media',   val: _fmtInt(m.elev_media_m), unit: 'm' },
-            { label: 'Cota máxima',  val: _fmtInt(m.elev_max_m),   unit: 'm' },
-            { label: 'Pendiente media de cuenca', val: _fmt(m.pendiente_media_pct, 2), unit: '%' },
-        ]);
-        _renderGrupo('hidro-drenaje', [
-            { label: 'Longitud cauce principal', val: _fmt(m.longitud_cauce_km, 2),  unit: 'km' },
-            { label: 'Pendiente del cauce',      val: _fmt(m.pendiente_cauce_pct, 2), unit: '%' },
-            { label: 'Densidad de drenaje',      val: _fmt(m.densidad_drenaje_km_km2, 2), unit: 'km/km²', hint: 'Σ longitud streams / área' },
-            { label: 'Long. total streams',      val: _fmt(m.longitud_total_streams_km, 1), unit: 'km' },
-        ]);
-        _renderGrupo('hidro-tiempos', [
-            { label: 'Tc (segundos)', val: _fmtInt(m.tc_kirpich_segundos), unit: 's' },
-            { label: 'Tc (minutos)',  val: _fmt(m.tc_kirpich_minutos, 1),   unit: 'min' },
-            { label: 'Tc (horas)',    val: _fmt(m.tc_kirpich_horas, 2),     unit: 'h' },
-        ]);
+        // Tabla compacta de métricas
+        _renderTabla(m);
 
         // Gráficos
         _renderHipsometrica(data.hipsometrica || []);
         _renderPerfilCauce(data.perfil_cauce || []);
 
-        // Warning si excede límite
+        // Warning
         var warnEl = document.getElementById('hidro-limit-warn');
         var btnUsar = document.getElementById('hidro-btn-usar');
         if (warnEl && btnUsar) {
             if (data.excede_limite) {
                 warnEl.style.display = 'flex';
-                btnUsar.disabled = true;
-                btnUsar.style.opacity = '0.4';
-                btnUsar.style.cursor = 'not-allowed';
+                btnUsar.disabled = true; btnUsar.style.opacity = '0.4';
             } else {
                 warnEl.style.display = 'none';
-                btnUsar.disabled = false;
-                btnUsar.style.opacity = '';
-                btnUsar.style.cursor = '';
+                btnUsar.disabled = false; btnUsar.style.opacity = '';
             }
         }
     }
 
-    function _renderGrupo(containerId, rows) {
-        var el = document.getElementById(containerId);
-        if (!el) return;
-        var html = '';
-        rows.forEach(function (r) {
-            html += '<div class="hidro-metric" title="' + (r.hint || '') + '">';
-            html += '  <div class="hidro-metric-lbl">' + r.label + '</div>';
-            html += '  <div class="hidro-metric-val">' + r.val + (r.unit ? ' <span class="hidro-metric-unit">' + r.unit + '</span>' : '') + '</div>';
-            html += '</div>';
-        });
-        el.innerHTML = html;
+    function _renderTabla(m) {
+        var tbody = document.querySelector('#hidro-table tbody');
+        if (!tbody) return;
+        var rows = '';
+        function section(title) {
+            rows += '<tr class="hidro-table-sep"><td colspan="3" style="height:4px;"></td></tr>';
+            rows += '<tr><th colspan="3">' + title + '</th></tr>';
+        }
+        function row(label, val, unit) {
+            rows += '<tr><td>' + label + '</td><td>' + val + '</td><td>' + (unit || '') + '</td></tr>';
+        }
+
+        section('Forma');
+        row('Área', _fmtInt(m.area_ha), 'ha');
+        row('Perímetro', _fmt(m.perimetro_km, 2), 'km');
+        row('Kc Gravelius', _fmt(m.compacidad_kc, 2), '');
+        row('Kf Horton', _fmt(m.forma_kf, 2), '');
+        row('Circularidad', _fmt(m.circularidad, 2), '');
+        row('Elongación', _fmt(m.elongacion, 2), '');
+        row('Long. axial', _fmt(m.longitud_axial_km, 2), 'km');
+
+        section('Relieve');
+        row('Cota mínima', _fmtInt(m.elev_min_m), 'm');
+        row('Cota media', _fmtInt(m.elev_media_m), 'm');
+        row('Cota máxima', _fmtInt(m.elev_max_m), 'm');
+        row('Pendiente media', _fmt(m.pendiente_media_pct, 2), '%');
+
+        section('Drenaje');
+        row('Cauce principal', _fmt(m.longitud_cauce_km, 2), 'km');
+        row('Pendiente cauce', _fmt(m.pendiente_cauce_pct, 2), '%');
+        row('Densidad drenaje', _fmt(m.densidad_drenaje_km_km2, 2), 'km/km²');
+        row('Total streams', _fmt(m.longitud_total_streams_km, 1), 'km');
+
+        section('Tiempo de concentración');
+        row('Tc Kirpich', _fmtInt(m.tc_kirpich_segundos), 's');
+        row('Tc Kirpich', _fmt(m.tc_kirpich_minutos, 1), 'min');
+        row('Tc Kirpich', _fmt(m.tc_kirpich_horas, 2), 'h');
+
+        tbody.innerHTML = rows;
     }
 
     function _renderHipsometrica(pts) {
         var canvas = document.getElementById('hidro-chart-hipso');
         if (!canvas || typeof Chart === 'undefined' || !pts.length) return;
-        if (_hipsoChart) { _hipsoChart.destroy(); }
+        if (_hipsoChart) _hipsoChart.destroy();
         _hipsoChart = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
                 labels: pts.map(function (p) { return p.area_pct.toFixed(0); }),
                 datasets: [{
-                    label: 'Curva hipsométrica',
                     data: pts.map(function (p) { return { x: p.area_pct, y: p.elev_m }; }),
-                    borderColor: '#4d8a1f',
-                    backgroundColor: 'rgba(106,170,53,0.18)',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    tension: 0.2,
-                    fill: true,
+                    borderColor: '#4d8a1f', backgroundColor: 'rgba(106,170,53,0.18)',
+                    borderWidth: 2, pointRadius: 0, tension: 0.2, fill: true,
                 }],
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: {
-                        type: 'linear', min: 0, max: 100,
-                        title: { display: true, text: '% Área acumulada sobre la cota', color: '#6b7280', font: { size: 10 } },
-                        ticks: { color: '#9ca3af', font: { size: 10 } },
-                        grid: { color: 'rgba(0,0,0,0.04)' },
-                    },
-                    y: {
-                        title: { display: true, text: 'Cota (m)', color: '#6b7280', font: { size: 10 } },
-                        ticks: { color: '#9ca3af', font: { size: 10 } },
-                        grid: { color: 'rgba(0,0,0,0.04)' },
-                    },
+                    x: { type: 'linear', min: 0, max: 100,
+                         title: { display: true, text: '% Área acumulada', color: '#6b7280', font: { size: 10 } },
+                         ticks: { color: '#9ca3af', font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                    y: { title: { display: true, text: 'Cota (m)', color: '#6b7280', font: { size: 10 } },
+                         ticks: { color: '#9ca3af', font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
                 },
             },
         });
@@ -331,37 +441,25 @@
     function _renderPerfilCauce(pts) {
         var canvas = document.getElementById('hidro-chart-perfil');
         if (!canvas || typeof Chart === 'undefined' || !pts.length) return;
-        if (_perfilChart) { _perfilChart.destroy(); }
+        if (_perfilChart) _perfilChart.destroy();
         _perfilChart = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
                 labels: pts.map(function (p) { return (p.distance_m / 1000).toFixed(2); }),
                 datasets: [{
-                    label: 'Perfil cauce',
                     data: pts.map(function (p) { return p.elev_m; }),
-                    borderColor: '#2c6fb5',
-                    backgroundColor: 'rgba(44,111,181,0.18)',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    tension: 0.15,
-                    fill: true,
+                    borderColor: '#2c6fb5', backgroundColor: 'rgba(44,111,181,0.18)',
+                    borderWidth: 2, pointRadius: 0, tension: 0.15, fill: true,
                 }],
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: {
-                        title: { display: true, text: 'Distancia desde nacimiento (km)', color: '#6b7280', font: { size: 10 } },
-                        ticks: { color: '#9ca3af', font: { size: 10 }, maxTicksLimit: 8 },
-                        grid: { color: 'rgba(0,0,0,0.04)' },
-                    },
-                    y: {
-                        title: { display: true, text: 'Cota (m)', color: '#6b7280', font: { size: 10 } },
-                        ticks: { color: '#9ca3af', font: { size: 10 } },
-                        grid: { color: 'rgba(0,0,0,0.04)' },
-                    },
+                    x: { title: { display: true, text: 'Distancia (km)', color: '#6b7280', font: { size: 10 } },
+                         ticks: { color: '#9ca3af', font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                    y: { title: { display: true, text: 'Cota (m)', color: '#6b7280', font: { size: 10 } },
+                         ticks: { color: '#9ca3af', font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
                 },
             },
         });
@@ -369,21 +467,24 @@
 
     /* ── Capas en el mapa ──────────────────────────────────── */
 
-    function _clearMapLayers() {
+    function _clearResultLayers() {
         try { if (_streamsLayer) map.removeLayer(_streamsLayer); } catch (e) {}
         try { if (_cauceLayer) map.removeLayer(_cauceLayer); } catch (e) {}
         try { if (_cuencaLayer) map.removeLayer(_cuencaLayer); } catch (e) {}
+        _streamsLayer = _cauceLayer = _cuencaLayer = null;
+    }
+
+    function _clearMapLayers() {
+        _clearResultLayers();
         try { if (_outletMarker) map.removeLayer(_outletMarker); } catch (e) {}
-        _streamsLayer = _cauceLayer = _cuencaLayer = _outletMarker = null;
+        try { if (_rectLayer) map.removeLayer(_rectLayer); } catch (e) {}
+        _outletMarker = _rectLayer = null;
     }
 
     function _dibujarEnMapa(data) {
         if (typeof map === 'undefined' || typeof L === 'undefined') return;
 
-        // Limpiar marcador temporal del click
-        try { if (_outletMarker) map.removeLayer(_outletMarker); _outletMarker = null; } catch (e) {}
-
-        // Polígono cuenca (translúcido verde)
+        // Polígono cuenca
         try {
             _cuencaLayer = L.geoJSON(data.cuenca, {
                 style: { color: '#6AAA35', weight: 2, fillColor: '#6AAA35', fillOpacity: 0.10, dashArray: '4 3' },
@@ -391,35 +492,32 @@
             map.fitBounds(_cuencaLayer.getBounds(), { padding: [40, 40] });
         } catch (e) { console.warn('[Hidro] cuenca:', e); }
 
-        // Stream network (celeste, más visible)
+        // Streams
         if (data.streams && data.streams.features && data.streams.features.length) {
             try {
-                console.log('[Hidro] Dibujando ' + data.streams.features.length + ' streams');
                 _streamsLayer = L.geoJSON(data.streams, {
                     style: { color: '#29b6f6', weight: 2.5, opacity: 0.95 },
                 }).addTo(map);
             } catch (e) { console.warn('[Hidro] streams:', e); }
-        } else {
-            console.warn('[Hidro] Sin streams en respuesta:', data.streams);
         }
 
-        // Cauce principal (azul fuerte, más grueso)
+        // Cauce principal
         if (data.cauce_principal && data.cauce_principal.coordinates && data.cauce_principal.coordinates.length) {
             try {
-                console.log('[Hidro] Dibujando cauce principal: ' + data.cauce_principal.coordinates.length + ' puntos');
                 _cauceLayer = L.geoJSON(data.cauce_principal, {
                     style: { color: '#0d47a1', weight: 4, opacity: 1.0 },
                 }).addTo(map);
             } catch (e) { console.warn('[Hidro] cauce:', e); }
         }
 
-        // Pin del outlet snapped (naranja)
+        // Outlet snapped
         if (data.outlet_snapped) {
             try {
+                if (_outletMarker) map.removeLayer(_outletMarker);
                 _outletMarker = L.circleMarker(
                     [data.outlet_snapped.lat, data.outlet_snapped.lng],
-                    { radius: 6, color: '#FF6B35', fillColor: '#FF6B35', fillOpacity: 0.9, weight: 2 }
-                ).addTo(map).bindTooltip('Outlet (snapped)', { permanent: false });
+                    { radius: 7, color: '#FF6B35', fillColor: '#FF6B35', fillOpacity: 0.9, weight: 2 }
+                ).addTo(map).bindTooltip('Outlet', { permanent: false });
             } catch (e) {}
         }
     }
@@ -434,24 +532,22 @@
         }
         var feature = {
             type: 'Feature',
-            properties: { source: 'hidromorfologia', tc_segundos: _lastResult.metricas.tc_kirpich_segundos },
+            properties: { source: 'hidromorfologia' },
             geometry: _lastResult.cuenca,
         };
-        // Setear como zona activa (mismo patrón que usarCuencaEnWorkspace)
         try {
             WorkspaceState.zona       = feature;
             WorkspaceState.zonaHa     = _lastResult.metricas.area_ha || 0;
-            WorkspaceState.zonaNombre = 'Cuenca delineada';
+            WorkspaceState.zonaNombre = 'Cuenca delimitada';
             WorkspaceState.zonaGEE    = (typeof simplifyZoneForGee === 'function')
-                ? simplifyZoneForGee(feature, WorkspaceState.zonaHa)
-                : feature;
+                ? simplifyZoneForGee(feature, WorkspaceState.zonaHa) : feature;
             if (typeof restoreZoneOnMap === 'function') restoreZoneOnMap();
             if (typeof updateZoneUI === 'function') updateZoneUI();
             if (typeof saveWorkspaceState === 'function') saveWorkspaceState();
-            _toast('✅ Cuenca delineada establecida como zona de estudio.');
+            _toast('✅ Cuenca establecida como zona de estudio.');
+            if (typeof switchWorkspaceTab === 'function') switchWorkspaceTab('resumen');
         } catch (e) {
-            console.warn('[Hidro] usar como zona:', e);
-            _toast('❌ Error al guardar la zona: ' + e.message);
+            _toast('❌ Error: ' + e.message);
         }
     };
 
@@ -459,52 +555,49 @@
         if (!_lastResult || !_lastResult.metricas) return;
         var m = _lastResult.metricas;
         var rows = [['metrica', 'valor', 'unidad']];
-        var add = function (lbl, val, unit) { rows.push([lbl, val == null ? '' : val, unit || '']); };
-        add('Área',                            m.area_ha,              'ha');
-        add('Área',                            m.area_km2,             'km2');
-        add('Perímetro',                       m.perimetro_km,         'km');
-        add('Compacidad Kc Gravelius',         m.compacidad_kc,        '');
-        add('Forma Kf Horton',                 m.forma_kf,             '');
-        add('Circularidad',                    m.circularidad,         '');
-        add('Elongación Schumm',               m.elongacion,           '');
-        add('Longitud axial',                  m.longitud_axial_km,    'km');
-        add('Cota mínima',                     m.elev_min_m,           'm');
-        add('Cota media',                      m.elev_media_m,         'm');
-        add('Cota máxima',                     m.elev_max_m,           'm');
-        add('Pendiente media de cuenca',       m.pendiente_media_pct,  '%');
-        add('Longitud cauce principal',        m.longitud_cauce_km,    'km');
-        add('Pendiente del cauce',             m.pendiente_cauce_pct,  '%');
-        add('Densidad de drenaje',             m.densidad_drenaje_km_km2, 'km/km2');
-        add('Longitud total de streams',       m.longitud_total_streams_km, 'km');
-        add('Tc Kirpich',                      m.tc_kirpich_segundos,  's');
-        add('Tc Kirpich',                      m.tc_kirpich_minutos,   'min');
-        add('Tc Kirpich',                      m.tc_kirpich_horas,     'h');
-
+        var add = function (lbl, val, u) { rows.push([lbl, val == null ? '' : val, u || '']); };
+        add('Área', m.area_ha, 'ha');
+        add('Perímetro', m.perimetro_km, 'km');
+        add('Kc Gravelius', m.compacidad_kc, '');
+        add('Kf Horton', m.forma_kf, '');
+        add('Circularidad', m.circularidad, '');
+        add('Elongación', m.elongacion, '');
+        add('Longitud axial', m.longitud_axial_km, 'km');
+        add('Cota mínima', m.elev_min_m, 'm');
+        add('Cota media', m.elev_media_m, 'm');
+        add('Cota máxima', m.elev_max_m, 'm');
+        add('Pendiente media', m.pendiente_media_pct, '%');
+        add('Cauce principal', m.longitud_cauce_km, 'km');
+        add('Pendiente cauce', m.pendiente_cauce_pct, '%');
+        add('Densidad drenaje', m.densidad_drenaje_km_km2, 'km/km2');
+        add('Total streams', m.longitud_total_streams_km, 'km');
+        add('Tc Kirpich (s)', m.tc_kirpich_segundos, 's');
+        add('Tc Kirpich (min)', m.tc_kirpich_minutos, 'min');
+        add('Tc Kirpich (h)', m.tc_kirpich_horas, 'h');
         var csv = rows.map(function (r) {
             return r.map(function (c) {
                 var s = String(c);
                 return /[,\n"]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
             }).join(',');
         }).join('\n');
-
         var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        var url  = URL.createObjectURL(blob);
-        var a    = document.createElement('a');
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
         a.href = url; a.download = 'hidromorfologia_metricas.csv';
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
 
-    /* ── Esconder botón outlet si plan no permite ──────────── */
+    /* ── Plan visibility ──────────────────────────────────── */
     function _enforcePlanVisibility() {
         var btn = document.getElementById('btn-outlet-cuenca');
-        if (!btn) return;
-        btn.style.display = _isProPlus() ? '' : 'none';
+        if (btn) btn.style.display = _isProPlus() ? '' : 'none';
     }
-    // Hook a load del workspace para reflejar el plan cuando lo carga auth.js
-    setTimeout(_enforcePlanVisibility, 1500);
-    document.addEventListener('DOMContentLoaded', function () {
-        setTimeout(_enforcePlanVisibility, 2500);
-    });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _enforcePlanVisibility);
+    } else {
+        _enforcePlanVisibility();
+    }
+    window.addEventListener('planChanged', _enforcePlanVisibility);
 
-}());
+})();

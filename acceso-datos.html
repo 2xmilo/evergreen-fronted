@@ -1179,47 +1179,91 @@
 
             <!-- Header dinámico -->
             <div class="hidro-header" id="hidro-header">
-                <span class="hidro-no-zone">
-                    <i class="fas fa-bullseye" style="margin-right:5px;opacity:.55;"></i>
-                    Click en "Delimitar Cuenca" en herramientas para delimitar una cuenca.
-                </span>
+                <span class="hidro-comuna-name">Delimitar cuenca</span>
             </div>
 
-            <!-- Meta info -->
-            <div class="hidro-meta-row" id="hidro-meta-row" style="display:none;">
-                <span class="hidro-meta-label">DEM: COPERNICUS/DEM/GLO30 · 30 m</span>
-                <span class="hidro-meta-period" id="hidro-meta-tc">—</span>
-            </div>
+            <!-- ═══ Panel de configuración (4 pasos) ═══ -->
+            <div id="hidro-config-panel" class="hidro-config">
 
-            <!-- Config -->
-            <div class="hidro-meta-row" style="gap:10px;">
-                <label style="font-size:10px;color:var(--muted);white-space:nowrap;">Umbral streams (celdas):</label>
-                <input type="number" id="hidro-stream-thr" value="50" min="5" max="500" step="5"
-                       style="width:60px;padding:3px 6px;border:1px solid var(--panel-border);border-radius:5px;font-size:11px;font-family:inherit;background:#fff;color:#333;">
-                <span style="font-size:9px;color:var(--muted2);">Menor = más streams</span>
+                <!-- Paso 1: Umbral streams -->
+                <div class="hidro-step-row">
+                    <span class="hidro-step-num">1</span>
+                    <div class="hidro-step-body">
+                        <div class="hidro-step-label">Umbral de streams</div>
+                        <div class="hidro-step-controls">
+                            <input type="number" id="hidro-stream-thr" value="50" min="5" max="500" step="5"
+                                   class="hidro-input">
+                            <span class="hidro-step-hint">celdas · menor = más streams</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 2: Rectángulo tentativo -->
+                <div class="hidro-step-row">
+                    <span class="hidro-step-num">2</span>
+                    <div class="hidro-step-body">
+                        <div class="hidro-step-label">Dibujar área tentativa</div>
+                        <button class="hidro-step-btn" id="hidro-btn-rect" onclick="hidroDibujarRect()">
+                            <i class="fas fa-vector-square"></i> Dibujar rectángulo en mapa
+                        </button>
+                        <div id="hidro-rect-info" class="hidro-step-info" style="display:none;">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="hidro-rect-coords"></span>
+                            <button class="hidro-step-clear" onclick="hidroLimpiarRect()"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 3: Outlet -->
+                <div class="hidro-step-row">
+                    <span class="hidro-step-num">3</span>
+                    <div class="hidro-step-body">
+                        <div class="hidro-step-label">Marcar punto outlet</div>
+                        <button class="hidro-step-btn" id="hidro-btn-outlet" onclick="hidroMarcarOutlet()">
+                            <i class="fas fa-crosshairs"></i> Marcar outlet en mapa
+                        </button>
+                        <div id="hidro-outlet-info" class="hidro-step-info" style="display:none;">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="hidro-outlet-coords"></span>
+                            <button class="hidro-step-clear" onclick="hidroLimpiarOutlet()"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 4: Ejecutar -->
+                <div class="hidro-step-row">
+                    <span class="hidro-step-num">4</span>
+                    <div class="hidro-step-body">
+                        <button class="hidro-action-btn" id="hidro-btn-ejecutar" onclick="hidroEjecutar()" disabled>
+                            <i class="fas fa-play"></i> Delimitar cuenca
+                        </button>
+                    </div>
+                </div>
+
+                <p class="hidro-config-hint">
+                    Dibuja un rectángulo que cubra el área aproximada de la cuenca, luego marca el punto de salida sobre un curso de agua.
+                </p>
             </div>
 
             <!-- Spinner -->
             <div id="hidro-loading" class="hidro-loading" style="display:none;">
                 <i class="fas fa-spinner fa-spin"></i>
-                <span id="hidro-loading-msg">Delineando cuenca…</span>
+                <span id="hidro-loading-msg">Delimitando cuenca…</span>
             </div>
 
-            <!-- Resultado -->
+            <!-- ═══ Resultado ═══ -->
             <div id="hidro-body" style="display:none;">
 
-                <!-- Bloque de métricas (grupos) -->
-                <div class="hidro-group-label">Forma</div>
-                <div class="hidro-metric-grid" id="hidro-forma"></div>
+                <!-- Meta (resolución + fuente) -->
+                <div class="hidro-meta-row" id="hidro-meta-row">
+                    <span class="hidro-meta-label" id="hidro-meta-dem"></span>
+                    <span class="hidro-meta-label" id="hidro-meta-tc"></span>
+                </div>
 
-                <div class="hidro-group-label">Relieve</div>
-                <div class="hidro-metric-grid" id="hidro-relieve"></div>
-
-                <div class="hidro-group-label">Drenaje</div>
-                <div class="hidro-metric-grid" id="hidro-drenaje"></div>
-
-                <div class="hidro-group-label">Tiempo de concentración</div>
-                <div class="hidro-metric-grid" id="hidro-tiempos"></div>
+                <!-- Tabla compacta de métricas -->
+                <table class="hidro-table" id="hidro-table">
+                    <tbody></tbody>
+                </table>
 
                 <!-- Gráficos -->
                 <div class="hidro-chart-section">
@@ -1243,7 +1287,7 @@
                 <!-- Acciones -->
                 <div class="hidro-actions">
                     <button class="hidro-action-btn" onclick="hidroUsarComoZona()" id="hidro-btn-usar">
-                        <i class="fas fa-check"></i> Usar esta cuenca como zona de estudio
+                        <i class="fas fa-check"></i> Usar cuenca como zona de estudio
                     </button>
                     <button class="hidro-action-btn hidro-action-btn--alt" onclick="hidroExportCSV()">
                         <i class="fas fa-download"></i> Exportar métricas CSV
@@ -1253,7 +1297,7 @@
                 <!-- Warning si excede límite -->
                 <div id="hidro-limit-warn" class="hidro-limit-warn" style="display:none;">
                     <i class="fas fa-triangle-exclamation"></i>
-                    <span>La cuenca delimitada excede el límite de 50.000 ha. Puedes visualizar el análisis pero no establecerla como zona. Refresca con un outlet más aguas abajo.</span>
+                    <span>La cuenca excede 50.000 ha. Puedes visualizar pero no establecerla como zona.</span>
                 </div>
             </div>
 
@@ -1261,7 +1305,7 @@
             <div class="hidro-footer">
                 <span class="hidro-source-link">
                     <i class="fas fa-cube" style="font-size:8px;margin-right:3px;"></i>
-                    D8 · COPERNICUS/DEM/GLO30 · GEE
+                    D8 · Copernicus GLO-30 · GEE
                 </span>
             </div>
 
