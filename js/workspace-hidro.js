@@ -380,6 +380,9 @@
     function _dibujarEnMapa(data) {
         if (typeof map === 'undefined' || typeof L === 'undefined') return;
 
+        // Limpiar marcador temporal del click
+        try { if (_outletMarker) map.removeLayer(_outletMarker); _outletMarker = null; } catch (e) {}
+
         // Polígono cuenca (translúcido verde)
         try {
             _cuencaLayer = L.geoJSON(data.cuenca, {

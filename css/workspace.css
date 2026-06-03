@@ -2386,6 +2386,20 @@ body.workspace-mode {
    PySheds + GEE delineation desde outlet
    ══════════════════════════════════════════════════════════════════════ */
 
+/* Reset hidro: sin uppercase heredado, colores legibles */
+#tab-hidromorfologia-content { text-transform: none !important; }
+#tab-hidromorfologia-content * { text-transform: none; }
+#tab-hidromorfologia-content .hidro-metric-lbl,
+#tab-hidromorfologia-content .hidro-metric-val,
+#tab-hidromorfologia-content .hidro-chart-head,
+#tab-hidromorfologia-content .hidro-action-btn,
+#tab-hidromorfologia-content .hidro-action-btn--alt {
+    text-transform: none !important;
+    color: inherit;
+}
+.hidro-action-btn { color: #fff !important; }
+.hidro-action-btn--alt { color: var(--text) !important; }
+
 .hidro-header {
     display: flex; align-items: center; gap: 7px;
     padding: 13px 18px 11px;
