@@ -97,7 +97,7 @@
         var btn = document.getElementById('btn-outlet-cuenca');
         if (btn) btn.classList.add('active');
 
-        _toast('📍 Click en el mapa sobre un curso de agua para marcar el outlet.');
+        _toast('📍 Click en el mapa sobre un curso de agua para delimitar la cuenca.');
         map.once('click', _onMapClickOutlet);
         // Esc para cancelar
         document.addEventListener('keydown', _onEscape);
@@ -143,11 +143,11 @@
         var loading= document.getElementById('hidro-loading');
         var msg    = document.getElementById('hidro-loading-msg');
 
-        if (header) header.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--accent);margin-right:6px;"></i> Delineando cuenca desde outlet…';
+        if (header) header.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--accent);margin-right:6px;"></i> <span style="color:var(--text);">Delimitando cuenca…</span>';
         if (body) body.style.display = 'none';
         if (meta) meta.style.display = 'none';
         if (loading) loading.style.display = 'flex';
-        if (msg) msg.textContent = 'Descargando DEM + corriendo PySheds (puede tardar 15-30s)…';
+        if (msg) msg.textContent = 'Descargando DEM (puede tardar 15-30s)…';
 
         // Pin temporal en el click
         try {
@@ -212,7 +212,7 @@
         if (header) {
             header.innerHTML =
                 '<i class="fas fa-bullseye" style="color:var(--accent);font-size:11px;margin-right:6px;"></i>' +
-                '<span class="hidro-comuna-name">Cuenca delineada · ' + _fmtInt(m.area_ha) + ' ha</span>';
+                '<span class="hidro-comuna-name">Cuenca delimitada · ' + _fmtInt(m.area_ha) + ' ha</span>';
         }
         var meta = document.getElementById('hidro-meta-row');
         if (meta) {
