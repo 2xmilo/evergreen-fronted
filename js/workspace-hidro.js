@@ -589,15 +589,20 @@
     };
 
     /* ── Plan visibility ──────────────────────────────────── */
+    // El botón se muestra por defecto (visible en HTML).
+    // Solo lo ocultamos cuando SABEMOS que es free (no cuando el plan no se ha cargado).
     function _enforcePlanVisibility() {
         var btn = document.getElementById('btn-outlet-cuenca');
-        if (btn) btn.style.display = _isProPlus() ? '' : 'none';
+        if (!btn) return;
+        var plan = window._sbUserPlan;
+        // Si plan no está definido aún, no ocultar (mejor mostrar de más)
+        if (!plan) return;
+        btn.style.display = (plan === 'pro' || plan === 'enterprise' || plan === 'admin') ? '' : 'none';
     }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', _enforcePlanVisibility);
-    } else {
-        _enforcePlanVisibility();
-    }
+    // Ejecutar después de que se haya cargado el plan
     window.addEventListener('planChanged', _enforcePlanVisibility);
+    // También verificar periódicamente los primeros 5 segundos
+    setTimeout(_enforcePlanVisibility, 2000);
+    setTimeout(_enforcePlanVisibility, 5000);
 
 })();
