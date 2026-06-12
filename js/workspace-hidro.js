@@ -510,14 +510,20 @@
             } catch (e) { console.warn('[Hidro] cauce:', e); }
         }
 
-        // Outlet snapped
-        if (data.outlet_snapped) {
+        // Outlet: mantener marcador donde el usuario clickeó (no moverlo al snap).
+        // El snap se usa internamente para el cálculo pero el UX no debe saltar.
+        // Solo agregar un punto pequeño gris si el snap se movió significativamente.
+        if (data.outlet_snapped && data.outlet_input) {
             try {
-                if (_outletMarker) map.removeLayer(_outletMarker);
-                _outletMarker = L.circleMarker(
-                    [data.outlet_snapped.lat, data.outlet_snapped.lng],
-                    { radius: 7, color: '#FF6B35', fillColor: '#FF6B35', fillOpacity: 0.9, weight: 2 }
-                ).addTo(map).bindTooltip('Outlet', { permanent: false });
+                var dlat = Math.abs(data.outlet_snapped.lat - data.outlet_input.lat);
+                var dlng = Math.abs(data.outlet_snapped.lng - data.outlet_input.lng);
+                if (dlat > 0.0003 || dlng > 0.0003) {
+                    // Snap se movió >~30m — mostrar punto gris pequeño
+                    L.circleMarker(
+                        [data.outlet_snapped.lat, data.outlet_snapped.lng],
+                        { radius: 4, color: '#888', fillColor: '#888', fillOpacity: 0.6, weight: 1 }
+                    ).addTo(map).bindTooltip('Punto hidrológico (auto-ajustado)', { permanent: false });
+                }
             } catch (e) {}
         }
     }
