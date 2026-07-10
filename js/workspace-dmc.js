@@ -234,7 +234,7 @@
                         escapeHtml(v.nombreCorto || v.nombre) + '</span>';
                 }).join('');
 
-                // Disparar análisis IA con las variables detectadas
+                // Detección determinística de cálculos disponibles según variables
                 var varNames = vars.map(function(v) { return v.nombreCorto || v.nombre; });
                 _loadCalcSugerencias(code, stationName || code, varNames);
             })
@@ -244,75 +244,83 @@
             });
     }
 
-    /* ── Análisis IA: sugerencias de cálculos ── */
+    /* ── Cálculos derivados (determinístico, sin IA) ──
+       Los nombres de variable DMC son estables entre estaciones (verificado en
+       16 estaciones norte-a-sur), así que la disponibilidad se decide con match
+       exacto contra nombreCorto. Todos los cálculos son de plan de pago (Pro+). */
 
-    var _CALCULO_IDS = {
-        'priestley_taylor': 'priestley',
-        'penman_monteith':  'penman',
-        'vpd':              'vpd',
-        'evap_penman':      'penman',   // pendiente
-        'gdd':              null        // pendiente
-    };
+    var _CALC_CATALOGO = [
+        { id: 'vpd',       nombre: 'VPD — Déficit de Presión de Vapor',
+          requiere: ['T aire', 'HR'],
+          desc: 'Indicador de estrés hídrico de la vegetación.' },
+        { id: 'priestley', nombre: 'ET Priestley-Taylor',
+          requiere: ['T aire', 'Rad.'],
+          desc: 'Evapotranspiración para humedales y superficies saturadas.' },
+        { id: 'penman',    nombre: 'ETo Penman-Monteith (FAO-56)',
+          requiere: ['T aire', 'HR', 'Rad.', 'V prom 2m'],
+          desc: 'Evapotranspiración de referencia — estándar global.' },
+        { id: 'confort',   nombre: 'Confort térmico',
+          requiere: ['T aire', 'HR'],
+          desc: 'Sensación térmica (calor/viento) y humedad absoluta.' }
+    ];
 
+    var _CALC_MIN_PLAN = 'pro';   // todos los cálculos derivados requieren plan de pago
+
+    function _faltantes(requiere, varNames) {
+        return requiere.filter(function(r) { return varNames.indexOf(r) === -1; });
+    }
+
+    function _planPermite(minPlan) {
+        if (typeof planTiene === 'function') return planTiene(minPlan);
+        // Fallback si auth.js aún no expone el helper central
+        var rank = { free: 0, pro: 1, enterprise: 2, admin: 3 };
+        return (rank[window._sbUserPlan] || 0) >= (rank[minPlan] || 99);
+    }
+
+    // Antes _loadCalcSugerencias llamaba a la IA; ahora resuelve la disponibilidad
+    // localmente. Se mantiene el nombre y la firma para no tocar _loadVariablesInto.
     function _loadCalcSugerencias(code, nombre, varNames) {
         var container = $('dmc-calc-' + code);
         if (!container) return;
-        container.innerHTML = '<div class="dmc-ai-loading"><i class="fas fa-spinner fa-spin"></i> Analizando variables...</div>';
+        container._varNames = varNames;
+        container._nombre   = nombre;
 
-        postDmcJson('/api/ai/analizar-estacion', {
-            codigo: code,
-            nombre: nombre,
-            variables: varNames
-        }).then(function(data) {
-            _renderCalcSugerencias(container, data.sugerencias || [], code, varNames, nombre);
-        }).catch(function(err) {
-            console.warn('[DMC AI]', err);
-            container.innerHTML = '<span class="dmc-ai-error">No se pudo cargar el análisis.</span>';
-        });
-    }
-
-    function _renderCalcSugerencias(container, sugerencias, code, varNames, nombre) {
-        var disponibles = sugerencias.filter(function(s) { return s.disponible; });
-        if (!disponibles.length) {
-            container.innerHTML = '<span class="dmc-ai-error">Sin cálculos disponibles para esta estación.</span>';
-            return;
-        }
-
+        var esPago = _planPermite(_CALC_MIN_PLAN);
         var html = '';
-        disponibles.forEach(function(s) {
-            var calcId = _CALCULO_IDS[s.id] || null;
-            var isPremium = (s.id === 'evap_penman' || s.id === 'gdd');
-            var btnHtml = '';
-            if (isPremium) {
-                btnHtml = '<span class="dmc-calc-premium">Premium</span>';
-            } else if (calcId) {
-                btnHtml = '<button class="dmc-calc-dl-btn" onclick="dmcDownloadCalculo(\'' + code + '\',\'' + calcId + '\')">' +
-                          '<i class="fas fa-download"></i> Mes completo con ET calculada</button>';
+
+        _CALC_CATALOGO.forEach(function(cfg) {
+            var faltan = _faltantes(cfg.requiere, varNames);
+            var disponible = faltan.length === 0;
+
+            var btnHtml;
+            if (!disponible) {
+                btnHtml = '<span class="dmc-calc-missing">Requiere: ' +
+                          escapeHtml(faltan.join(', ')) + '</span>';
+            } else if (!esPago) {
+                btnHtml = '<button class="dmc-calc-dl-btn dmc-calc-locked" ' +
+                          'onclick="dmcCalcUpgrade()"><i class="fas fa-lock"></i> Plan Pro</button>';
+            } else {
+                btnHtml = '<button class="dmc-calc-dl-btn" ' +
+                          'onclick="dmcDownloadCalculo(\'' + code + '\',\'' + cfg.id + '\')">' +
+                          '<i class="fas fa-download"></i> Descargar mes con cálculo</button>';
             }
-            html += '<div class="dmc-calc-card' + (s.recomendado ? ' dmc-calc-card--rec' : '') + '">' +
+
+            html += '<div class="dmc-calc-card' + (disponible ? '' : ' dmc-calc-card--off') + '">' +
                 '<div class="dmc-calc-head">' +
-                    '<span class="dmc-calc-name">' + escapeHtml(s.nombre) + '</span>' +
-                    (s.recomendado ? '<span class="dmc-calc-badge-rec">Recomendado</span>' : '') +
+                    '<span class="dmc-calc-name">' + escapeHtml(cfg.nombre) + '</span>' +
                 '</div>' +
-                '<div class="dmc-calc-razon">' + escapeHtml(s.razon || '') + '</div>' +
+                '<div class="dmc-calc-razon">' + escapeHtml(cfg.desc) + '</div>' +
                 btnHtml +
             '</div>';
         });
 
-        // Chat input
-        html += '<div class="dmc-ai-chat">' +
-            '<input class="dmc-ai-input" id="dmc-chat-input-' + code + '" type="text" ' +
-            'placeholder="Pregunta sobre esta estación..." ' +
-            'onkeydown="if(event.key===\'Enter\')dmcChatPregunta(\'' + code + '\',\'' + escapeHtml(nombre) + '\')" />' +
-            '<button class="dmc-ai-send" onclick="dmcChatPregunta(\'' + code + '\',\'' + escapeHtml(nombre) + '\')">' +
-            '<i class="fas fa-paper-plane"></i></button>' +
-        '</div>' +
-        '<div class="dmc-ai-chat-resp" id="dmc-chat-resp-' + code + '"></div>';
-
         container.innerHTML = html;
-        // Guardar variables para el chat
-        container._varNames = varNames;
-        container._nombre   = nombre;
+    }
+
+    function calcUpgrade() {
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('🔒 Los cálculos meteorológicos están disponibles en el plan Pro o superior.');
+        }
     }
 
     /* ── Buscar estaciones ── */
@@ -536,36 +544,9 @@
         });
     }
 
-    /* ── Chat IA ── */
-
-    function chatPregunta(code, nombre) {
-        var input = $('dmc-chat-input-' + code);
-        var resp  = $('dmc-chat-resp-' + code);
-        if (!input || !resp) return;
-        var pregunta = input.value.trim();
-        if (!pregunta) return;
-
-        var container = $('dmc-calc-' + code);
-        var varNames  = (container && container._varNames) || [];
-
-        input.disabled = true;
-        resp.innerHTML = '<span class="dmc-chat-thinking"><i class="fas fa-spinner fa-spin"></i> Pensando...</span>';
-
-        postDmcJson('/api/ai/chat-estacion', {
-            codigo: code,
-            nombre: nombre,
-            variables: varNames,
-            pregunta: pregunta
-        }).then(function(data) {
-            resp.innerHTML = '<span class="dmc-chat-answer">' + escapeHtml(data.respuesta || '') + '</span>';
-            input.value = '';
-        }).catch(function() {
-            resp.innerHTML = '<span class="dmc-ai-error">Error al consultar el asistente.</span>';
-        }).finally(function() {
-            input.disabled = false;
-            input.focus();
-        });
-    }
+    /* ── (Chat IA retirado 2026-07: operaba sin los datos reales de la estación,
+           así que no podía responder con verdad. Reemplazado por cálculos
+           determinísticos verificables.) ── */
 
     /* ── Event listeners ── */
 
@@ -595,6 +576,6 @@
     window.dmcDownloadCsv           = downloadCsv;
     window.dmcDownloadHistorico     = downloadHistorico;
     window.dmcDownloadCalculo       = downloadCalculo;
-    window.dmcChatPregunta          = chatPregunta;
+    window.dmcCalcUpgrade           = calcUpgrade;
     window.dmcClearMarkers          = _clearMarkers;
 })();

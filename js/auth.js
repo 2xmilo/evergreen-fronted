@@ -11,6 +11,20 @@ window._sbUserZones = [];
 // PLAN_LIMITS — debe coincidir con private.enforce_workspace_zone_quota() en Supabase
 var PLAN_LIMITS = { 'free': 1, 'pro': 3, 'enterprise': 10, 'admin': Infinity };
 
+// ── Gating por plan (jerarquía). Fuente de verdad: window._sbUserPlan (user_quotas).
+// Uso: if (!planTiene('pro')) { ...bloquear... }   ·   if (planTiene('enterprise')) { ... }
+var PLAN_RANK = { 'free': 0, 'pro': 1, 'enterprise': 2, 'admin': 3 };
+
+/** True si el plan actual del usuario es igual o superior a minPlan. */
+function planTiene(minPlan) {
+    var actual = PLAN_RANK[window._sbUserPlan];
+    var req    = PLAN_RANK[minPlan];
+    if (actual === undefined) actual = 0;   // desconocido → free (fail-closed)
+    if (req    === undefined) req    = 99;  // minPlan inválido → nunca concede
+    return actual >= req;
+}
+window.planTiene = planTiene;
+
 async function getBackendAuthHeaders(baseHeaders) {
     var headers = Object.assign({}, baseHeaders || {});
     if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
