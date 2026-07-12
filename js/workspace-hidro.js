@@ -221,12 +221,23 @@
         document.removeEventListener('keydown', _onEscapeOutlet);
     }
 
+    // Ícono de triángulo azul para el punto outlet
+    function _outletTriIcon() {
+        return L.divIcon({
+            className: 'hidro-outlet-tri',
+            html: '<svg width="18" height="16" viewBox="0 0 18 16" xmlns="http://www.w3.org/2000/svg">' +
+                  '<polygon points="9,1.5 16.5,14.5 1.5,14.5" fill="#1565C0" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+            iconSize: [18, 16],
+            iconAnchor: [9, 10]
+        });
+    }
+
     function _onOutletClick(e) {
         _outletLatLng = { lat: e.latlng.lat, lng: e.latlng.lng };
-        // Dibujar marker
+        // Dibujar marker (triángulo azul)
         if (_outletMarker) map.removeLayer(_outletMarker);
-        _outletMarker = L.circleMarker([e.latlng.lat, e.latlng.lng], {
-            radius: 7, color: '#FF6B35', fillColor: '#FF6B35', fillOpacity: 0.9, weight: 2
+        _outletMarker = L.marker([e.latlng.lat, e.latlng.lng], {
+            icon: _outletTriIcon()
         }).addTo(map).bindTooltip('Outlet', { permanent: false });
         // Mostrar info
         var info = document.getElementById('hidro-outlet-info');
@@ -388,13 +399,11 @@
         row('Kf Horton', _fmt(m.forma_kf, 2), '');
         row('Circularidad', _fmt(m.circularidad, 2), '');
         row('Elongación', _fmt(m.elongacion, 2), '');
-        row('Long. axial', _fmt(m.longitud_axial_km, 2), 'km');
 
         section('Relieve');
         row('Cota mínima', _fmtInt(m.elev_min_m), 'm');
         row('Cota media', _fmtInt(m.elev_media_m), 'm');
         row('Cota máxima', _fmtInt(m.elev_max_m), 'm');
-        row('Pendiente media', _fmt(m.pendiente_media_pct, 2), '%');
 
         section('Drenaje');
         row('Cauce principal', _fmt(m.longitud_cauce_km, 2), 'km');
@@ -487,7 +496,7 @@
         // Polígono cuenca
         try {
             _cuencaLayer = L.geoJSON(data.cuenca, {
-                style: { color: '#6AAA35', weight: 2, fillColor: '#6AAA35', fillOpacity: 0.10, dashArray: '4 3' },
+                style: { color: '#E53935', weight: 2.5, fillColor: '#E53935', fillOpacity: 0.06 },
             }).addTo(map);
             map.fitBounds(_cuencaLayer.getBounds(), { padding: [40, 40] });
         } catch (e) { console.warn('[Hidro] cuenca:', e); }
@@ -568,11 +577,9 @@
         add('Kf Horton', m.forma_kf, '');
         add('Circularidad', m.circularidad, '');
         add('Elongación', m.elongacion, '');
-        add('Longitud axial', m.longitud_axial_km, 'km');
         add('Cota mínima', m.elev_min_m, 'm');
         add('Cota media', m.elev_media_m, 'm');
         add('Cota máxima', m.elev_max_m, 'm');
-        add('Pendiente media', m.pendiente_media_pct, '%');
         add('Cauce principal', m.longitud_cauce_km, 'km');
         add('Pendiente cauce', m.pendiente_cauce_pct, '%');
         add('Densidad drenaje', m.densidad_drenaje_km_km2, 'km/km2');
