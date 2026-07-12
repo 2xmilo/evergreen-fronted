@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=26">
+    <link rel="stylesheet" href="css/workspace.css?v=30">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -119,6 +119,18 @@
             <i class="fas fa-chevron-down icon-chev" id="layers-chevron"></i>
         </button>
         <div class="map-layers-body collapsed" id="map-layers-body">
+
+            <!-- ── Header: contador + ocultar todas ── -->
+            <div class="map-layers-head">
+                <span class="map-layers-count" id="map-layers-count">0 activas</span>
+                <button type="button" class="map-layers-hideall" id="map-layers-hideall">Ocultar todas</button>
+            </div>
+
+            <!-- ── Buscador ── -->
+            <div class="map-layers-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="map-layers-search-input" placeholder="Buscar capa…" autocomplete="off">
+            </div>
 
             <!-- ── ZONA ── -->
             <div class="layers-section-hdr">Zona</div>
@@ -1011,6 +1023,66 @@
         ════════════════════════════════════════ -->
         <div class="ws-module-content" id="tab-clima-content">
             <div class="control-panel">
+                <!-- ═══ 1. Estaciones DMC (punto de entrada rápido) ═══ -->
+                <div class="accordion-section open" id="accordion-dmc">
+                    <div class="accordion-header" onclick="toggleAccordion('dmc')">
+                        <span class="accordion-title">Estaciones DMC cercanas</span>
+                        <i class="fas fa-chevron-down accordion-chevron"></i>
+                    </div>
+                    <div class="accordion-content" id="content-dmc" style="display:block;">
+                        <div class="accordion-body">
+                            <div class="dmc-actions">
+                                <button type="button" class="dmc-primary-btn" id="btn-dmc-search">
+                                    <i class="fas fa-location-crosshairs"></i>
+                                    Buscar cerca de mi zona
+                                </button>
+                            </div>
+                            <p class="dmc-help">Consulta estaciones automaticas DMC disponibles cerca del centro de la zona activa.</p>
+                            <div class="dmc-status" id="dmc-status">Define una zona y presiona buscar.</div>
+                            <div class="dmc-stations-list" id="dmc-stations-list"></div>
+                            <div class="dmc-detail" id="dmc-detail" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Enganche + instrucciones: descarga masiva de grillados ═══ -->
+                <div class="clima-grid-hook" id="clima-grid-hook">
+                    <div class="clima-grid-hook__head">
+                        <i class="fas fa-satellite-dish clima-grid-hook__icon"></i>
+                        <div class="clima-grid-hook__text">
+                            <strong>¿Necesitas completar tus series de datos?</strong>
+                            <span>Descarga masiva de <b>productos grillados</b> de precipitación y temperatura.</span>
+                        </div>
+                    </div>
+
+                    <!-- Paso 1: elegir área -->
+                    <div class="clima-step">
+                        <span class="clima-step__num">1</span>
+                        <div class="clima-step__body">
+                            <div class="clima-step__label">Elige el área a descargar</div>
+                            <div class="clima-mode-btns">
+                                <button type="button" class="clima-mode-btn" id="clima-mode-zona" onclick="climaModoZona()">
+                                    <i class="fas fa-draw-polygon"></i> Usar zona de estudio
+                                </button>
+                                <button type="button" class="clima-mode-btn" id="clima-mode-puntos" onclick="climaModoPuntos()">
+                                    <i class="fas fa-location-dot"></i> Puntos en el mapa
+                                </button>
+                            </div>
+                            <div class="clima-mode-hint" id="clima-mode-hint">Máximo <b>1 zona</b> · o hasta <b>3 puntos</b> en el mapa.</div>
+                        </div>
+                    </div>
+
+                    <!-- Paso 2: elegir productos -->
+                    <div class="clima-step">
+                        <span class="clima-step__num">2</span>
+                        <div class="clima-step__body">
+                            <div class="clima-step__label">Selecciona los productos y el rango temporal</div>
+                            <div class="clima-step__desc">Marca uno o más productos en <b>Variables Climáticas</b> (abajo). Límite del sistema: <b>50.000 registros</b> (días × ubicaciones × productos).</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ 2. Variables climáticas (grillados) ═══ -->
                 <div class="accordion-section open" id="accordion-productos">
                     <div class="accordion-header" onclick="toggleAccordion('productos')">
                         <span class="accordion-title">Variables Climáticas</span>
@@ -1035,6 +1107,7 @@
                     </div>
                 </div>
 
+                <!-- ═══ 3. Rango temporal (aplica a grillados) ═══ -->
                 <div class="accordion-section open" id="accordion-tiempo">
                     <div class="accordion-header" onclick="toggleAccordion('tiempo')">
                         <span class="accordion-title">Rango Temporal</span>
@@ -1046,27 +1119,6 @@
                                 <div><label>Desde:</label><input type="date" id="fecha-inicio" value="2026-01-01"></div>
                                 <div><label>Hasta:</label><input type="date" id="fecha-fin" value="2026-12-31"></div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-section open" id="accordion-dmc">
-                    <div class="accordion-header" onclick="toggleAccordion('dmc')">
-                        <span class="accordion-title">Estaciones DMC cercanas</span>
-                        <i class="fas fa-chevron-down accordion-chevron"></i>
-                    </div>
-                    <div class="accordion-content" id="content-dmc" style="display:block;">
-                        <div class="accordion-body">
-                            <div class="dmc-actions">
-                                <button type="button" class="dmc-primary-btn" id="btn-dmc-search">
-                                    <i class="fas fa-location-crosshairs"></i>
-                                    Buscar cerca de mi zona
-                                </button>
-                            </div>
-                            <p class="dmc-help">Consulta estaciones automaticas DMC disponibles cerca del centro de la zona activa.</p>
-                            <div class="dmc-status" id="dmc-status">Define una zona y presiona buscar.</div>
-                            <div class="dmc-stations-list" id="dmc-stations-list"></div>
-                            <div class="dmc-detail" id="dmc-detail" style="display:none;"></div>
                         </div>
                     </div>
                 </div>
@@ -1505,7 +1557,7 @@
 </script>
 
 <!-- CLIMA SCRIPT (SAGRADO) -->
-<script src="js/acceso-datos.js"></script>
+<script src="js/acceso-datos.js?v=3"></script>
 
 <!-- WORKSPACE LOGIC -->
 <script src="js/workspace-core.js?v=8"></script>
@@ -1520,6 +1572,7 @@
 <script src="js/workspace-arclim.js?v=4"></script>
 <script src="js/workspace-hidro.js?v=1"></script>
 <script src="js/workspace-resize.js?v=1"></script>
+<script src="js/workspace-layers-ui.js?v=3"></script>
 
 <!-- CONTACTO -->
 <script>
@@ -1609,6 +1662,7 @@
             if (WorkspaceState && WorkspaceState.zona) {
                 agregarPoligonoDesdeWorkspace(WorkspaceState.zona, WorkspaceState.zonaNombre, WorkspaceState.zonaHa);
                 restoreZoneOnMap();
+                if (typeof _setClimaModo === 'function') _setClimaModo('zona');
             }
             if (typeof map !== 'undefined' && map !== null) {
                 map.invalidateSize();

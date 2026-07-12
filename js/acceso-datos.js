@@ -390,7 +390,14 @@ function setupMapEvents() {
         if (activeDrawHandler) return; // ignorar clicks durante dibujo de polígono (modo clima)
         // Ignorar también cuando el workspace está dibujando su propio polígono
         if (typeof globalDrawControl !== 'undefined' && globalDrawControl && globalDrawControl._enabled) return;
-        if (puntos.length >= LIMITES.max_puntos) { alert(`⚠️ Máximo ${LIMITES.max_puntos} puntos`); return; }
+        // Los puntos solo tienen sentido en el tab Clima (descarga de grillados punto/polígono).
+        // En Hidromorfología, Riesgos, etc. los clicks son para sus propios flujos (outlet, rectángulo)
+        // y NO deben crear puntos sueltos.
+        var climaTab = document.getElementById('tab-clima-content');
+        if (!climaTab || !climaTab.classList.contains('active')) return;
+        // Además, solo cuando el usuario eligió explícitamente el modo "Puntos en el mapa".
+        if (_climaModo !== 'puntos') return;
+        if (puntos.length >= LIMITES.max_puntos) { mostrarNotificacion(`⚠️ Máximo ${LIMITES.max_puntos} puntos.`); return; }
         agregarPunto(e.latlng.lat, e.latlng.lng);
     });
 
@@ -452,6 +459,52 @@ function agregarPuntoManual() {
     map.setView([lat, lon], 10);
     latInput.value = '';
     lonInput.value = '';
+}
+
+// ================================
+// MODO DE DESCARGA DE GRILLADOS (CLIMA): 'zona' | 'puntos' | null
+// ================================
+let _climaModo = null;
+
+function _setClimaModo(modo) {
+    _climaModo = modo;
+    const bZona = document.getElementById('clima-mode-zona');
+    const bPtos = document.getElementById('clima-mode-puntos');
+    if (bZona) bZona.classList.toggle('active', modo === 'zona');
+    if (bPtos) bPtos.classList.toggle('active', modo === 'puntos');
+    const hint = document.getElementById('clima-mode-hint');
+    if (hint) {
+        if (modo === 'puntos')      hint.innerHTML = '<b>Modo puntos:</b> haz click en el mapa (hasta 3 puntos).';
+        else if (modo === 'zona')   hint.innerHTML = 'Se usará tu <b>zona de estudio</b> como área de descarga.';
+        else                        hint.innerHTML = 'Máximo <b>1 zona</b> · o hasta <b>3 puntos</b> en el mapa.';
+    }
+}
+
+// Botón "Usar zona de estudio": toma la zona activa del workspace como polígono de descarga.
+function climaModoZona() {
+    if (!(typeof WorkspaceState !== 'undefined' && WorkspaceState && WorkspaceState.zona)) {
+        mostrarNotificacion('Primero define una zona de estudio (botón "Dibujar zona").');
+        return;
+    }
+    // Limpiar puntos existentes (zona y puntos son excluyentes en esta guía)
+    puntos.forEach(p => p.marker && map.removeLayer(p.marker));
+    puntos = [];
+    actualizarListaPuntos();
+    // Usar la zona como polígono de descarga
+    if (typeof agregarPoligonoDesdeWorkspace === 'function') {
+        agregarPoligonoDesdeWorkspace(WorkspaceState.zona, WorkspaceState.zonaNombre, WorkspaceState.zonaHa);
+    }
+    _setClimaModo('zona');
+    actualizarEstimacion();
+}
+
+// Botón "Puntos en el mapa": activa el modo punto (clicks agregan puntos, máx 3).
+function climaModoPuntos() {
+    // Quitar el polígono/zona del set de descarga (la zona sigue dibujada en el mapa).
+    poligonos = [];
+    if (typeof actualizarListaPoligonos === 'function') actualizarListaPoligonos();
+    _setClimaModo('puntos');
+    actualizarEstimacion();
 }
 
 function agregarPunto(lat, lon) {
