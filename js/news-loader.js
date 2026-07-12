@@ -1,16 +1,29 @@
 /**
  * Evergreen - cargador de noticias ambientales.
- * Fuente principal: Mongabay Latam RSS, consultado via proxy publico.
- * Si el proxy falla o demora demasiado, se muestran tarjetas locales de respaldo.
+ * Fuente: Mongabay Latam RSS (es.mongabay.com/feed).
+ * Robustez: se intenta una CADENA de proxies/APIs en orden hasta que uno
+ * responda con artículos. Antes se usaba solo allorigins.win, que se cae
+ * seguido → por eso "nunca cargaban bien". Ahora corsproxy.io es el primario
+ * (rápido y con imágenes) y hay 2 respaldos.
+ *
+ * IMPORTANTE: NUNCA se inventan noticias. Si TODAS las fuentes fallan, solo se
+ * muestra un aviso honesto ("no se pudieron cargar") con enlace a la fuente
+ * real. Prohibido mostrar tarjetas de noticias locales/fabricadas.
  */
 
 const CACHE_KEY = 'evergreen_news_cache';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 const TOTAL_CARDS = 3;
 const FEED_URL = 'https://es.mongabay.com/feed/';
-const PROXY_URL = `https://api.allorigins.win/get?url=${encodeURIComponent(FEED_URL)}`;
 const FALLBACK_IMG = 'img/patagonia.jpeg';
-const FETCH_TIMEOUT = 7000;
+const FETCH_TIMEOUT = 8000;
+
+// Cadena de fuentes: se prueban en orden hasta que una entregue artículos.
+const SOURCES = [
+    { name: 'corsproxy', url: (f) => 'https://corsproxy.io/?url=' + encodeURIComponent(f), parse: parseXmlResponse },
+    { name: 'rss2json',  url: (f) => 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(f), parse: parseRss2Json },
+    { name: 'allorigins', url: (f) => 'https://api.allorigins.win/get?url=' + encodeURIComponent(f), parse: parseAllorigins },
+];
 
 document.addEventListener('DOMContentLoaded', () => loadNews());
 
@@ -24,39 +37,72 @@ async function loadNews() {
         return;
     }
 
-    try {
-        const res = await fetchWithTimeout(PROXY_URL, FETCH_TIMEOUT);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const data = await res.json();
-        if (!data.contents) throw new Error('Respuesta RSS vacia');
-
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(data.contents, 'text/xml');
-        const items = Array.from(xml.querySelectorAll('item'));
-        if (!items.length) throw new Error('Sin articulos');
-
-        const articles = items.slice(0, TOTAL_CARDS).map(item => {
-            const enclosure = item.querySelector('enclosure');
-            const media = item.querySelector('media\\:content, content');
-            const imageUrl = enclosure?.getAttribute('url') || media?.getAttribute('url') || FALLBACK_IMG;
-
-            return {
-                title: cleanText(item.querySelector('title')?.textContent || '', 90),
-                description: cleanText(item.querySelector('description')?.textContent || '', 140),
-                link: item.querySelector('link')?.textContent?.trim() || '#',
-                image: imageUrl || FALLBACK_IMG,
-                date: item.querySelector('pubDate')?.textContent || ''
-            };
-        });
-
-        setCache(articles);
-        renderCards(container, articles);
-    } catch (err) {
-        console.warn('[Evergreen] News load error:', err);
-        showFallback(container);
+    for (const source of SOURCES) {
+        try {
+            const res = await fetchWithTimeout(source.url(FEED_URL), FETCH_TIMEOUT);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const text = await res.text();
+            const articles = source.parse(text);
+            if (articles && articles.length) {
+                setCache(articles);
+                renderCards(container, articles);
+                return;
+            }
+            throw new Error('Sin articulos');
+        } catch (err) {
+            console.warn(`[Evergreen] News source "${source.name}" fallo:`, err.message || err);
+            // sigue con la próxima fuente
+        }
     }
+
+    showFallback(container);
 }
+
+/* ── Parsers por tipo de fuente ─────────────────────────────── */
+
+// corsproxy: devuelve el XML crudo del RSS.
+function parseXmlResponse(text) {
+    return articlesFromXml(text);
+}
+
+// allorigins: devuelve { contents: "<xml…>" }.
+function parseAllorigins(text) {
+    const data = JSON.parse(text);
+    if (!data.contents) return [];
+    return articlesFromXml(data.contents);
+}
+
+// rss2json: devuelve JSON ya parseado.
+function parseRss2Json(text) {
+    const data = JSON.parse(text);
+    if (data.status !== 'ok' || !Array.isArray(data.items)) return [];
+    return data.items.slice(0, TOTAL_CARDS).map((it) => ({
+        title: cleanText(it.title || '', 90),
+        description: cleanText(it.description || '', 140),
+        link: (it.link || '#').trim(),
+        image: it.thumbnail || (it.enclosure && it.enclosure.link) || FALLBACK_IMG,
+        date: it.pubDate || ''
+    }));
+}
+
+function articlesFromXml(xmlString) {
+    const xml = new DOMParser().parseFromString(xmlString, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item'));
+    return items.slice(0, TOTAL_CARDS).map((item) => {
+        const enclosure = item.querySelector('enclosure');
+        const media = item.querySelector('media\\:content, content');
+        const imageUrl = enclosure?.getAttribute('url') || media?.getAttribute('url') || FALLBACK_IMG;
+        return {
+            title: cleanText(item.querySelector('title')?.textContent || '', 90),
+            description: cleanText(item.querySelector('description')?.textContent || '', 140),
+            link: item.querySelector('link')?.textContent?.trim() || '#',
+            image: imageUrl || FALLBACK_IMG,
+            date: item.querySelector('pubDate')?.textContent || ''
+        };
+    });
+}
+
+/* ── Cache ──────────────────────────────────────────────────── */
 
 function getCache() {
     try {
@@ -86,6 +132,8 @@ async function fetchWithTimeout(url, timeout) {
         clearTimeout(timer);
     }
 }
+
+/* ── Render ─────────────────────────────────────────────────── */
 
 function renderCards(container, articles) {
     container.innerHTML = articles.map(a => {

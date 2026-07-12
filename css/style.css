@@ -921,6 +921,83 @@ h2.title em {
     transform: none;
 }
 
+/* ── Carrusel de proyectos ── */
+.proj-nav-wrap {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.proj-nav {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-brd);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, background 0.2s, opacity 0.2s;
+}
+
+.proj-nav:hover {
+    border-color: rgba(200, 168, 130, 0.5);
+    background: rgba(200, 168, 130, 0.1);
+}
+
+.proj-nav:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.proj-track {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+}
+
+.proj-track::-webkit-scrollbar {
+    display: none;
+}
+
+.proj-track > .proj-card {
+    flex: 0 0 clamp(280px, 31%, 384px);
+    scroll-snap-align: start;
+}
+
+/* Altura fija de la descripción → el título queda a la MISMA posición en
+   todas las cards, sin importar el largo del texto (se recorta a 3 líneas). */
+.proj-track .proj-desc {
+    height: 64px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: opacity 0.35s ease, transform 0.35s ease, height 0.35s ease;
+}
+
+/* En hover: la descripción se expande completa (sin "…") y, como el cuerpo
+   está anclado abajo, el título sube para dejar espacio. */
+.proj-track .proj-card:hover .proj-desc {
+    height: auto;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+@media (max-width: 700px) {
+    .proj-track > .proj-card {
+        flex: 0 0 85%;
+    }
+}
+
 .proj-name-news {
     font-family: var(--serif);
     font-size: 18px;
