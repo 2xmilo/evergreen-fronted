@@ -884,12 +884,12 @@
             <button class="bio-run-btn" onclick="runBioAnalysis()">
               <i class="fas fa-magnifying-glass"></i> Ejecutar Análisis GBIF
             </button>
-            <button class="bio-run-btn secondary" onclick="addBioExtended()">
-              <i class="fas fa-plus"></i> Agregar Chromista + Protozoa
-            </button>
             <button class="bio-run-btn secondary" id="bio-evidence-btn" onclick="runBioEvidence()" disabled>
               <i class="fas fa-calendar-days"></i> Analizar evidencia temporal
               <span class="bio-btn-sub">Facets GBIF + muestra georreferenciada controlada</span>
+            </button>
+            <button class="bio-run-btn secondary" id="bio-map-points-btn" onclick="toggleBioEvidencePoints()" disabled>
+              <i class="fas fa-map-marker-alt"></i> Agregar puntos en el mapa
             </button>
             <div class="bio-progress" id="bio-progress">
               <div class="bio-progress-text" id="bio-progress-text">Consultando GBIF...</div>

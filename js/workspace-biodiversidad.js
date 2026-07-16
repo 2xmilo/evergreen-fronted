@@ -22,6 +22,13 @@ var _bioEvidenceColors = {
     Protozoa: '#ef4444'
 };
 
+function _setBioMapBtnDisabled(disabled) {
+    ['bio-toggle-evidence-map-btn', 'bio-map-points-btn'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.disabled = disabled;
+    });
+}
+
 // ── Actualizar zona en el badge del panel bio ────────────────────────
 function updateBioZoneBadge() {
     var nombre = document.getElementById('bio-zona-nombre');
@@ -115,8 +122,7 @@ function runBioEvidence() {
     _setBioEl('bio-evidence-mini', '');
     var exportBtn = document.getElementById('bio-export-evidence-btn');
     if (exportBtn) exportBtn.disabled = true;
-    var mapBtn = document.getElementById('bio-toggle-evidence-map-btn');
-    if (mapBtn) mapBtn.disabled = true;
+    _setBioMapBtnDisabled(true);
     clearBioEvidencePoints();
 
     var btn = document.getElementById('bio-evidence-btn');
@@ -148,8 +154,7 @@ window.addEventListener('message', function(event) {
     var d = event.data.data;
     clearBioEvidencePoints();
     _bioEvidencePoints = [];
-    var staleMapBtn = document.getElementById('bio-toggle-evidence-map-btn');
-    if (staleMapBtn) staleMapBtn.disabled = true;
+    _setBioMapBtnDisabled(true);
     var staleExportBtn = document.getElementById('bio-export-evidence-btn');
     if (staleExportBtn) staleExportBtn.disabled = true;
 
@@ -243,11 +248,9 @@ function _handleBioEvidenceResult(data) {
     var exportBtn = document.getElementById('bio-export-evidence-btn');
     if (exportBtn) exportBtn.disabled = !(data.sample_size > 0);
     _bioEvidencePoints = data.map_points || [];
+    _setBioMapBtnDisabled(!_bioEvidencePoints.length);
     var mapBtn = document.getElementById('bio-toggle-evidence-map-btn');
-    if (mapBtn) {
-        mapBtn.disabled = !_bioEvidencePoints.length;
-        mapBtn.innerHTML = '<i class="fas fa-location-dot"></i> Mostrar puntos en mapa';
-    }
+    if (mapBtn) mapBtn.innerHTML = '<i class="fas fa-location-dot"></i> Mostrar puntos en mapa';
 
     if (data.decada_data) {
         _updateBioDecada(data.decada_data);
@@ -510,8 +513,9 @@ function toggleBioEvidencePoints() {
     if (typeof map === 'undefined' || typeof L === 'undefined') return;
     if (_bioEvidenceLayer && map.hasLayer(_bioEvidenceLayer)) {
         clearBioEvidencePoints();
-        var offBtn = document.getElementById('bio-toggle-evidence-map-btn');
-        if (offBtn) offBtn.innerHTML = '<i class="fas fa-location-dot"></i> Mostrar puntos en mapa';
+        ['bio-toggle-evidence-map-btn', 'bio-map-points-btn'].forEach(function(id) {
+            var btn = document.getElementById(id); if (btn) btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Agregar puntos en el mapa';
+        });
         return;
     }
     renderBioEvidencePoints();
@@ -565,19 +569,17 @@ function _buildBioPopupHtml(p) {
 function renderBioEvidencePoints() {
     if (!_bioEvidencePoints.length || typeof map === 'undefined' || typeof L === 'undefined') return;
 
-    var renderer = L.canvas ? L.canvas({ padding: 0.35 }) : null;
     var group = L.layerGroup();
 
     _bioEvidencePoints.forEach(function(p) {
         if (p.lat == null || p.lon == null) return;
         var color = _bioEvidenceColors[p.kingdom] || '#14b8a6';
         var marker = L.circleMarker([p.lat, p.lon], {
-            radius: 4,
-            renderer: renderer,
+            radius: 5,
             color: color,
             weight: 1,
             fillColor: color,
-            fillOpacity: 0.55,
+            fillOpacity: 0.7,
             opacity: 0.9
         });
         var speciesName = p.species || 'Especie sin nombre';
@@ -586,14 +588,15 @@ function renderBioEvidencePoints() {
             sticky: true,
             opacity: 0.92
         });
-        marker.bindPopup(_buildBioPopupHtml(p), { maxWidth: 280 });
+        marker.bindPopup(_buildBioPopupHtml(p), { maxWidth: 280, autoPan: true });
         group.addLayer(marker);
     });
 
     _bioEvidenceLayer = group.addTo(map);
     addBioEvidenceLegend(_bioEvidencePoints);
-    var onBtn = document.getElementById('bio-toggle-evidence-map-btn');
-    if (onBtn) onBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar puntos del mapa';
+    ['bio-toggle-evidence-map-btn', 'bio-map-points-btn'].forEach(function(id) {
+        var btn = document.getElementById(id); if (btn) btn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar puntos del mapa';
+    });
 }
 
 function addBioEvidenceLegend(points) {
