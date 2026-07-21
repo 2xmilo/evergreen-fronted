@@ -465,27 +465,18 @@ function _renderBioTable(filter) {
             '<td>' + rce + '</td><td>' + iucn + '</td><td>' + spe + '</td>' +
             '<td style="font-size:10px;color:#6b7280;">' + (s.piso_vegetacional||'—') + '</td>' +
             '<td>' + rie + '</td>' +
-            '<td><button class="bio-dist-btn" onclick="openBioDistModal(this)"><i class="fas fa-map" style="font-size:9px;"></i></button></td>' +
+            '<td><button class="bio-dist-btn" onclick="openBioDistModal(this)" data-taxon="' + _escapeBioHtml(String(s.taxonKey||s.speciesKey||'')) + '" data-name="' + _escapeBioHtml(s.officialName||s.scientificName||'') + '"><i class="fas fa-map" style="font-size:9px;"></i></button></td>' +
             '</tr>';
     }).join('');
 }
 
 function openBioDistModal(btn) {
-    // Delegar al iframe si está disponible
-    try {
-        var iframe = document.getElementById('iframe-biodiversidad');
-        if (iframe && iframe.contentWindow && typeof iframe.contentWindow.openDistribucionModal === 'function') {
-            // Encontrar la fila y obtener el nombre
-            var row = btn.closest('tr');
-            var nombre = row ? row.querySelector('.bio-spp-name') : null;
-            if (nombre) {
-                var spp = _bioFinalList.find(function(s) {
-                    return (s.officialName||s.scientificName||'') === nombre.textContent.trim();
-                });
-                if (spp) iframe.contentWindow.openDistribucionModal(spp);
-            }
-        }
-    } catch(e) { console.warn('openBioDistModal:', e); }
+    var taxonKey = btn.getAttribute('data-taxon');
+    var name     = btn.getAttribute('data-name') || '';
+    var url = taxonKey
+        ? 'https://www.gbif.org/species/' + taxonKey
+        : 'https://www.gbif.org/search?q=' + encodeURIComponent(name);
+    window.open(url, '_blank', 'noopener');
 }
 
 function exportBioCSV() {
@@ -547,23 +538,31 @@ function _formatBioDate(eventDate, year, month) {
 }
 
 function _buildBioPopupHtml(p) {
-    var fecha  = _formatBioDate(p.eventDate, p.year, p.month);
-    var nombre = _escapeBioHtml(p.species || '—');
-    var base   = _escapeBioHtml(p.basisOfRecord || '—');
-    var reino  = _escapeBioHtml(p.kingdom || '—');
-    var filo   = _escapeBioHtml(p.phylum  || '—');
-    var clase  = _escapeBioHtml(p.class   || '—');
-    return '<div class="bio-popup-ficha">' +
-        '<div class="bio-popup-title">Avistamientos de Especies (GBIF)</div>' +
-        '<table class="bio-popup-table">' +
-        '<tr><td class="bio-popup-label">NOMBRE CIENTÍFICO</td><td class="bio-popup-val"><i>' + nombre + '</i></td></tr>' +
-        '<tr><td class="bio-popup-label">FECHA</td><td class="bio-popup-val">' + fecha + '</td></tr>' +
-        '<tr><td class="bio-popup-label">BASE DEL REGISTRO</td><td class="bio-popup-val">' + base + '</td></tr>' +
-        '<tr><td class="bio-popup-label">REINO</td><td class="bio-popup-val">' + reino + '</td></tr>' +
-        '<tr><td class="bio-popup-label">FILO</td><td class="bio-popup-val">' + filo + '</td></tr>' +
-        '<tr><td class="bio-popup-label">CLASE</td><td class="bio-popup-val">' + clase + '</td></tr>' +
-        '</table>' +
-        '</div>';
+    var fecha   = _formatBioDate(p.eventDate, p.year, p.month);
+    var nombre  = p.species || '';
+    var reino   = p.kingdom || '';
+    var color   = _bioEvidenceColors[reino] || '#14b8a6';
+    var base    = p.basisOfRecord || '';
+    var baseLabel = { HUMAN_OBSERVATION: 'Observación', PRESERVED_SPECIMEN: 'Espécimen', MACHINE_OBSERVATION: 'Sensor', LITERATURE: 'Literatura' }[base] || base;
+
+    var gbifUrl  = p.taxonKey  ? 'https://www.gbif.org/species/' + p.taxonKey : 'https://www.gbif.org/search?q=' + encodeURIComponent(nombre);
+    var inatUrl  = 'https://www.inaturalist.org/search?q=' + encodeURIComponent(nombre);
+
+    return '<div class="bio-popup-compact">' +
+        '<div class="bio-popup-reino" style="background:' + color + '22;border-left:3px solid ' + color + '">' +
+            '<span class="bio-popup-reino-dot" style="background:' + color + '"></span>' +
+            _escapeBioHtml(reino || 'Sin reino') +
+        '</div>' +
+        '<div class="bio-popup-spp"><i>' + _escapeBioHtml(nombre || 'Especie sin identificar') + '</i></div>' +
+        '<div class="bio-popup-meta">' +
+            (fecha !== '—' ? '<span>' + fecha + '</span>' : '') +
+            (baseLabel ? '<span>' + _escapeBioHtml(baseLabel) + '</span>' : '') +
+        '</div>' +
+        '<div class="bio-popup-links">' +
+            '<a href="' + gbifUrl + '" target="_blank" rel="noopener" class="bio-popup-link gbif">GBIF <i class="fas fa-arrow-up-right-from-square"></i></a>' +
+            '<a href="' + inatUrl + '" target="_blank" rel="noopener" class="bio-popup-link inat">iNaturalist <i class="fas fa-arrow-up-right-from-square"></i></a>' +
+        '</div>' +
+    '</div>';
 }
 
 function renderBioEvidencePoints() {

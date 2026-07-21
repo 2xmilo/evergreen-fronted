@@ -1646,20 +1646,80 @@ body.workspace-mode {
   font-weight: 700;
 }
 
-/* ══ BIO POPUP FICHA ══════════════════════════════════════ */
-.bio-popup-ficha { min-width: 210px; font-family: 'Inter',-apple-system,sans-serif; }
-.bio-popup-title {
-  font-size: 11.5px; font-weight: 700; color: #1a1a1a;
-  padding-bottom: 6px; margin-bottom: 6px;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
+/* ══ BIO POPUP COMPACTO ══════════════════════════════════════ */
+/* Forzar fondo blanco — Leaflet dark theme lo sobreescribe */
+.leaflet-popup-content-wrapper { background: #fff !important; color: #1a1a1a !important; box-shadow: 0 4px 20px rgba(0,0,0,0.18) !important; border-radius: 10px !important; }
+.leaflet-popup-tip { background: #fff !important; }
+
+.bio-popup-compact { min-width: 190px; max-width: 230px; font-family: 'Inter',-apple-system,sans-serif; padding: 2px 0; }
+.bio-popup-reino {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  color: #374151; padding: 4px 8px; border-radius: 5px; margin-bottom: 8px;
 }
-.bio-popup-table { border-collapse: collapse; width: 100%; }
-.bio-popup-label {
-  font-size: 9px; color: #9ca3af; text-transform: uppercase;
-  letter-spacing: .45px; font-weight: 600;
-  padding: 2.5px 10px 2.5px 0; vertical-align: top; white-space: nowrap;
+.bio-popup-reino-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.bio-popup-spp {
+  font-size: 13px; font-weight: 600; color: #111827;
+  line-height: 1.3; margin-bottom: 6px; padding: 0 2px;
 }
-.bio-popup-val { font-size: 11px; color: #1a1a1a; font-weight: 500; padding: 2.5px 0; }
+.bio-popup-meta {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;
+}
+.bio-popup-meta span {
+  font-size: 10px; color: #6b7280; background: #f3f4f6;
+  border-radius: 4px; padding: 2px 6px;
+}
+.bio-popup-links { display: flex; gap: 6px; }
+.bio-popup-link {
+  flex: 1; text-align: center; padding: 5px 0;
+  font-size: 10.5px; font-weight: 600; border-radius: 6px;
+  text-decoration: none !important; transition: opacity .15s;
+}
+.bio-popup-link:hover { opacity: .8; }
+.bio-popup-link.gbif  { background: #e8f5e9; color: #2e7d32; }
+.bio-popup-link.inat  { background: #e3f2fd; color: #1565c0; }
+.bio-popup-link i { font-size: 8px; margin-left: 3px; }
+
+/* ══ PRODUCT TOUR — resaltado pulsante (sutil, sin overlay) ══════════ */
+.eg-tour-ring {
+  position: fixed; z-index: 100000; pointer-events: none;
+  border-radius: 12px; border: 2px solid #6aaa35;
+  transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease;
+  animation: egTourPulse 1.7s ease-in-out infinite;
+}
+@keyframes egTourPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(106,170,53,.28); }
+  50%      { box-shadow: 0 0 0 13px rgba(106,170,53,0); }
+}
+.eg-tour-tip {
+  position: fixed; z-index: 100001; max-width: 272px;
+  background: #12261a; color: #f4f7f1;
+  border: 1px solid rgba(106,170,53,.35); border-radius: 12px;
+  padding: 14px 16px; box-shadow: 0 12px 34px rgba(0,0,0,.42);
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: left .25s ease, top .25s ease;
+}
+.eg-tour-tip__step {
+  font-size: 10px; letter-spacing: .11em; text-transform: uppercase;
+  color: #6aaa35; font-weight: 700; margin-bottom: 6px;
+}
+.eg-tour-tip__text { font-size: 13px; line-height: 1.55; color: #f4f7f1; }
+.eg-tour-tip__text b { color: #a6d977; font-weight: 600; }
+.eg-tour-tip__actions {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 14px; gap: 10px;
+}
+.eg-tour-skip {
+  background: none; border: none; color: rgba(244,247,241,.5);
+  font-size: 11.5px; cursor: pointer; padding: 4px 2px; font-family: inherit;
+}
+.eg-tour-skip:hover { color: #f4f7f1; }
+.eg-tour-next {
+  background: #6aaa35; border: none; color: #0b160c; font-weight: 600;
+  font-size: 12.5px; border-radius: 8px; padding: 7px 16px; cursor: pointer;
+  font-family: inherit;
+}
+.eg-tour-next:hover { background: #5c9a2d; }
 
 /* ══ PANEL DE CAPAS — SECCIONES ════════════════════════ */
 .layers-section-hdr {
