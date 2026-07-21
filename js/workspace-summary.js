@@ -483,6 +483,11 @@ function resetAnalisis() {
     _bosqueRealData = null;
     _tilesCache     = {};
     _layerRegistry  = {};
+    // También borrar los resultados en Supabase; si no, reaparecen al recargar
+    // (loadCloudWorkspace los vuelve a traer). Mantiene la zona intacta.
+    if (window._sbUserId && WorkspaceState.zonaId && typeof clearResultsForWorkspace === 'function') {
+        clearResultsForWorkspace(window._sbUserId, WorkspaceState.zonaId);
+    }
     saveWorkspaceState();
     renderIndicadorCards();
     refreshIndRows();

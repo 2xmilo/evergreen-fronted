@@ -539,6 +539,50 @@
 
     /* ── Acciones ──────────────────────────────────────────── */
 
+    // Modal de elección (solo pro/enterprise/admin con zona activa): reemplazar vs. nuevo sitio
+    function _zonaChoiceModal(opts) {
+        var ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;z-index:100050;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px;';
+        var card = document.createElement('div');
+        card.style.cssText = 'max-width:380px;width:100%;background:#12261a;border:1px solid rgba(106,170,53,.3);border-radius:14px;padding:22px;font-family:Inter,system-ui,sans-serif;color:#f4f7f1;box-shadow:0 20px 50px rgba(0,0,0,.5);';
+        card.innerHTML =
+            '<div style="font-size:16px;font-weight:600;margin-bottom:8px;">Usar cuenca como zona de estudio</div>' +
+            '<div style="font-size:13px;line-height:1.55;color:rgba(244,247,241,.7);margin-bottom:18px;">' + (opts.msg || '') + '</div>';
+        function mkBtn(txt, css, cb) {
+            var b = document.createElement('button');
+            b.textContent = txt; b.style.cssText = css + 'width:100%;font-family:inherit;cursor:pointer;';
+            b.onclick = function () { close(); cb && cb(); };
+            return b;
+        }
+        function close() { try { document.body.removeChild(ov); } catch (e) {} }
+        card.appendChild(mkBtn('Agregar como nuevo sitio de estudio',
+            'padding:11px;border-radius:9px;border:none;background:#6aaa35;color:#0b160c;font-size:13px;font-weight:600;margin-bottom:8px;', opts.onNew));
+        card.appendChild(mkBtn('Reemplazar zona actual',
+            'padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#f4f7f1;font-size:13px;font-weight:500;margin-bottom:8px;', opts.onReplace));
+        card.appendChild(mkBtn('Cancelar',
+            'padding:8px;border-radius:9px;border:none;background:transparent;color:rgba(244,247,241,.5);font-size:12px;', null));
+        ov.onclick = function (e) { if (e.target === ov) close(); };
+        ov.appendChild(card); document.body.appendChild(ov);
+    }
+
+    // ¿La cuota de zonas está llena? (muestra modal de límite y devuelve true)
+    function _cuotaLlena(plan) {
+        if (!window._sbUserId) return false;
+        var LIMITS = { free: 1, pro: 3, enterprise: 10, admin: Infinity };
+        var maxZones = LIMITS[plan] !== undefined ? LIMITS[plan] : 1;
+        if (maxZones === Infinity) return false;
+        var zones = (typeof getValidStoredZones === 'function')
+            ? getValidStoredZones(window._sbUserZones)
+            : (window._sbUserZones || []).filter(function (z) { return z && z.polygon_geojson; });
+        if (zones.length >= maxZones) {
+            if (typeof mostrarModalLimite === 'function') {
+                mostrarModalLimite({ ok: false, reason: 'LIMIT_REACHED', plan: plan, used: zones.length, max: maxZones });
+            }
+            return true;
+        }
+        return false;
+    }
+
     window.hidroUsarComoZona = function () {
         if (!_lastResult || !_lastResult.cuenca) return;
         if (_lastResult.excede_limite) {
@@ -550,20 +594,70 @@
             properties: { source: 'hidromorfologia' },
             geometry: _lastResult.cuenca,
         };
-        try {
-            WorkspaceState.zona       = feature;
-            WorkspaceState.zonaHa     = _lastResult.metricas.area_ha || 0;
-            WorkspaceState.zonaNombre = 'Cuenca delimitada';
-            WorkspaceState.zonaGEE    = (typeof simplifyZoneForGee === 'function')
-                ? simplifyZoneForGee(feature, WorkspaceState.zonaHa) : feature;
-            if (typeof restoreZoneOnMap === 'function') restoreZoneOnMap();
-            if (typeof updateZoneUI === 'function') updateZoneUI();
-            if (typeof saveWorkspaceState === 'function') saveWorkspaceState();
-            _toast('✅ Cuenca establecida como zona de estudio.');
-            if (typeof switchWorkspaceTab === 'function') switchWorkspaceTab('resumen');
-        } catch (e) {
-            _toast('❌ Error: ' + e.message);
+        var ha     = (_lastResult.metricas && _lastResult.metricas.area_ha) || 0;
+        var nombre = 'Cuenca delimitada';
+        var plan   = window._sbUserPlan || 'free';
+        var hasZona = !!(WorkspaceState.zona && WorkspaceState.zonaId);
+
+        // Escribe la cuenca en el estado + mapa. Ya se limpió el estado antes.
+        function _setZona() {
+            try {
+                WorkspaceState.zona       = feature;
+                WorkspaceState.zonaHa     = ha;
+                WorkspaceState.zonaNombre = nombre;
+                WorkspaceState.zonaGEE    = (typeof simplifyZoneForGee === 'function')
+                    ? simplifyZoneForGee(feature, ha) : feature;
+                try { _clearResultLayers(); } catch (e) {}   // quitar cuenca/streams del módulo hidro
+                if (typeof restoreZoneOnMap === 'function') restoreZoneOnMap();
+                if (typeof agregarPoligonoDesdeWorkspace === 'function') agregarPoligonoDesdeWorkspace(feature, nombre, ha);
+                if (typeof updateZoneUI === 'function') updateZoneUI();
+                if (typeof saveWorkspaceState === 'function') saveWorkspaceState();
+                if (typeof enviarZonaABiodiversidad === 'function') enviarZonaABiodiversidad();
+                _toast('✅ Cuenca establecida como zona de estudio.');
+                if (typeof switchWorkspaceTab === 'function') switchWorkspaceTab('resumen');
+            } catch (e) { _toast('❌ Error: ' + e.message); }
         }
+
+        // Reemplazar la zona actual: limpia análisis local + results en Supabase (mismo workspace id)
+        function _reemplazar() {
+            var replacedId = WorkspaceState.zonaId;
+            if (typeof clearAnalysisStateForZoneChange === 'function') {
+                var had = clearAnalysisStateForZoneChange();
+                if (had && window._sbUserId && replacedId && typeof clearResultsForWorkspace === 'function') {
+                    clearResultsForWorkspace(window._sbUserId, replacedId);
+                }
+            }
+            _setZona();   // mantiene zonaId → UPDATE del workspace actual
+        }
+
+        // Agregar como NUEVO sitio: conserva la zona anterior (nuevo workspace id → INSERT)
+        function _agregarNueva() {
+            if (typeof clearAnalysisStateForZoneChange === 'function') clearAnalysisStateForZoneChange();
+            WorkspaceState.zonaId = null;   // fuerza INSERT de un workspace nuevo
+            _setZona();
+        }
+
+        // ── Sin zona activa → primera zona (verificar cuota) ──
+        if (!hasZona) {
+            if (_cuotaLlena(plan)) return;
+            _agregarNueva();
+            return;
+        }
+
+        // ── Free (máx 1 zona) → obligar a reemplazar la anterior ──
+        if (plan === 'free') {
+            if (confirm('Ya tienes una zona de estudio activa.\n\nTu plan gratuito permite 1 zona, así que al usar esta cuenca se REEMPLAZARÁ tu zona actual y se borrarán sus análisis.\n\n¿Continuar?')) {
+                _reemplazar();
+            }
+            return;
+        }
+
+        // ── Pro/Enterprise/Admin → elegir reemplazar o agregar como nuevo sitio ──
+        _zonaChoiceModal({
+            msg: 'Ya tienes una zona activa. Puedes <b>agregar</b> esta cuenca como un nuevo sitio de estudio (conservando la actual) o <b>reemplazar</b> tu zona actual.',
+            onNew: function () { if (!_cuotaLlena(plan)) _agregarNueva(); },
+            onReplace: _reemplazar,
+        });
     };
 
     window.hidroExportCSV = function () {

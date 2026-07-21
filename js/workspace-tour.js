@@ -23,7 +23,7 @@
                         return b ? b.parentElement : null;
                     },
                     step: 'Paso 2 de 2',
-                    text: '¡Zona lista! Ahora elige un <b>módulo</b> (Vegetación, Agua, Bosque…) y presiona <b>Ejecutar análisis</b> para ver los datos.'
+                    text: 'Luego de crear tu zona, elige el <b>módulo</b> que quieras y ejecuta los <b>análisis</b>.'
                 }
             ]
         },
@@ -55,7 +55,12 @@
     };
 
     var _ring = null, _tip = null, _raf = null;
-    var _tour = null, _idx = 0;
+    var _tour = null, _tourName = null, _idx = 0;
+
+    // Estado del auto-manager del tour de Resumen (basado en zona activa)
+    var _prevHasZona = null;
+    var _resumenDismissed = false;   // el usuario cerró/completó la guía en esta "sesión sin zona"
+    var _noZonaShown = false;        // ya se mostró en el episodio actual sin zona
 
     function _ensureNodes() {
         if (_ring) return;
@@ -139,17 +144,21 @@
         if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
         if (_ring) _ring.style.display = 'none';
         if (_tip)  _tip.style.display  = 'none';
-        if (_tour && _tour.flag) {
+        // El tour de resumen se controla por estado de zona (no localStorage);
+        // marcar como descartado en la sesión para no re-mostrarlo hasta que
+        // cambie el estado de la zona (ver _manageResumen).
+        if (_tourName === 'resumen') _resumenDismissed = true;
+        else if (_tour && _tour.flag) {
             try { localStorage.setItem(_tour.flag, completed ? 'done' : 'skipped'); } catch (e) {}
         }
-        _tour = null;
+        _tour = null; _tourName = null;
     }
 
     function _start(name) {
         var t = TOURS[name];
         if (!t) return;
         _ensureNodes();
-        _tour = t; _idx = 0;
+        _tour = t; _tourName = name; _idx = 0;
         _ring.style.display = 'block';
         _tip.style.display  = 'block';
         _showStep(0);
@@ -173,14 +182,54 @@
         }
     };
 
-    // ── Autolanzado ──
-    // Resumen: primera visita, si estamos en el tab resumen y aún no hay zona.
-    window.addEventListener('load', function () {
-        setTimeout(function () {
-            if (_seen('resumen')) return;
-            if (!document.getElementById('draw-toggle-btn')) return;
+    // ── Helpers de estado ──
+    function _hasZona() { return !!(window.WorkspaceState && WorkspaceState.zona); }
+
+    function _onResumenTab() {
+        var b = document.getElementById('tab-btn-resumen');
+        return b ? b.classList.contains('active') : true;
+    }
+
+    // Abrir (no togglear) el panel de Herramientas de dibujo
+    function _openDrawTools() {
+        var wrap = document.getElementById('draw-tools-wrap');
+        var btn  = document.getElementById('draw-toggle-btn');
+        if (wrap && !wrap.classList.contains('open')) {
+            wrap.classList.add('open');
+            if (btn) btn.classList.add('open');
+        }
+    }
+
+    // ── Auto-manager del tour de Resumen (por estado de zona) ──
+    //  • Al ingresar SIN zona activa → abre herramientas de dibujo + guía.
+    //  • Al ingresar CON zona activa → no muestra nada.
+    //  • Si se borra la zona (crear una nueva empieza por limpiar) → re-arma la guía.
+    function _manageResumen() {
+        if (!document.getElementById('draw-toggle-btn')) return;   // workspace no listo
+        var hasZona = _hasZona();
+
+        // Transición: había zona y ahora no → re-armar la guía
+        if (_prevHasZona === true && hasZona === false) {
+            _resumenDismissed = false;
+            _noZonaShown = false;
+        }
+
+        // Sin zona → mostrar guía una vez por episodio (si estamos en Resumen y nada activo)
+        if (!hasZona && !_resumenDismissed && !_noZonaShown && _onResumenTab() && !_tour) {
+            _noZonaShown = true;
+            _openDrawTools();
             _start('resumen');
-        }, 1800);
+        }
+
+        // Con zona → resetear para que un futuro "borrar zona" vuelva a mostrar
+        if (hasZona) _noZonaShown = false;
+
+        _prevHasZona = hasZona;
+    }
+
+    window.addEventListener('load', function () {
+        setTimeout(_manageResumen, 1800);       // primera evaluación tras cargar
+        setInterval(_manageResumen, 1500);      // vigilar cambios de zona
     });
 
     // Hidro: al entrar por primera vez al tab de Hidromorfología.
