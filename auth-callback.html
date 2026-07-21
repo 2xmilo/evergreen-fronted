@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verificando — Monitor Pro · Evergreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #080f08;
+  --bg-card:  rgba(16, 26, 16, 0.80);
+  --border:   rgba(255,255,255,0.08);
+  --border-a: rgba(200,168,130,0.20);
+  --white:    #f4f7f1;
+  --muted:    rgba(244,247,241,0.52);
+  --muted2:   rgba(244,247,241,0.28);
+  --accent:   #c8a882;
+  --accent-d: #a8865e;
+  --green-l:  #6aaa35;
+  --error:    rgba(231,76,60,0.14);
+  --error-b:  rgba(231,76,60,0.35);
+  --error-t:  #f0776a;
+  --ok:       rgba(106,170,53,0.12);
+  --ok-b:     rgba(106,170,53,0.28);
+  --ok-t:     #7ecb4f;
+  --serif:    'Playfair Display', Georgia, serif;
+  --sans:     'DM Sans', system-ui, sans-serif;
+  --mono:     'DM Mono', 'Courier New', monospace;
+}
+
+html, body {
+  height: 100%; background: var(--bg); color: var(--white);
+  font-family: var(--sans); overflow: hidden;
+}
+
+.bg-glow { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.bg-glow::before {
+  content: ''; position: absolute; top: -10%; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, rgba(61,122,46,0.11) 0%, transparent 60%);
+}
+
+.login-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  height: 56px; display: flex; align-items: center;
+  padding: 0 40px; border-bottom: 1px solid var(--border);
+}
+.login-nav-logo img { height: 36px; width: auto; }
+
+.wrap {
+  position: relative; z-index: 1;
+  height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 56px 24px 24px;
+}
+
+.card {
+  width: 100%; max-width: 420px;
+  background: var(--bg-card);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.09); border-radius: 20px;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(106,170,53,0.08);
+  padding: 40px 36px;
+  text-align: center;
+}
+
+.state-icon {
+  width: 68px; height: 68px; margin: 0 auto 22px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+}
+.state-icon.loading { background: rgba(200,168,130,0.10); border: 1px solid rgba(200,168,130,0.22); color: var(--accent); }
+.state-icon.ok      { background: rgba(106,170,53,0.10); border: 1px solid rgba(106,170,53,0.22); color: var(--green-l); }
+.state-icon.err     { background: var(--error); border: 1px solid var(--error-b); color: var(--error-t); }
+
+.state-title {
+  font-family: var(--serif); font-size: 24px; font-weight: 500;
+  color: var(--white); margin-bottom: 10px;
+}
+.state-text { font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-bottom: 4px; }
+
+.big-spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid rgba(200,168,130,0.2); border-top-color: var(--accent);
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+/* Form (set new password) */
+.reset-form { text-align: left; margin-top: 24px; }
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted2); margin-bottom: 7px;
+}
+.field-input-wrap { position: relative; }
+.field input {
+  width: 100%; padding: 11px 14px; border-radius: 10px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  color: var(--white); font-size: 14px; font-family: var(--sans);
+  outline: none; transition: border-color .2s;
+}
+.field input.has-toggle { padding-right: 42px; }
+.field input:focus { border-color: rgba(106,170,53,0.40); background: rgba(255,255,255,0.07); }
+.pwd-toggle {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border: none; background: transparent;
+  color: var(--muted2); cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pwd-hint {
+  font-family: var(--mono); font-size: 9.5px; color: var(--muted2);
+  margin-top: 6px; letter-spacing: .04em;
+}
+
+.auth-btn {
+  width: 100%; padding: 13px; border-radius: 10px; border: none;
+  background: var(--accent); color: var(--bg);
+  font-size: 13.5px; font-weight: 600; font-family: var(--sans);
+  cursor: pointer; transition: background .2s, opacity .2s; margin-top: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.auth-btn:hover:not(:disabled) { background: var(--accent-d); }
+.auth-btn:disabled { opacity: .6; cursor: not-allowed; }
+.small-spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(8,15,8,0.3); border-top-color: var(--bg);
+  animation: spin .6s linear infinite; display: none;
+}
+
+.auth-msg {
+  display: none; padding: 10px 14px; border-radius: 8px;
+  font-size: 12.5px; line-height: 1.5; margin-bottom: 16px; text-align: left;
+}
+.auth-msg.error   { background: var(--error); border: 1px solid var(--error-b); color: var(--error-t); }
+.auth-msg.success { background: var(--ok); border: 1px solid var(--ok-b); color: var(--ok-t); }
+
+.link-btn {
+  display: inline-block; margin-top: 22px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+  color: var(--accent); text-decoration: none;
+}
+.link-btn:hover { text-decoration: underline; }
+
+@media (max-width: 768px) { .field input { font-size: 16px; } }
+@media (max-width: 480px) {
+  .login-nav { padding: 0 20px; height: 52px; }
+  .card { padding: 32px 22px; }
+  .state-title { font-size: 21px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<nav class="login-nav">
+  <a href="index.html" class="login-nav-logo"><img src="img/logo3.png" alt="Evergreen"></a>
+</nav>
+
+<div class="wrap">
+  <div class="card">
+
+    <!-- LOADING (default) -->
+    <div id="state-loading">
+      <div class="state-icon loading"><div class="big-spinner"></div></div>
+      <div class="state-title">Verificando…</div>
+      <div class="state-text">Un momento mientras confirmamos tu acceso.</div>
+    </div>
+
+    <!-- OK -->
+    <div id="state-ok" style="display:none;">
+      <div class="state-icon ok"><i class="fas fa-check"></i></div>
+      <div class="state-title" id="ok-title">¡Verificado!</div>
+      <div class="state-text" id="ok-text">Cargando tu workspace…</div>
+    </div>
+
+    <!-- ERROR -->
+    <div id="state-err" style="display:none;">
+      <div class="state-icon err"><i class="fas fa-triangle-exclamation"></i></div>
+      <div class="state-title">Enlace inválido o expirado</div>
+      <div class="state-text" id="err-text">Este enlace ya no es válido. Solicita uno nuevo desde la página de acceso.</div>
+      <a href="login.html" class="link-btn"><i class="fas fa-arrow-left" style="font-size:9px;"></i> Ir a la página de acceso</a>
+    </div>
+
+    <!-- RESET PASSWORD -->
+    <div id="state-reset" style="display:none;">
+      <div class="state-icon ok"><i class="fas fa-lock"></i></div>
+      <div class="state-title">Nueva contraseña</div>
+      <div class="state-text">Ingresa la nueva contraseña para tu cuenta.</div>
+
+      <div class="auth-msg error"   id="reset-error"></div>
+      <div class="auth-msg success" id="reset-success"></div>
+
+      <form class="reset-form" onsubmit="handleReset(event)">
+        <div class="field">
+          <label>Nueva contraseña</label>
+          <div class="field-input-wrap">
+            <input type="password" id="new-password" class="has-toggle" placeholder="Mínimo 8 caracteres" required autocomplete="new-password">
+            <button type="button" class="pwd-toggle" onclick="togglePwd('new-password', this)" aria-label="Mostrar contraseña"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Confirmar contraseña</label>
+          <input type="password" id="new-confirm" placeholder="Repite la contraseña" required autocomplete="new-password">
+          <p class="pwd-hint">Mínimo 8 caracteres · 1 número recomendado</p>
+        </div>
+        <button class="auth-btn" type="submit" id="reset-btn">
+          <div class="small-spinner" id="reset-spinner"></div>
+          <span id="reset-btn-text">Guardar y entrar</span>
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/supabase-client.js"></script>
+<script>
+var _isRecovery = false;
+var _handled = false;
+
+/* ── Mostrar un estado (loading | ok | err | reset) ── */
+function _show(state) {
+    ['loading', 'ok', 'err', 'reset'].forEach(function (s) {
+        document.getElementById('state-' + s).style.display = (s === state) ? 'block' : 'none';
+    });
+}
+
+function _showError(text) {
+    if (text) document.getElementById('err-text').textContent = text;
+    _show('err');
+}
+
+/* ── Detectar tipo desde el hash ANTES de que Supabase lo limpie ── */
+(function detectFromHash() {
+    var hash = window.location.hash || '';
+    if (hash.indexOf('error') !== -1) {
+        var params = new URLSearchParams(hash.replace(/^#/, ''));
+        var desc = params.get('error_description') || params.get('error') || '';
+        _handled = true;
+        setTimeout(function () {
+            _showError(desc ? decodeURIComponent(desc.replace(/\+/g, ' ')) : null);
+        }, 100);
+    }
+    if (hash.indexOf('type=recovery') !== -1) {
+        _isRecovery = true;
+    }
+})();
+
+/* ── Escuchar eventos de auth ── */
+if (_sb) {
+    _sb.auth.onAuthStateChange(function (event, session) {
+        if (_handled && event !== 'PASSWORD_RECOVERY') return;
+
+        if (event === 'PASSWORD_RECOVERY') {
+            _handled = true;
+            _isRecovery = true;
+            _show('reset');
+        } else if (event === 'SIGNED_IN' && session && !_isRecovery) {
+            _handled = true;
+            _show('ok');
+            setTimeout(function () { window.location.href = 'acceso-datos.html'; }, 1200);
+        }
+    });
+
+    /* Fallback: si tras 4s no pasó nada, revisar sesión manualmente */
+    setTimeout(async function () {
+        if (_handled) return;
+        try {
+            var r = await _sb.auth.getSession();
+            if (r.data && r.data.session) {
+                if (_isRecovery) { _show('reset'); }
+                else {
+                    _show('ok');
+                    setTimeout(function () { window.location.href = 'acceso-datos.html'; }, 1000);
+                }
+            } else {
+                _showError();
+            }
+        } catch (e) { _showError(); }
+        _handled = true;
+    }, 4000);
+} else {
+    _showError('No se pudo conectar. Recarga la página.');
+}
+
+/* ── Mostrar/ocultar contraseña ── */
+function togglePwd(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var icon  = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+    else { input.type = 'password'; icon.className = 'fas fa-eye'; }
+}
+
+/* ── Guardar nueva contraseña ── */
+async function handleReset(e) {
+    e.preventDefault();
+    var errEl = document.getElementById('reset-error');
+    var okEl  = document.getElementById('reset-success');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+
+    var pwd     = document.getElementById('new-password').value;
+    var confirm = document.getElementById('new-confirm').value;
+
+    if (pwd !== confirm) { errEl.textContent = 'Las contraseñas no coinciden.'; errEl.style.display = 'block'; return; }
+    if (pwd.length < 8)  { errEl.textContent = 'La contraseña debe tener al menos 8 caracteres.'; errEl.style.display = 'block'; return; }
+
+    var btn = document.getElementById('reset-btn');
+    var sp  = document.getElementById('reset-spinner');
+    btn.disabled = true; sp.style.display = 'block';
+
+    try {
+        var result = await _sb.auth.updateUser({ password: pwd });
+        if (result.error) {
+            errEl.textContent = result.error.message; errEl.style.display = 'block';
+            btn.disabled = false; sp.style.display = 'none';
+        } else {
+            okEl.textContent = '¡Contraseña actualizada! Cargando tu workspace…'; okEl.style.display = 'block';
+            setTimeout(function () { window.location.href = 'acceso-datos.html'; }, 900);
+        }
+    } catch (err) {
+        errEl.textContent = 'Error de red. Intenta de nuevo.'; errEl.style.display = 'block';
+        btn.disabled = false; sp.style.display = 'none';
+    }
+}
+</script>
+</body>
+</html>

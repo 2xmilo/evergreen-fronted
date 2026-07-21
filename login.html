@@ -126,7 +126,7 @@ html, body {
   flex: 1; padding: 12px; text-align: center;
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
   color: var(--muted2); cursor: pointer; border: none; background: transparent;
-  transition: color .2s, background .2s; font-family: var(--mono);
+  transition: color .2s, background .2s;
 }
 .auth-tab.active {
   color: var(--green-l); background: rgba(106,170,53,0.05);
@@ -155,14 +155,34 @@ html, body {
   display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
   text-transform: uppercase; color: var(--muted2); margin-bottom: 7px;
 }
+.field-input-wrap { position: relative; }
 .field input {
   width: 100%; padding: 11px 14px; border-radius: 10px;
   background: rgba(255,255,255,0.05); border: 1px solid var(--border);
   color: var(--white); font-size: 14px; font-family: var(--sans);
   outline: none; transition: border-color .2s;
 }
+.field input.has-toggle { padding-right: 42px; }
 .field input::placeholder { color: var(--muted2); }
 .field input:focus { border-color: rgba(106,170,53,0.40); background: rgba(255,255,255,0.07); }
+.pwd-toggle {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border: none; background: transparent;
+  color: var(--muted2); cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; transition: color .2s;
+}
+.pwd-toggle:hover { color: var(--muted); }
+
+/* Row (forgot link) */
+.field-row {
+  display: flex; justify-content: flex-end; margin: 10px 0 4px;
+}
+.auth-link {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .04em;
+  color: var(--accent); text-decoration: none; cursor: pointer;
+  background: none; border: none; padding: 0; transition: color .2s;
+}
+.auth-link:hover { color: var(--white); text-decoration: underline; }
 
 /* Submit button */
 .auth-btn {
@@ -174,12 +194,47 @@ html, body {
 }
 .auth-btn:hover:not(:disabled) { background: var(--accent-d); }
 .auth-btn:disabled { opacity: .6; cursor: not-allowed; }
+.auth-btn.secondary {
+  background: transparent; border: 1px solid var(--border-a); color: var(--accent);
+}
+.auth-btn.secondary:hover:not(:disabled) { background: rgba(200,168,130,0.08); }
+.auth-btn.google {
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--white);
+}
+.auth-btn.google:hover:not(:disabled) { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.16); }
+.auth-btn.google svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+/* Divider "o" */
+.auth-divider {
+  display: flex; align-items: center; gap: 12px; margin: 20px 0 4px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted2);
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
 
 /* Password hint */
 .pwd-hint {
   font-family: var(--mono); font-size: 9.5px; color: var(--muted2);
   margin-top: 6px; letter-spacing: .04em;
 }
+
+/* Back link for sub-modes */
+.mode-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); background: none; border: none; cursor: pointer;
+  margin-bottom: 20px; padding: 0; transition: color .2s;
+}
+.mode-back:hover { color: var(--white); }
+
+/* Sub-mode heading */
+.mode-heading {
+  font-family: var(--serif); font-size: 20px; font-weight: 500;
+  color: var(--white); margin-bottom: 6px;
+}
+.mode-desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-bottom: 22px; }
 
 /* Divider */
 .card-footer {
@@ -196,11 +251,37 @@ html, body {
   border: 2px solid rgba(8,15,8,0.3); border-top-color: var(--bg);
   animation: spin .6s linear infinite; display: none;
 }
+.auth-btn.secondary .spinner { border-color: rgba(200,168,130,0.3); border-top-color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Sent screen */
+.sent-screen { text-align: center; padding: 8px 0 4px; }
+.sent-icon {
+  width: 64px; height: 64px; margin: 0 auto 20px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: rgba(106,170,53,0.10); border: 1px solid rgba(106,170,53,0.22);
+  color: var(--green-l); font-size: 24px;
+}
+.sent-title {
+  font-family: var(--serif); font-size: 22px; font-weight: 500;
+  color: var(--white); margin-bottom: 10px;
+}
+.sent-text { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
+.sent-email { color: var(--accent); font-weight: 500; word-break: break-all; }
+.sent-resend {
+  margin-top: 22px; font-family: var(--mono); font-size: 10.5px; color: var(--muted2);
+}
+.sent-resend button {
+  font-family: var(--mono); font-size: 10.5px; color: var(--accent);
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.sent-resend button:hover:not(:disabled) { text-decoration: underline; }
+.sent-resend button:disabled { color: var(--muted2); cursor: not-allowed; text-decoration: none; }
 
 @media (max-width: 768px) {
   /* iOS Safari hace zoom automático con font-size <16px */
   .field input { font-size: 16px; padding: 12px 14px; }
+  .field input.has-toggle { padding-right: 42px; }
   .auth-btn { padding: 14px; font-size: 14px; }
 }
 
@@ -241,8 +322,8 @@ html, body {
       <div class="card-sub">Inicia sesión o crea tu cuenta para acceder a tu<br>entorno de monitoreo personal.</div>
     </div>
 
-    <!-- Tabs -->
-    <div class="auth-tabs">
+    <!-- Tabs (solo en login/register) -->
+    <div class="auth-tabs" id="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="setMode('login')">Iniciar sesión</button>
       <button class="auth-tab" id="tab-register" onclick="setMode('register')">Registrarse</button>
     </div>
@@ -260,13 +341,30 @@ html, body {
           <label>Email</label>
           <input type="email" id="login-email" placeholder="tu@email.cl" required autocomplete="email">
         </div>
-        <div class="field">
+        <div class="field" style="margin-bottom:0;">
           <label>Contraseña</label>
-          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+          <div class="field-input-wrap">
+            <input type="password" id="login-password" class="has-toggle" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" class="pwd-toggle" onclick="togglePwd('login-password', this)" aria-label="Mostrar contraseña"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div class="field-row">
+          <button type="button" class="auth-link" onclick="setMode('forgot')">¿Olvidaste tu contraseña?</button>
         </div>
         <button class="auth-btn" type="submit" id="login-btn">
           <div class="spinner" id="login-spinner"></div>
           <span id="login-btn-text">Ingresar al Workspace</span>
+        </button>
+
+        <div class="auth-divider">O continúa con</div>
+        <button class="auth-btn google" type="button" onclick="handleGoogle()" style="margin-top:12px;">
+          <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.33A9 9 0 0 0 9 18z"/>
+            <path fill="#FBBC05" d="M3.97 10.71a5.41 5.41 0 0 1 0-3.42V4.96H.96a9 9 0 0 0 0 8.08l3.01-2.33z"/>
+            <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.96l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+          </svg>
+          Continuar con Google
         </button>
       </form>
 
@@ -278,7 +376,10 @@ html, body {
         </div>
         <div class="field">
           <label>Contraseña</label>
-          <input type="password" id="reg-password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password">
+          <div class="field-input-wrap">
+            <input type="password" id="reg-password" class="has-toggle" placeholder="Mínimo 8 caracteres" required autocomplete="new-password">
+            <button type="button" class="pwd-toggle" onclick="togglePwd('reg-password', this)" aria-label="Mostrar contraseña"><i class="fas fa-eye"></i></button>
+          </div>
         </div>
         <div class="field">
           <label>Confirmar contraseña</label>
@@ -291,10 +392,46 @@ html, body {
         </button>
       </form>
 
+      <!-- FORGOT PASSWORD FORM -->
+      <form id="form-forgot" onsubmit="handleForgot(event)" style="display:none;">
+        <button type="button" class="mode-back" onclick="setMode('login')">
+          <i class="fas fa-arrow-left" style="font-size:9px;"></i> Volver
+        </button>
+        <div class="mode-heading">Recuperar contraseña</div>
+        <div class="mode-desc">Ingresa tu email y te enviaremos un enlace para crear una nueva contraseña.</div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="forgot-email" placeholder="tu@email.cl" required autocomplete="email">
+        </div>
+        <button class="auth-btn" type="submit" id="forgot-btn">
+          <div class="spinner" id="forgot-spinner"></div>
+          <span id="forgot-btn-text">Enviar enlace de recuperación</span>
+        </button>
+      </form>
+
+      <!-- SENT SCREEN -->
+      <div id="screen-sent" style="display:none;">
+        <div class="sent-screen">
+          <div class="sent-icon"><i class="fas fa-envelope-open-text"></i></div>
+          <div class="sent-title" id="sent-title">Revisa tu correo</div>
+          <p class="sent-text" id="sent-text">Te enviamos un enlace a</p>
+          <p class="sent-text sent-email" id="sent-email"></p>
+          <p class="sent-text" style="margin-top:12px;font-size:12px;color:var(--muted2);">
+            Revisa también spam o promociones. El enlace expira en unos minutos.
+          </p>
+          <div class="sent-resend">
+            ¿No llegó? <button type="button" id="resend-btn" onclick="resendEmail()">Reenviar</button>
+          </div>
+          <button type="button" class="mode-back" style="margin-top:24px;margin-bottom:0;" onclick="setMode('login')">
+            <i class="fas fa-arrow-left" style="font-size:9px;"></i> Volver al inicio
+          </button>
+        </div>
+      </div>
+
     </div>
 
     <!-- Footer -->
-    <div class="card-footer">
+    <div class="card-footer" id="card-footer">
       Acceso gratuito durante el piloto · <a href="index.html#contacto">¿Problemas? Contáctanos</a>
     </div>
 
@@ -303,6 +440,9 @@ html, body {
 
 <script src="js/supabase-client.js"></script>
 <script>
+/* ── URL a la que apuntan todos los emails (confirmación, magic, reset) ── */
+var AUTH_REDIRECT = window.location.origin + '/auth-callback';
+
 /* ── Si ya hay sesión, redirigir directo al workspace ── */
 (async function () {
     if (!_sb) return;
@@ -314,16 +454,40 @@ html, body {
     } catch (e) {}
 })();
 
-/* ── Modo: login | register ── */
+/* ── Modo: login | register | magic | forgot | sent ── */
 var _mode = 'login';
+var _lastAction = null;   // { fn: function, email: string } para reenviar
+
+var _forms = {
+    login:    'form-login',
+    register: 'form-register',
+    forgot:   'form-forgot',
+    sent:     'screen-sent'
+};
 
 function setMode(m) {
     _mode = m;
-    document.getElementById('form-login').style.display    = m === 'login'    ? 'block' : 'none';
-    document.getElementById('form-register').style.display = m === 'register' ? 'block' : 'none';
+    Object.keys(_forms).forEach(function (k) {
+        document.getElementById(_forms[k]).style.display = (k === m) ? (k === 'sent' ? 'block' : 'block') : 'none';
+    });
+    // Tabs y footer solo visibles en login/register
+    var tabsVisible = (m === 'login' || m === 'register');
+    document.getElementById('auth-tabs').style.display  = tabsVisible ? 'flex' : 'none';
+    document.getElementById('card-footer').style.display = (m === 'sent') ? 'none' : 'block';
     document.getElementById('tab-login').classList.toggle('active',    m === 'login');
     document.getElementById('tab-register').classList.toggle('active', m === 'register');
     _clearMessages();
+}
+
+/* ── Mostrar/ocultar contraseña ── */
+function togglePwd(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var icon  = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text'; icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password'; icon.className = 'fas fa-eye';
+    }
 }
 
 /* ── Mensajes ── */
@@ -352,7 +516,35 @@ function _setBtnLoading(id, spinnerId, textId, loading, label) {
     if (!loading && label) tx.textContent = label;
 }
 
-/* ── Iniciar sesión ── */
+/* ── Pantalla "revisa tu correo" ── */
+function showSent(opts) {
+    document.getElementById('sent-title').textContent = opts.title || 'Revisa tu correo';
+    document.getElementById('sent-text').textContent  = opts.text  || 'Te enviamos un enlace a';
+    document.getElementById('sent-email').textContent = opts.email || '';
+    _lastAction = opts.resend || null;
+    setMode('sent');
+}
+
+var _resendCooldown = 0;
+function resendEmail() {
+    if (!_lastAction || !_lastAction.fn || _resendCooldown > 0) return;
+    _lastAction.fn();
+    // Cooldown de 30s para evitar rate limit de Supabase
+    _resendCooldown = 30;
+    var btn = document.getElementById('resend-btn');
+    var tick = setInterval(function () {
+        _resendCooldown--;
+        if (_resendCooldown <= 0) {
+            clearInterval(tick);
+            btn.disabled = false; btn.textContent = 'Reenviar';
+        } else {
+            btn.disabled = true; btn.textContent = 'Reenviar en ' + _resendCooldown + 's';
+        }
+    }, 1000);
+    btn.disabled = true; btn.textContent = 'Reenviar en 30s';
+}
+
+/* ── Iniciar sesión (email + contraseña) ── */
 async function handleLogin(e) {
     e.preventDefault();
     if (!_sb) { _showError('Error de conexión. Recarga la página.'); return; }
@@ -367,7 +559,7 @@ async function handleLogin(e) {
         if (result.error) {
             var msg = result.error.message;
             if (msg === 'Invalid login credentials') msg = 'Email o contraseña incorrectos.';
-            if (msg.includes('Email not confirmed'))   msg = 'Confirma tu email antes de ingresar.';
+            if (msg.indexOf('Email not confirmed') !== -1) msg = 'Aún no confirmaste tu email. Revisa tu bandeja de entrada.';
             _showError(msg);
             _setBtnLoading('login-btn', 'login-spinner', 'login-btn-text', false, 'Ingresar al Workspace');
         } else {
@@ -380,7 +572,7 @@ async function handleLogin(e) {
     }
 }
 
-/* ── Registrarse ── */
+/* ── Registrarse (con verificación de email) ── */
 async function handleRegister(e) {
     e.preventDefault();
     if (!_sb) { _showError('Error de conexión. Recarga la página.'); return; }
@@ -390,34 +582,89 @@ async function handleRegister(e) {
     var password = document.getElementById('reg-password').value;
     var confirm  = document.getElementById('reg-confirm').value;
 
-    if (password !== confirm) {
-        _showError('Las contraseñas no coinciden.'); return;
-    }
-    if (password.length < 8) {
-        _showError('La contraseña debe tener al menos 8 caracteres.'); return;
-    }
+    if (password !== confirm) { _showError('Las contraseñas no coinciden.'); return; }
+    if (password.length < 8)  { _showError('La contraseña debe tener al menos 8 caracteres.'); return; }
 
     _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', true);
 
     try {
-        var result = await _sb.auth.signUp({ email: email, password: password });
+        var result = await _sb.auth.signUp({
+            email: email,
+            password: password,
+            options: { emailRedirectTo: AUTH_REDIRECT }
+        });
         if (result.error) {
             _showError(result.error.message);
             _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', false, 'Crear cuenta');
-        } else {
-            // Intentar login inmediato (si confirmación de email está desactivada)
-            var login = await _sb.auth.signInWithPassword({ email: email, password: password });
-            if (!login.error) {
-                _showSuccess('¡Cuenta creada! Cargando tu workspace...');
-                setTimeout(function () { window.location.href = 'acceso-datos.html'; }, 700);
-            } else {
-                _showSuccess('¡Cuenta creada! Revisa tu bandeja de entrada para confirmar el email y luego inicia sesión.');
-                _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', false, 'Crear cuenta');
-            }
+            return;
         }
+
+        // Si Supabase devuelve sesión activa → confirmación de email desactivada → entrar directo
+        if (result.data && result.data.session) {
+            _showSuccess('¡Cuenta creada! Cargando tu workspace...');
+            setTimeout(function () { window.location.href = 'acceso-datos.html'; }, 700);
+            return;
+        }
+
+        // Confirmación de email activada → pantalla "revisa tu correo"
+        _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', false, 'Crear cuenta');
+        showSent({
+            title: 'Confirma tu email',
+            text:  'Enviamos un enlace de confirmación a',
+            email: email,
+            resend: { email: email, fn: function () {
+                _sb.auth.resend({ type: 'signup', email: email, options: { emailRedirectTo: AUTH_REDIRECT } });
+            }}
+        });
     } catch (e) {
         _showError('Error de red. Verifica tu conexión.');
         _setBtnLoading('register-btn', 'register-spinner', 'register-btn-text', false, 'Crear cuenta');
+    }
+}
+
+/* ── Continuar con Google (OAuth) ── */
+async function handleGoogle() {
+    if (!_sb) { _showError('Error de conexión. Recarga la página.'); return; }
+    _clearMessages();
+    try {
+        var result = await _sb.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: AUTH_REDIRECT }
+        });
+        // Si no hay error, el navegador redirige a Google automáticamente.
+        if (result.error) _showError(result.error.message);
+    } catch (e) {
+        _showError('No se pudo conectar con Google. Intenta de nuevo.');
+    }
+}
+
+/* ── Recuperar contraseña ── */
+async function handleForgot(e) {
+    e.preventDefault();
+    if (!_sb) { _showError('Error de conexión. Recarga la página.'); return; }
+    _clearMessages();
+    _setBtnLoading('forgot-btn', 'forgot-spinner', 'forgot-btn-text', true);
+
+    var email = document.getElementById('forgot-email').value.trim();
+
+    try {
+        var result = await _sb.auth.resetPasswordForEmail(email, { redirectTo: AUTH_REDIRECT });
+        _setBtnLoading('forgot-btn', 'forgot-spinner', 'forgot-btn-text', false, 'Enviar enlace de recuperación');
+        if (result.error) {
+            _showError(result.error.message);
+            return;
+        }
+        showSent({
+            title: 'Enlace enviado',
+            text:  'Si existe una cuenta con ese correo, enviamos un enlace de recuperación a',
+            email: email,
+            resend: { email: email, fn: function () {
+                _sb.auth.resetPasswordForEmail(email, { redirectTo: AUTH_REDIRECT });
+            }}
+        });
+    } catch (e) {
+        _showError('Error de red. Verifica tu conexión.');
+        _setBtnLoading('forgot-btn', 'forgot-spinner', 'forgot-btn-text', false, 'Enviar enlace de recuperación');
     }
 }
 </script>
