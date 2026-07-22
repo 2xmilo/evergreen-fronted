@@ -187,22 +187,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Texto descriptivo del índice de agua
     actualizarInfoAgua();
 
-    // Mini-panel: mostrar con datos demo para que sea visible
-    // (se sobreescribirá con datos reales al procesar bosque)
-    var _DEMO_PERDIDA = [
-        {year:2001,ha_zona:185,ha_buffer:72},
-        {year:2003,ha_zona:247,ha_buffer:93},
-        {year:2005,ha_zona:318,ha_buffer:121},
-        {year:2007,ha_zona:276,ha_buffer:104},
-        {year:2010,ha_zona:304,ha_buffer:115},
-        {year:2013,ha_zona:389,ha_buffer:148},
-        {year:2015,ha_zona:334,ha_buffer:127},
-        {year:2018,ha_zona:456,ha_buffer:174},
-        {year:2020,ha_zona:371,ha_buffer:141},
-        {year:2022,ha_zona:312,ha_buffer:98},
-        {year:2023,ha_zona:428,ha_buffer:163}
-    ];
-    setTimeout(function() { renderMiniPanel(_DEMO_PERDIDA); }, 600);
+    // Mini-panel: NO se muestra al cargar. Aparece solo cuando hay contenido real
+    // — al ejecutar el análisis de Bosque, o al activar una capa con leyenda.
+    // (Arranca con clase "hidden" en el HTML.)
 
     // Cargar iframe de biodiversidad en background al inicio
     (function() {

@@ -492,16 +492,9 @@ function resetAnalisis() {
     renderIndicadorCards();
     refreshIndRows();
     _refreshGeeLayersPanel();
-    // Resetear mini-panel a demo
-    var _DEMO_RESET = [
-        {year:2001,ha_zona:185,ha_buffer:72},{year:2003,ha_zona:247,ha_buffer:93},
-        {year:2005,ha_zona:318,ha_buffer:121},{year:2007,ha_zona:276,ha_buffer:104},
-        {year:2010,ha_zona:304,ha_buffer:115},{year:2013,ha_zona:389,ha_buffer:148},
-        {year:2015,ha_zona:334,ha_buffer:127},{year:2018,ha_zona:456,ha_buffer:174},
-        {year:2020,ha_zona:371,ha_buffer:141},{year:2022,ha_zona:312,ha_buffer:98},
-        {year:2023,ha_zona:428,ha_buffer:163}
-    ];
-    renderMiniPanel(_DEMO_RESET);
+    // Ocultar el mini-panel (ya no se muestran datos demo al reiniciar)
+    var _mp = document.getElementById('mini-panel');
+    if (_mp) _mp.classList.add('hidden');
     if (typeof mostrarNotificacion === 'function') mostrarNotificacion('✅ Análisis reiniciados');
 }
 
