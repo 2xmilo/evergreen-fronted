@@ -2778,7 +2778,12 @@ body.workspace-mode {
     border: 1px solid rgba(106,170,53,0.35);
     border-radius: 3px;
     padding: 1px 4px;
-    margin-left: auto;
+    /* Absoluto a la derecha: fuera del flujo flex para que el ícono+texto
+       se centren con justify-content: center (antes margin-left:auto los empujaba). */
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 .draw-btn--pro.active {
     background: var(--accent-light);

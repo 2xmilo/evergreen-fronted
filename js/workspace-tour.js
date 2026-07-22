@@ -61,6 +61,7 @@
     var _prevHasZona = null;
     var _resumenDismissed = false;   // el usuario cerró/completó la guía en esta "sesión sin zona"
     var _noZonaShown = false;        // ya se mostró en el episodio actual sin zona
+    var _hidroShown = false;         // el tour de hidro ya se mostró en esta carga de página
 
     function _ensureNodes() {
         if (_ring) return;
@@ -232,13 +233,18 @@
         setInterval(_manageResumen, 1500);      // vigilar cambios de zona
     });
 
-    // Hidro: al entrar por primera vez al tab de Hidromorfología.
+    // Hidro: al entrar al tab de Hidromorfología (o clic en "Delimitar Cuenca").
+    // Se muestra una vez por carga de página (no localStorage permanente), así
+    // reaparece de forma confiable y es descartable — igual que el de Resumen.
     document.addEventListener('click', function (e) {
         var btn = e.target && e.target.closest ? e.target.closest('#tab-btn-hidromorfologia, #btn-outlet-cuenca') : null;
         if (!btn) return;
-        if (_seen('hidro')) return;
+        if (_hidroShown || _tour) return;
         setTimeout(function () {
-            if (document.getElementById('hidro-config-panel')) _start('hidro');
+            if (document.getElementById('hidro-config-panel') && !_tour) {
+                _hidroShown = true;
+                _start('hidro');
+            }
         }, 700);
     }, true);
 
