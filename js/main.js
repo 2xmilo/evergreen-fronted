@@ -313,10 +313,18 @@ document.addEventListener('DOMContentLoaded', function () {
         submitBtn.disabled = true;
 
         try {
-            const response = await fetch(form.action, {
+            var _v = function (sel) { var el = form.querySelector(sel); return el ? el.value : ''; };
+            const payload = {
+                nombre:  _v('#contact-name'),
+                email:   _v('#contact-email'),
+                asunto:  _v('#contact-subject'),
+                mensaje: _v('#contact-message'),
+                website: _v('#contact-website')   // honeypot anti-spam
+            };
+            const response = await fetch('https://evergreen-backend-awv1.onrender.com/api/contacto', {
                 method: 'POST',
-                body: new FormData(form),
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
@@ -329,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
             btnText.style.display = 'flex';
             btnLoading.style.display = 'none';
             submitBtn.disabled = false;
-            alert('Hubo un problema al enviar. Por favor intenta nuevamente o contáctanos a contacto@evergreenclima.com');
+            alert('Hubo un problema al enviar. Por favor intenta nuevamente o escríbenos a contacto@evergreenchile.cl');
         }
     });
 });

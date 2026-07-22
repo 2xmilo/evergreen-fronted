@@ -462,8 +462,8 @@
                     </div>
 
                     <!-- Contact Form with specific Formspree attributes -->
-                    <form class="contact-form r d2" action="https://formspree.io/f/xwpkvjbq" method="POST"
-                        id="contact-form">
+                    <form class="contact-form r d2" method="POST" id="contact-form">
+                        <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:0;width:0;">
                         <div class="form-row">
                             <div class="fg"><label class="fl" for="contact-name">Nombre completo</label><input
                                     type="text" id="contact-name" name="nombre" placeholder="Usuario" required>
@@ -608,7 +608,7 @@
         })();
     </script>
 
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2"></script>
     <script src="js/news-loader.js?v=3"></script>
 
 </body>
