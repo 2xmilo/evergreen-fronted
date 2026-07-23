@@ -318,7 +318,9 @@
     }
 
     function calcUpgrade() {
-        if (typeof mostrarNotificacion === 'function') {
+        if (typeof mostrarModalPro === 'function') {
+            mostrarModalPro('Los cálculos meteorológicos DMC');
+        } else if (typeof mostrarNotificacion === 'function') {
             mostrarNotificacion('🔒 Los cálculos meteorológicos están disponibles en el plan Pro o superior.');
         }
     }

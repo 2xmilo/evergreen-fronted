@@ -58,15 +58,43 @@ function renderZoneSelector(zones) {
 
     dropdown.innerHTML = html;
 
-    // CTA "Comparar zonas" en el panel (fuera del dropdown) — solo si hay ≥2 zonas
+    // CTA "Módulo Comparativo": pro+ navega (si hay ≥2 zonas); free lo ve con candado.
     var cta = document.getElementById('rs-compare-cta');
     if (cta) {
-        var planSupportsCompare = maxZones === Infinity || maxZones >= 2;
-        cta.style.display = (planSupportsCompare && used >= 2) ? 'flex' : 'none';
+        var puedeComparar = (typeof featureDisponible === 'function')
+            ? featureDisponible('comparador')
+            : (maxZones === Infinity || maxZones >= 2);
+        var arrow = cta.querySelector('.rs-compare-arrow');
+        if (!puedeComparar) {
+            // Free: mostrar como teaser con candado → click abre el modal Pro
+            cta.style.display = 'flex';
+            cta.classList.add('rs-compare-cta--locked');
+            if (arrow) arrow.className = 'fas fa-lock rs-compare-arrow';
+        } else {
+            // Pro+: mostrar solo si hay ≥2 zonas para comparar
+            cta.style.display = (used >= 2) ? 'flex' : 'none';
+            cta.classList.remove('rs-compare-cta--locked');
+            if (arrow) arrow.className = 'fas fa-arrow-right rs-compare-arrow';
+        }
     }
 }
 
+// Intercepta el click del CTA Comparativo: free → modal Pro; pro+ → navega.
+function comparadorGate(e) {
+    if (typeof featureDisponible === 'function' && !featureDisponible('comparador')) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (typeof mostrarModalPro === 'function') mostrarModalPro('El Módulo Comparativo');
+        return false;
+    }
+    return true;
+}
+window.comparadorGate = comparadorGate;
+
 function goToComparador() {
+    if (typeof featureDisponible === 'function' && !featureDisponible('comparador')) {
+        if (typeof mostrarModalPro === 'function') mostrarModalPro('El Módulo Comparativo');
+        return;
+    }
     window.location.href = 'comparador.html';
 }
 

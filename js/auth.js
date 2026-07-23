@@ -25,6 +25,51 @@ function planTiene(minPlan) {
 }
 window.planTiene = planTiene;
 
+// ── Gating por feature (Opción B: config centralizada). ────────────────────
+// Para bloquear/liberar un feature cambia SOLO el plan mínimo de aquí (1 línea).
+// 'free' = disponible para todos.
+var PLAN_GATE = {
+    comparador:      'pro',    // Módulo Comparativo (A/B)
+    calculos_dmc:    'pro',    // Cálculos meteorológicos derivados (DMC)
+    hidromorfologia: 'free',   // por ahora libre
+};
+/** True si el feature está disponible para el plan actual del usuario. */
+function featureDisponible(feature) {
+    var min = PLAN_GATE[feature] || 'free';
+    return (typeof planTiene === 'function') ? planTiene(min) : true;
+}
+window.featureDisponible = featureDisponible;
+
+/** Modal reutilizable "Función Pro" con botón para contactar a Evergreen.
+ *  Enfoque no comercial: no vende online, deriva a conversación. */
+window.mostrarModalPro = function (featureLabel) {
+    if (document.getElementById('modal-pro-overlay')) return;   // ya abierto
+    var ov = document.createElement('div');
+    ov.id = 'modal-pro-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100060;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:24px;';
+    var card = document.createElement('div');
+    card.style.cssText = 'max-width:400px;width:100%;background:#12261a;border:1px solid rgba(200,168,130,.3);border-radius:16px;padding:28px;font-family:Inter,system-ui,sans-serif;color:#f4f7f1;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.5);';
+    var label = featureLabel ? ('<b style="color:#f4f7f1;">' + featureLabel + '</b> está disponible en el plan <b style="color:#c8a882;">Pro</b>.')
+                             : 'Esta función está disponible en el plan <b style="color:#c8a882;">Pro</b>.';
+    card.innerHTML =
+        '<div style="width:56px;height:56px;margin:0 auto 16px;border-radius:50%;background:rgba(200,168,130,.12);border:1px solid rgba(200,168,130,.3);display:flex;align-items:center;justify-content:center;color:#c8a882;font-size:22px;"><i class="fas fa-lock"></i></div>' +
+        '<div style="font-size:18px;font-weight:600;margin-bottom:10px;">Función Pro</div>' +
+        '<div style="font-size:13.5px;line-height:1.6;color:rgba(244,247,241,.75);margin-bottom:8px;">' + label + '</div>' +
+        '<div style="font-size:12.5px;line-height:1.6;color:rgba(244,247,241,.5);margin-bottom:22px;">Durante el piloto el acceso es educativo y no comercial. Para uso profesional o mayores límites, conversemos.</div>';
+    var contact = document.createElement('a');
+    contact.href = 'index.html#contacto';
+    contact.textContent = 'Contactar a Evergreen';
+    contact.style.cssText = 'display:block;padding:12px;border-radius:10px;background:#c8a882;color:#0b160c;font-weight:600;font-size:13.5px;text-decoration:none;margin-bottom:8px;';
+    var close = document.createElement('button');
+    close.textContent = 'Ahora no';
+    close.style.cssText = 'width:100%;padding:9px;border-radius:10px;border:none;background:transparent;color:rgba(244,247,241,.5);font-size:12.5px;cursor:pointer;font-family:inherit;';
+    function cerrar() { try { document.body.removeChild(ov); } catch (e) {} }
+    close.onclick = cerrar;
+    ov.onclick = function (e) { if (e.target === ov) cerrar(); };
+    card.appendChild(contact); card.appendChild(close);
+    ov.appendChild(card); document.body.appendChild(ov);
+};
+
 async function getBackendAuthHeaders(baseHeaders) {
     var headers = Object.assign({}, baseHeaders || {});
     if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';

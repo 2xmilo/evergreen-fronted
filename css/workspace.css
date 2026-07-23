@@ -1165,6 +1165,18 @@ body.workspace-mode {
   transform:translateX(3px);
   opacity:1;
 }
+/* Estado bloqueado (free): tinte dorado "Pro" + candado, sin slide en hover */
+.rs-compare-cta--locked {
+  background:linear-gradient(90deg, rgba(200,168,130,0.14), rgba(200,168,130,0.05));
+  border-color:rgba(200,168,130,0.32);
+}
+.rs-compare-cta--locked:hover {
+  background:linear-gradient(90deg, rgba(200,168,130,0.22), rgba(200,168,130,0.10));
+  border-color:rgba(200,168,130,0.50);
+}
+.rs-compare-cta--locked > i:first-child,
+.rs-compare-cta--locked .rs-compare-arrow { color:var(--accent, #c8a882); opacity:1; }
+.rs-compare-cta--locked:hover .rs-compare-arrow { transform:none; }
 
 /* ══ MODAL LÍMITE DE PLAN ══════════════════════════════════ */
 .modal-limit-overlay {

@@ -94,8 +94,11 @@
     /* ── Botón principal: "Delimitar Cuenca" en herramientas ── */
 
     window.hidroIniciarOutletClick = function () {
-        if (!_isProPlus()) {
-            _toast('🔒 Función disponible en plan Pro o superior.');
+        // Gating central: hoy PLAN_GATE.hidromorfologia = 'free' → todos pasan.
+        // Para bloquearlo después, cambia esa línea en auth.js y aquí saldrá el modal Pro.
+        if (typeof featureDisponible === 'function' && !featureDisponible('hidromorfologia')) {
+            if (typeof mostrarModalPro === 'function') mostrarModalPro('La Delimitación de Cuencas');
+            else _toast('🔒 Función disponible en plan Pro o superior.');
             return;
         }
         // Cambiar al tab Hidromorfología
@@ -701,10 +704,12 @@
     function _enforcePlanVisibility() {
         var btn = document.getElementById('btn-outlet-cuenca');
         if (!btn) return;
-        var plan = window._sbUserPlan;
-        // Si plan no está definido aún, no ocultar (mejor mostrar de más)
-        if (!plan) return;
-        btn.style.display = (plan === 'pro' || plan === 'enterprise' || plan === 'admin') ? '' : 'none';
+        var tag = btn.querySelector('.draw-btn-tag');
+        // Controlado por la config central (PLAN_GATE.hidromorfologia). Hoy 'free' → visible para todos.
+        // El chip "PRO" solo se muestra si el feature está bloqueado; el click abre el modal.
+        var disponible = (typeof featureDisponible === 'function') ? featureDisponible('hidromorfologia') : true;
+        btn.style.display = '';
+        if (tag) tag.style.display = disponible ? 'none' : '';
     }
     // Ejecutar después de que se haya cargado el plan
     window.addEventListener('planChanged', _enforcePlanVisibility);

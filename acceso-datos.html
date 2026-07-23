@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=31">
+    <link rel="stylesheet" href="css/workspace.css?v=32">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -322,8 +322,8 @@
                 <span id="rs-meta-gee"          style="display:none;"></span>
             </div>
 
-            <!-- CTA Comparador (solo pro / enterprise / admin con ≥2 zonas) -->
-            <a href="comparador.html" id="rs-compare-cta" class="rs-compare-cta" style="display:none;">
+            <!-- CTA Comparador — pro+: navega; free: candado → modal Pro -->
+            <a href="comparador.html" id="rs-compare-cta" class="rs-compare-cta" style="display:none;" onclick="return comparadorGate(event)">
                 <i class="fas fa-columns"></i>
                 <span class="rs-compare-text">
                     <span class="rs-compare-title">Módulo Comparativo</span>
@@ -1538,7 +1538,7 @@
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/auth.js?v=8"></script>
+<script src="js/auth.js?v=9"></script>
 
 <!-- OVERRIDES requeridos por acceso-datos.js -->
 <script>
@@ -1566,12 +1566,12 @@
 <script src="js/workspace-bosque.js?v=5"></script>
 <script src="js/workspace-summary.js?v=9"></script>
 <script src="js/workspace-gee-modules.js?v=9"></script>
-<script src="js/workspace-zones.js?v=8"></script>
+<script src="js/workspace-zones.js?v=9"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
-<script src="js/workspace-dmc.js?v=5"></script>
+<script src="js/workspace-dmc.js?v=6"></script>
 <script src="js/workspace-simbio.js?v=1"></script>
 <script src="js/workspace-arclim.js?v=4"></script>
-<script src="js/workspace-hidro.js?v=4"></script>
+<script src="js/workspace-hidro.js?v=5"></script>
 <script src="js/workspace-resize.js?v=1"></script>
 <script src="js/workspace-layers-ui.js?v=3"></script>
 <script src="js/workspace-tour.js?v=3"></script>
