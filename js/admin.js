@@ -71,12 +71,14 @@ function renderStats(users) {
     var nFree       = users.filter(function(u) { return u.plan === 'free'; }).length;
     var nPro        = users.filter(function(u) { return u.plan === 'pro'; }).length;
     var nEnterprise = users.filter(function(u) { return u.plan === 'enterprise'; }).length;
+    var analyses24h = users.reduce(function(s, u) { return s + (u.n_analyses_24h || 0); }, 0);
 
     setText('stat-total',      total);
     setText('stat-active',     activeWeek);
     setText('stat-free',       nFree);
     setText('stat-pro',        nPro);
     setText('stat-enterprise', nEnterprise);
+    setText('stat-analyses',   analyses24h);
 }
 
 /* ── Tabla de usuarios ───────────────────────────────────────────────────── */
@@ -118,7 +120,10 @@ function renderTable(users) {
             '<td>' + statusBadge + '</td>' +
             '<td class="adm-date">' + lastLogin + '</td>' +
             '<td class="adm-num">' + (u.n_workspaces || 0) + '</td>' +
-            '<td class="adm-num">' + (u.n_analyses || 0) + '</td>' +
+            '<td class="adm-num" title="Análisis: 24h · 7 días · total">' +
+                '<b style="' + ((u.n_analyses_24h||0)>=10?'color:#e05252;font-weight:700;':((u.n_analyses_24h||0)>=7?'color:#e0952f;font-weight:700;':'')) + '">' + (u.n_analyses_24h||0) + '</b>' +
+                ' · ' + (u.n_analyses_7d||0) + ' · <span style="opacity:.55;">' + (u.n_analyses||0) + '</span>' +
+            '</td>' +
             '<td>' +
                 '<div class="adm-actions">' +
                     planSelect +
