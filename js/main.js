@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // La pantalla de carga transiciona sola tras 5s (o con el botón "Entrar").
     // El progress bar es OPCIONAL — si no existe, igual se entra al sitio.
     if (loadingScreen && mainSite) {
-        autoAdvanceTimer = setTimeout(transitionToMainSite, 5000);
+        autoAdvanceTimer = setTimeout(transitionToMainSite, 3000);
         if (progressBar) startProgressBar();
         if (enterBtn) enterBtn.addEventListener('click', transitionToMainSite);
     }
@@ -304,38 +304,41 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        const btnText = submitBtn.querySelector('.btn-text');
-        const btnLoading = submitBtn.querySelector('.btn-loading');
-        btnText.style.display = 'none';
-        btnLoading.style.display = 'flex';
-        submitBtn.disabled = true;
+        // Recolectamos los datos ANTES de ocultar el formulario.
+        var _v = function (sel) { var el = form.querySelector(sel); return el ? el.value : ''; };
+        const payload = {
+            nombre:  _v('#contact-name'),
+            email:   _v('#contact-email'),
+            asunto:  _v('#contact-subject'),
+            mensaje: _v('#contact-message'),
+            website: _v('#contact-website')   // honeypot anti-spam
+        };
+
+        // UX optimista: la solicitud ya salió, así que mostramos el éxito al
+        // instante y dejamos que el envío termine en segundo plano (Render
+        // puede tardar ~1 min por cold-start, pero el usuario no debe esperar).
+        form.style.display = 'none';
+        successDiv.style.display = 'block';
+        successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         try {
-            var _v = function (sel) { var el = form.querySelector(sel); return el ? el.value : ''; };
-            const payload = {
-                nombre:  _v('#contact-name'),
-                email:   _v('#contact-email'),
-                asunto:  _v('#contact-subject'),
-                mensaje: _v('#contact-message'),
-                website: _v('#contact-website')   // honeypot anti-spam
-            };
             const response = await fetch('https://evergreen-backend-awv1.onrender.com/api/contacto', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-
-            if (response.ok) {
-                form.style.display = 'none';
-                successDiv.style.display = 'block';
-            } else {
-                throw new Error('Error en el envío');
-            }
+            if (!response.ok) throw new Error('HTTP ' + response.status);
         } catch (err) {
-            btnText.style.display = 'flex';
-            btnLoading.style.display = 'none';
-            submitBtn.disabled = false;
-            alert('Hubo un problema al enviar. Por favor intenta nuevamente o escríbenos a contacto@evergreenchile.cl');
+            // Si el envío falló de verdad, avisamos con honestidad y ofrecemos
+            // el correo directo — sin dejar al usuario con un falso "enviado".
+            successDiv.innerHTML =
+                '<div class="success-icon" style="text-align:center;margin-bottom:10px;">' +
+                    '<i class="fas fa-exclamation-triangle" style="font-size:2rem;color:#e0952f;"></i>' +
+                '</div>' +
+                '<h3 style="text-align:center;font-family:var(--serif);">No pudimos enviar tu mensaje</h3>' +
+                '<p style="text-align:center;">Por favor escríbenos directamente a ' +
+                    '<a href="mailto:contacto@evergreenchile.cl" style="color:var(--accent);text-decoration:underline;">contacto@evergreenchile.cl</a> ' +
+                    'y te responderemos a la brevedad.</p>';
         }
     });
 });
