@@ -42,15 +42,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1000);
     }
 
-    // Auto-advance after 5 seconds
-    autoAdvanceTimer = setTimeout(transitionToMainSite, 5000);
-
-    // Start progress bar
-    startProgressBar();
-
-    // Manual button click
-    if (enterBtn) {
-        enterBtn.addEventListener('click', transitionToMainSite);
+    // Solo ejecutar la pantalla de carga si existe en esta página (el index actual no la tiene)
+    if (loadingScreen && progressBar && mainSite) {
+        autoAdvanceTimer = setTimeout(transitionToMainSite, 5000);
+        startProgressBar();
+        if (enterBtn) enterBtn.addEventListener('click', transitionToMainSite);
     }
 
     // ============================================
@@ -239,6 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener('DOMContentLoaded', function () {
     const serviceColumns = document.querySelectorAll('.service-column');
     const servicesSection = document.querySelector('.services-fullscreen-section');
+    if (!servicesSection) return;   // sección de un diseño viejo; no existe en el index actual
 
     // 1. Crear el overlay de fondo si no existe
     let bgOverlay = servicesSection.querySelector('.services-bg-overlay');
