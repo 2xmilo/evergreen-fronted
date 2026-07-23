@@ -42,10 +42,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1000);
     }
 
-    // Solo ejecutar la pantalla de carga si existe en esta página (el index actual no la tiene)
-    if (loadingScreen && progressBar && mainSite) {
+    // La pantalla de carga transiciona sola tras 5s (o con el botón "Entrar").
+    // El progress bar es OPCIONAL — si no existe, igual se entra al sitio.
+    if (loadingScreen && mainSite) {
         autoAdvanceTimer = setTimeout(transitionToMainSite, 5000);
-        startProgressBar();
+        if (progressBar) startProgressBar();
         if (enterBtn) enterBtn.addEventListener('click', transitionToMainSite);
     }
 
