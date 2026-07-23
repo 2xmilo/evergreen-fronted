@@ -42,12 +42,46 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1000);
     }
 
-    // La pantalla de carga transiciona sola tras 5s (o con el botón "Entrar").
+    // Salta la pantalla de carga de inmediato (sin animación) y muestra el sitio.
+    // Se usa cuando se llega a una sección concreta (#contacto...) o cuando el
+    // usuario ya vio el intro en esta sesión.
+    function skipLoader() {
+        clearTimeout(autoAdvanceTimer);
+        loadingScreen.style.display = 'none';
+        loadingScreen.classList.remove('active');
+        mainSite.classList.add('active');
+
+        // Si venimos con un ancla, desplazamos directo a esa sección
+        // (el salto nativo del navegador falla porque #main-site estaba oculto).
+        var hash = window.location.hash;
+        if (hash && hash.length > 1) {
+            var target = document.querySelector(hash);
+            if (target) {
+                setTimeout(function () {
+                    target.scrollIntoView({ behavior: 'auto', block: 'start' });
+                }, 60);
+            }
+        }
+    }
+
+    // La pantalla de carga transiciona sola tras 3s (o con el botón "Entrar").
     // El progress bar es OPCIONAL — si no existe, igual se entra al sitio.
     if (loadingScreen && mainSite) {
-        autoAdvanceTimer = setTimeout(transitionToMainSite, 3000);
-        if (progressBar) startProgressBar();
-        if (enterBtn) enterBtn.addEventListener('click', transitionToMainSite);
+        var _hasHash    = window.location.hash && window.location.hash.length > 1;
+        var _seenLoader = false;
+        try { _seenLoader = sessionStorage.getItem('eg_loader_seen') === '1'; } catch (e) {}
+
+        if (_hasHash || _seenLoader) {
+            // Deep-link a una sección (#contacto...) o el intro ya se vio en esta
+            // sesión → no repetimos el loading, vamos directo al contenido.
+            skipLoader();
+        } else {
+            // Primera visita "limpia" a la home → mostramos el intro completo.
+            autoAdvanceTimer = setTimeout(transitionToMainSite, 3000);
+            if (progressBar) startProgressBar();
+            if (enterBtn) enterBtn.addEventListener('click', transitionToMainSite);
+        }
+        try { sessionStorage.setItem('eg_loader_seen', '1'); } catch (e) {}
     }
 
     // ============================================

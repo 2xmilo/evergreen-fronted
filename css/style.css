@@ -1204,6 +1204,42 @@ h2.title em {
     color: var(--white);
 }
 
+/* Card de acción (acceso a Monitor Pro) dentro del bloque de contacto */
+.ci--action {
+    text-decoration: none;
+    align-items: center;
+    border-color: rgba(200, 168, 130, 0.35);
+    background: linear-gradient(135deg, rgba(200, 168, 130, 0.12), rgba(200, 168, 130, 0.04));
+    transition: border-color .25s ease, transform .25s ease, background .25s ease;
+}
+
+.ci--action:hover {
+    border-color: rgba(200, 168, 130, 0.7);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, rgba(200, 168, 130, 0.18), rgba(200, 168, 130, 0.06));
+}
+
+.ci--action .ci-icon {
+    background: rgba(200, 168, 130, 0.18);
+    color: var(--accent);
+}
+
+.ci--action .ci-lbl {
+    color: var(--accent);
+}
+
+.ci-arrow {
+    width: 16px;
+    height: 16px;
+    margin-left: auto;
+    color: var(--accent);
+    transition: transform .25s ease;
+}
+
+.ci--action:hover .ci-arrow {
+    transform: translateX(4px);
+}
+
 /* Form glass panel */
 .contact-form {
     background: rgba(14, 26, 14, 0.50);

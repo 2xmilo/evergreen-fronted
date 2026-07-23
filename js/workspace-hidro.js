@@ -586,6 +586,47 @@
         return false;
     }
 
+    /* ── Persistir streams como capa complementaria en Supabase ──────────────
+       La cuenca (polígono) se usa como zona de estudio; los streams NO forman
+       parte de la zona, pero se guardan ligados al MISMO workspace en la tabla
+       `results` con tipo_indice='hidromorfologia_streams'. Así:
+         · quedan complementarios (FK ON DELETE CASCADE: al borrar la zona se
+           borran los streams);
+         · se pueden cargar por separado más tarde en el Comparador.
+       No se meten en WorkspaceState.resultados para no ensuciar el mini-panel
+       (ver filtro en auth.js/loadCloudWorkspace y workspace-core/renderMonitorPanel). */
+    function _guardarStreamsCloud(zoneName) {
+        if (!_lastResult) return;
+        var fc = _lastResult.streams;
+        if (!fc || !fc.features || !fc.features.length) return;          // sin streams → nada que guardar
+        if (!window._sbUserId || typeof saveResultsToCloud !== 'function') return;
+
+        var payload = {
+            name:            'streams ' + (zoneName || 'Cuenca'),
+            ts:              Date.now(),
+            streams:         fc,
+            cauce_principal: _lastResult.cauce_principal || null,
+            threshold:       _getStreamThreshold(),
+            resolucion_m:    _lastResult.resolucion_m || 30
+        };
+
+        // El workspace puede estar recién insertándose (zonaId se asigna async).
+        // Reintentar hasta que exista zonaId. El delay inicial deja asentar el
+        // INSERT/UPDATE del workspace y, en el flujo "reemplazar", el borrado
+        // previo de results (para que el DELETE no se lleve estos streams).
+        // OJO: la tabla `results` tiene CHECK (jsonb_typeof(result_data)='array'),
+        // así que se guarda envuelto en un array de un elemento.
+        var tries = 0;
+        function attempt() {
+            if (WorkspaceState && WorkspaceState.zonaId) {
+                try { saveResultsToCloud(window._sbUserId, 'hidromorfologia_streams', [payload]); } catch (e) {}
+            } else if (tries++ < 25) {
+                setTimeout(attempt, 300);
+            }
+        }
+        setTimeout(attempt, 700);
+    }
+
     window.hidroUsarComoZona = function () {
         if (!_lastResult || !_lastResult.cuenca) return;
         if (_lastResult.excede_limite) {
@@ -615,6 +656,7 @@
                 if (typeof agregarPoligonoDesdeWorkspace === 'function') agregarPoligonoDesdeWorkspace(feature, nombre, ha);
                 if (typeof updateZoneUI === 'function') updateZoneUI();
                 if (typeof saveWorkspaceState === 'function') saveWorkspaceState();
+                _guardarStreamsCloud(nombre);   // guarda los streams como capa complementaria (para el Comparador)
                 if (typeof enviarZonaABiodiversidad === 'function') enviarZonaABiodiversidad();
                 _toast('✅ Cuenca establecida como zona de estudio.');
                 if (typeof switchWorkspaceTab === 'function') switchWorkspaceTab('resumen');

@@ -325,6 +325,8 @@ function renderMonitorPanel() {
 
     var resultados = WorkspaceState.resultados || {};
     var keys = Object.keys(resultados).filter(function(k) {
+        // La capa de streams no es un indicador del dashboard (es complementaria a la cuenca).
+        if (k.indexOf('hidromorfologia_') === 0) return false;
         return Array.isArray(resultados[k]) && resultados[k].length > 0;
     });
 

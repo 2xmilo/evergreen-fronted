@@ -185,6 +185,9 @@ async function loadCloudWorkspace(userId) {
             if (res.length > 0) {
                 if (!WorkspaceState.resultados) WorkspaceState.resultados = {};
                 res.forEach(function(row) {
+                    // La capa de streams (Hidromorfología) es complementaria y solo
+                    // se consume en el Comparador; no es un indicador del dashboard.
+                    if (row.tipo_indice === 'hidromorfologia_streams') return;
                     WorkspaceState.resultados[row.tipo_indice] = row.result_data;
                 });
                 changed = true;
