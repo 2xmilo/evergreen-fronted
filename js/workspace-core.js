@@ -171,6 +171,9 @@ function loadWorkspaceState() {
             if (typeof restoreVegSerieUI === 'function') {
                 try { restoreVegSerieUI(); } catch(e) {}
             }
+            if (typeof restoreDnbrUI === 'function') {
+                try { restoreDnbrUI(); } catch(e) {}
+            }
         } catch (e) {
             console.error("Error restaurando workspace", e);
         }
@@ -242,14 +245,20 @@ var _indicadorLayer  = null;
 
 /**
  * Guarda un resultado de análisis y actualiza el dashboard.
- * @param {string} tipo - 'vegetacion' | 'agua' | 'dem'
+ * @param {string} tipo - 'vegetacion' | 'agua' | 'dem' | 'dnbr' | 'biodiversidad'
  * @param {string} indice - Nombre del índice (NDVI, NDWI, etc.)
  * @param {object} stats - Objeto con mean, min, max, etc.
  * @param {string} tilesUrl - URL del tile layer
  * @param {string|null} fechaInicio - Fecha inicio del rango
  * @param {string|null} fechaFin - Fecha fin del rango
+ * @param {object} [figuras] - Series/distribuciones necesarias para REDIBUJAR
+ *        los gráficos del análisis (ej. { clases:[...], porReino:[...] }).
+ *        Se persisten como datos, no como imagen: es lo único que permite
+ *        superponer dos zonas en el comparador, mantener los tooltips y
+ *        re-renderizar nítido a cualquier tamaño. Las imágenes se reservan
+ *        para los previews de ráster GEE, cuyos tiles expiran a las ~24h.
  */
-function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin) {
+function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin, figuras) {
     var key = tipo + '_' + indice;
     var ts  = Date.now();
 
@@ -263,11 +272,13 @@ function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin) {
     }
     if (!WorkspaceState.resultados[key]) WorkspaceState.resultados[key] = [];
 
-    WorkspaceState.resultados[key].push({
+    var entrada = {
         tipo: tipo, indice: indice, stats: stats,
         tilesUrl: tilesUrl || null,   // guardada para reutilizar sin recalcular en GEE
         fechaInicio: fechaInicio, fechaFin: fechaFin, ts: ts
-    });
+    };
+    if (figuras) entrada.figuras = figuras;
+    WorkspaceState.resultados[key].push(entrada);
 
     // Máximo 12 mediciones por índice — eliminar la más antigua
     var arr = WorkspaceState.resultados[key];

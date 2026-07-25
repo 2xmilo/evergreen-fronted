@@ -257,13 +257,21 @@ function requestDnbr() {
 
         renderDnbr(data);
 
-        // Persistir como medición del dashboard (dNBR es un resultado con capa)
+        // Persistir como medición del dashboard (dNBR es un resultado con capa).
+        // `figuras.clases` guarda la composición completa por severidad: es lo
+        // que permite redibujar el gráfico aquí tras recargar y compararlo
+        // contra otra zona en el Comparador.
         if (typeof saveResultado === 'function') {
             var ts = saveResultado('dnbr', 'Severidad',
                 { mean: data.dnbr_mean, min: 0, max: data.dnbr_max,
                   afectado_ha: data.afectado_ha, severa_ha: data.severa_ha,
+                  aoi_ha: data.aoi_ha, coverage_pct: data.coverage_pct,
+                  n_pre: data.n_pre, n_post: data.n_post,
                   n_imagenes: (data.n_pre + data.n_post) },
-                data.tiles, preIni, postFin);
+                data.tiles, preIni, postFin,
+                { clases: data.clases,
+                  periodos: { pre_inicio: preIni, pre_fin: preFin,
+                              post_inicio: postIni, post_fin: postFin } });
             if (typeof uploadAnalysisPreviewFromPayload === 'function') {
                 uploadAnalysisPreviewFromPayload('dnbr_Severidad', ts, data);
             }
@@ -376,6 +384,33 @@ function renderDnbr(d) {
 
     var res = document.getElementById('dnbr-resultados');
     if (res) res.style.display = 'block';
+}
+
+/**
+ * Reconstruye el panel dNBR desde la medición guardada (localStorage o
+ * Supabase). Solo necesita `figuras.clases` — el ráster puede haber
+ * expirado, pero el análisis sigue siendo legible.
+ */
+function restoreDnbrUI() {
+    var arr = (WorkspaceState.resultados || {})['dnbr_Severidad'];
+    if (!arr || !arr.length) return;
+    var e = arr[arr.length - 1];
+    if (!e || !e.figuras || !e.figuras.clases) return;
+
+    var s = e.stats || {};
+    var p = e.figuras.periodos || {};
+    renderDnbr({
+        clases: e.figuras.clases,
+        n_pre: s.n_pre, n_post: s.n_post,
+        coverage_pct: s.coverage_pct,
+        afectado_ha: s.afectado_ha, severa_ha: s.severa_ha,
+        dnbr_mean: s.mean, dnbr_max: s.max, aoi_ha: s.aoi_ha
+    });
+
+    // Reflejar los rangos usados en el formulario
+    var set = function(id, v) { var el = document.getElementById(id); if (el && v) el.value = v; };
+    set('dnbr-pre-inicio', p.pre_inicio);   set('dnbr-pre-fin',  p.pre_fin);
+    set('dnbr-post-inicio', p.post_inicio); set('dnbr-post-fin', p.post_fin);
 }
 
 // ---------------------------------------------------------

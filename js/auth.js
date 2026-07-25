@@ -223,6 +223,9 @@ async function loadCloudWorkspace(userId) {
             if (typeof restoreVegSerieUI === 'function') {
                 try { restoreVegSerieUI(); } catch(e) {}
             }
+            if (typeof restoreDnbrUI === 'function') {
+                try { restoreDnbrUI(); } catch(e) {}
+            }
         }
 
         // Renderizar selector de zonas (siempre, incluso sin zona)

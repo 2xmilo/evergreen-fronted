@@ -211,14 +211,30 @@ window.addEventListener('message', function(event) {
         if (evidenceBtn) evidenceBtn.disabled = false;
     }
 
-    // Guardar en dashboard Resumen
+    // Guardar en dashboard Resumen.
+    // `figuras` lleva las distribuciones que alimentan los 4 gráficos del tab
+    // (donut por reino, gap regional RCE, cobertura por década y RCE vs IUCN):
+    // sin ellas los gráficos se pierden al recargar y no hay nada que comparar
+    // entre zonas. `final_list` NO se persiste — puede tener cientos de filas
+    // y no alimenta ninguna figura.
     saveResultado('biodiversidad', 'Biodiversidad', {
         n_especies: d.n_especies, n_rce: d.n_rce,
         n_cr: d.n_cr, n_en: d.n_en, n_vu: d.n_vu,
         mean: d.n_especies,
         piso: d.piso, snaspe_int: d.snaspe_int,
+        snaspe_dist: d.snaspe_dist,
+        int_19300: d.int_19300, int_erb: d.int_erb, int_humedal: d.int_humedal,
+        chao1: d.chao1, completitud: d.completitud,
+        pct_rce: d.pct_rce, pct_amenazadas: d.pct_amenazadas,
+        marginales: d.marginales,
         top_amenazadas: d.top_amenazadas
-    }, null, null, null);
+    }, null, null, null, {
+        kingdom_counts: d.kingdom_counts || null,
+        regional_data:  d.regional_data  || null,
+        region_name:    d.region_name    || null,
+        decada_data:    d.decada_data    || null,
+        rce_iucn_data:  d.rce_iucn_data  || null
+    });
 
     if (typeof mostrarNotificacion === 'function') {
         mostrarNotificacion('🌿 Análisis GBIF completo: ' + d.n_especies + ' especies.');

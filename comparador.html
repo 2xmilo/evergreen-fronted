@@ -26,13 +26,61 @@
   --serif: 'Playfair Display', Georgia, serif;
   --sans: 'DM Sans', system-ui, sans-serif;
   --mono: 'DM Mono', monospace;
+
+  /* ── Material / vibrancy (lenguaje iOS-macOS) ──
+     Superficies translúcidas que dejan pasar el fondo desenfocado,
+     hairlines de 0.5px y sombras suaves en vez de bordes duros. */
+  --mat-1: rgba(242,245,239,0.055);   /* card base            */
+  --mat-2: rgba(242,245,239,0.085);   /* card elevada / hover */
+  --mat-chrome: rgba(10,20,9,0.72);   /* topbar / sidebar     */
+  --hairline: rgba(255,255,255,0.09);
+  --hairline-soft: rgba(255,255,255,0.055);
+  --blur: saturate(180%) blur(28px);
+  --blur-sm: saturate(160%) blur(14px);
+  --shadow-1: 0 1px 2px rgba(0,0,0,.28), 0 4px 16px rgba(0,0,0,.24);
+  --shadow-2: 0 2px 6px rgba(0,0,0,.32), 0 16px 44px rgba(0,0,0,.40);
+  /* Escala de radios: contenedor > interior > control */
+  --r-lg: 18px; --r-md: 14px; --r-sm: 10px; --r-xs: 8px;
+  --ease: cubic-bezier(.32,.72,0,1);   /* curva tipo spring de iOS */
 }
 html, body { height: 100%; }
-body { background: var(--bg); color: var(--white); font-family: var(--sans); font-weight: 300; overflow: hidden; }
+body {
+  color: var(--white); font-family: var(--sans); font-weight: 300; overflow: hidden;
+  /* Fondo en capas: da profundidad para que el blur de las superficies
+     tenga algo que muestrear (si es plano, la vibrancy no se percibe). */
+  background:
+    radial-gradient(1100px 620px at 12% -8%,  rgba(106,170,53,0.13), transparent 60%),
+    radial-gradient(900px 520px at 88% 4%,   rgba(200,168,130,0.10), transparent 62%),
+    radial-gradient(1000px 700px at 50% 108%, rgba(106,170,53,0.07), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
 #root { height: 100vh; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.26); background-clip: content-box; }
+
+/* ── Segmented control (iOS) ──
+   Contenedor pill translúcido + chip deslizante para la opción activa. */
+.cz-seg {
+  display: inline-flex; position: relative; padding: 2px; gap: 2px;
+  background: rgba(255,255,255,0.07); border: 0.5px solid var(--hairline-soft);
+  border-radius: 999px;
+}
+.cz-seg-btn {
+  position: relative; z-index: 1; padding: 5px 13px; border-radius: 999px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--w55); transition: color .22s var(--ease); white-space: nowrap;
+}
+.cz-seg-btn:hover { color: var(--w90); }
+.cz-seg-btn.active { color: var(--bg); font-weight: 500; }
+.cz-seg-chip {
+  position: absolute; top: 2px; bottom: 2px; z-index: 0; border-radius: 999px;
+  background: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  transition: left .32s var(--ease), width .32s var(--ease);
+}
 
 .cz-root { display: flex; flex-direction: column; height: 100vh; }
 
@@ -40,7 +88,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-topbar {
   height: 56px; flex-shrink: 0; display: flex; align-items: center;
   justify-content: space-between; padding: 0 20px;
-  background: var(--bg2); border-bottom: 1px solid var(--border);
+  background: var(--mat-chrome);
+  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  border-bottom: 0.5px solid var(--hairline);
+  position: relative; z-index: 60;
 }
 .cz-back { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--w55); transition: color .2s; }
 .cz-back:hover { color: var(--white); }
@@ -92,8 +143,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* ── SIDEBAR ── */
 .cz-sidebar {
-  width: 234px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; gap: 14px; padding: 18px 16px; overflow-y: auto;
+  width: 244px; flex-shrink: 0;
+  background: var(--mat-chrome);
+  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  border-right: 0.5px solid var(--hairline);
+  display: flex; flex-direction: column; gap: 16px; padding: 18px 14px; overflow-y: auto;
 }
 .cz-side-group { display: flex; flex-direction: column; gap: 5px; }
 .cz-side-label { font-family: var(--mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--w40); }
@@ -103,8 +157,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-zsel { position: relative; width: 100%; }
 .cz-zsel-btn {
   width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
-  background: var(--card); border: 1px solid var(--border); border-left-width: 3px; border-radius: 8px;
-  padding: 7px 9px; transition: border-color .2s, background .2s; cursor: pointer;
+  background: var(--mat-1); border: 0.5px solid var(--hairline); border-left-width: 3px;
+  border-radius: var(--r-sm); box-shadow: var(--shadow-1);
+  padding: 8px 10px; transition: border-color .2s var(--ease), background .2s var(--ease); cursor: pointer;
 }
 .cz-zsel--a .cz-zsel-btn { border-left-color: var(--za); }
 .cz-zsel--b .cz-zsel-btn { border-left-color: var(--zb); }
@@ -116,8 +171,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-zsel-btn.open .cz-zsel-caret { transform: rotate(180deg); }
 .cz-zsel-menu {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 1200;
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  padding: 6px; box-shadow: 0 18px 44px rgba(0,0,0,0.55); max-height: 280px; overflow-y: auto;
+  background: rgba(15,28,14,0.82);
+  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  border: 0.5px solid var(--hairline); border-radius: var(--r-md);
+  padding: 6px; box-shadow: var(--shadow-2); max-height: 280px; overflow-y: auto;
 }
 .cz-zsel-item {
   width: 100%; display: flex; flex-direction: column; gap: 2px; text-align: left;
@@ -137,27 +194,32 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-zchip--b { color: var(--zb); border-color: color-mix(in srgb, var(--zb) 50%, transparent); background: color-mix(in srgb, var(--zb) 12%, transparent); }
 
 /* module rail */
-.cz-modrail { display: flex; flex-direction: column; gap: 3px; }
+/* Rail de módulos — filas tipo sidebar de macOS (Finder/Mail):
+   sin radio button, selección como píldora rellena. */
+.cz-modrail { display: flex; flex-direction: column; gap: 1px; }
 .cz-modtab {
-  display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
-  padding: 9px 11px; border-radius: 9px; color: var(--w55); font-size: 13px; font-weight: 400;
-  border: 1px solid transparent; transition: background .16s, color .16s, border-color .16s;
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: var(--r-xs); color: var(--w70); font-size: 13px; font-weight: 400;
+  transition: background .2s var(--ease), color .2s var(--ease);
 }
-.cz-modtab-radio { width: 13px; height: 13px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid var(--w25); transition: all .16s; position: relative; }
-.cz-modtab i { font-size: 12.5px; width: 16px; text-align: center; color: var(--w40); transition: color .16s; }
-.cz-modtab:hover { background: rgba(255,255,255,0.03); color: var(--white); }
+.cz-modtab-radio { display: none; }
+.cz-modtab i { font-size: 12px; width: 20px; text-align: center; color: var(--w40); transition: color .2s var(--ease); }
+.cz-modtab:hover { background: rgba(255,255,255,0.055); color: var(--white); }
 .cz-modtab:hover i { color: var(--w70); }
-.cz-modtab.active { background: rgba(200,168,130,0.10); color: var(--white); border-color: rgba(200,168,130,0.26); }
-.cz-modtab.active i { color: var(--accent); }
-.cz-modtab.active .cz-modtab-radio { border-color: var(--accent); }
-.cz-modtab.active .cz-modtab-radio::after { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: var(--accent); }
+.cz-modtab.active {
+  background: linear-gradient(180deg, rgba(200,168,130,0.30), rgba(200,168,130,0.20));
+  color: #fff; font-weight: 500;
+  box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.18), 0 1px 3px rgba(0,0,0,.25);
+}
+.cz-modtab.active i { color: #fff; }
 .cz-tab-dot { margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: .7; }
+.cz-modtab.active .cz-tab-dot { background: rgba(255,255,255,.75); }
 
 /* ── CANVAS ── */
 .cz-canvas {
   flex: 1; min-width: 0; min-height: 0;
-  display: flex; flex-direction: column; gap: 14px;
-  padding: 16px 18px; overflow-y: auto; background: var(--bg);
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 18px 20px 22px; overflow-y: auto; background: transparent;
 }
 
 /* KPI row */
@@ -170,8 +232,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   gap: 12px;
 }
 .cz-tech-sheet, .cz-shape-mini {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px 12px 8px;
+  background: var(--mat-1); border: 0.5px solid var(--hairline);
+  -webkit-backdrop-filter: var(--blur-sm); backdrop-filter: var(--blur-sm);
+  box-shadow: var(--shadow-1);
+  border-radius: var(--r-md); padding: 12px 14px 10px;
   display: flex; flex-direction: column; min-height: 0;
 }
 .cz-tech-sheet .cz-table-head,
@@ -196,7 +260,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .cz-overview { grid-template-columns: 1fr; }
   .cz-shape-mini-canvas { min-height: 180px; }
 }
-.cz-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 15px 17px; display: flex; flex-direction: column; gap: 11px; }
+.cz-kpi {
+  background: var(--mat-1); border: 0.5px solid var(--hairline);
+  -webkit-backdrop-filter: var(--blur-sm); backdrop-filter: var(--blur-sm);
+  box-shadow: var(--shadow-1);
+  border-radius: var(--r-md); padding: 15px 17px; display: flex; flex-direction: column; gap: 11px;
+}
 .cz-kpi-head { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--w55); display: flex; align-items: center; gap: 8px; }
 .cz-kpi-head i { color: var(--accent); font-size: 12px; }
 .cz-kpi-flow { display: flex; align-items: baseline; gap: 10px; }
@@ -215,8 +284,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* map tiles */
 .cz-tiles { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 42vh; min-height: 260px; }
-.cz-tile { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-.cz-tile-head { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; }
+.cz-tile {
+  display: flex; flex-direction: column;
+  background: var(--mat-1); border: 0.5px solid var(--hairline);
+  -webkit-backdrop-filter: var(--blur-sm); backdrop-filter: var(--blur-sm);
+  box-shadow: var(--shadow-2);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.cz-tile-head { display: flex; align-items: center; gap: 9px; padding: 11px 15px; border-bottom: 0.5px solid var(--hairline); border-left: 3px solid transparent; }
 .cz-tile-head--a { border-left-color: var(--za); }
 .cz-tile-head--b { border-left-color: var(--zb); }
 .cz-tile-name { font-family: var(--serif); font-size: 14px; font-weight: 500; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -240,7 +315,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-legend-scale { display: flex; justify-content: space-between; margin-top: 5px; font-family: var(--mono); font-size: 9px; color: var(--w40); }
 
 /* detail */
-.cz-detail { flex: 0 0 auto; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px 16px; }
+.cz-detail {
+  flex: 0 0 auto;
+  background: var(--mat-1); border: 0.5px solid var(--hairline);
+  -webkit-backdrop-filter: var(--blur-sm); backdrop-filter: var(--blur-sm);
+  box-shadow: var(--shadow-1);
+  border-radius: var(--r-lg); padding: 16px 18px 18px;
+}
 .cz-detail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .cz-detail-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
 .cz-detail-note { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; color: var(--w40); text-transform: uppercase; }
@@ -623,6 +704,109 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-bio-reanalyze:hover { background: rgba(200,168,130,0.16); }
 .cz-bio-reanalyze i { font-size: 11px; }
 
+/* ══ SERIES ESTACIONALES (Fase C) ══ */
+.cz-series { display: flex; flex-direction: column; gap: 14px; }
+
+/* Barra de control: selector de serie + métrica */
+.cz-series-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding-bottom: 12px; border-bottom: 0.5px solid var(--hairline-soft);
+}
+.cz-series-pick { position: relative; }
+.cz-series-pick-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--mat-1); border: 0.5px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 7px 12px; box-shadow: var(--shadow-1);
+  transition: background .2s var(--ease);
+}
+.cz-series-pick-btn:hover { background: var(--mat-2); }
+.cz-series-pick-label { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.cz-series-pick-title { font-size: 12.5px; color: var(--white); font-weight: 500; }
+.cz-series-pick-meta { font-family: var(--mono); font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--w40); }
+.cz-series-pick-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 1200; min-width: 300px;
+  background: rgba(15,28,14,0.85);
+  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  border: 0.5px solid var(--hairline); border-radius: var(--r-md);
+  padding: 6px; box-shadow: var(--shadow-2); max-height: 320px; overflow-y: auto;
+}
+.cz-series-opt {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 9px 11px; border-radius: var(--r-xs); transition: background .15s var(--ease);
+}
+.cz-series-opt:hover { background: rgba(255,255,255,0.055); }
+.cz-series-opt.sel { background: rgba(200,168,130,0.14); }
+.cz-series-opt-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cz-series-opt-name { font-size: 12.5px; color: var(--white); }
+.cz-series-opt-meta { font-family: var(--mono); font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--w40); }
+/* Puntos que indican en qué zonas existe la serie */
+.cz-series-dots { display: flex; gap: 4px; flex-shrink: 0; }
+.cz-series-dot { width: 7px; height: 7px; border-radius: 50%; border: 1px solid; }
+.cz-series-dot--a { border-color: var(--za); }
+.cz-series-dot--b { border-color: var(--zb); }
+.cz-series-dot.on--a { background: var(--za); }
+.cz-series-dot.on--b { background: var(--zb); }
+
+/* Gráfico */
+.cz-series-chart {
+  position: relative; height: 300px;
+  background: rgba(0,0,0,0.16); border: 0.5px solid var(--hairline-soft);
+  border-radius: var(--r-md); padding: 12px 14px 8px;
+}
+.cz-series-legend { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cz-series-leg { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--w70); }
+.cz-series-leg-line { width: 16px; height: 2.5px; border-radius: 2px; flex-shrink: 0; }
+
+/* Tarjetas de tendencia por zona (lista agrupada tipo Ajustes de iOS) */
+.cz-series-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cz-series-card {
+  background: var(--mat-1); border: 0.5px solid var(--hairline); border-left-width: 3px;
+  border-radius: var(--r-md); box-shadow: var(--shadow-1); overflow: hidden;
+}
+.cz-series-card.za { border-left-color: var(--za); }
+.cz-series-card.zb { border-left-color: var(--zb); }
+.cz-series-card-head {
+  display: flex; align-items: center; gap: 9px; padding: 11px 14px;
+  border-bottom: 0.5px solid var(--hairline-soft);
+}
+.cz-series-card-name { font-family: var(--serif); font-size: 14px; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cz-series-card-tag {
+  margin-left: auto; flex-shrink: 0; font-family: var(--mono); font-size: 8.5px;
+  letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px;
+  border: 0.5px solid var(--hairline); color: var(--w40);
+}
+.cz-series-card-tag.sig { color: var(--accent); border-color: rgba(200,168,130,.45); background: rgba(200,168,130,.10); }
+.cz-series-rows { display: flex; flex-direction: column; }
+.cz-series-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 9px 14px; border-bottom: 0.5px solid var(--hairline-soft);
+}
+.cz-series-row:last-child { border-bottom: none; }
+.cz-series-row-lbl { font-size: 11.5px; color: var(--w55); }
+.cz-series-row-val { font-family: var(--mono); font-size: 14px; color: var(--white); letter-spacing: -.01em; }
+.cz-series-row-val.pos { color: var(--data); }
+.cz-series-row-val.neg { color: var(--neg); }
+.cz-series-row-val.na  { color: var(--w40); font-size: 12px; }
+
+/* Aviso (umbral distinto, serie en una sola zona, etc.) */
+.cz-series-note {
+  display: flex; align-items: flex-start; gap: 9px;
+  background: rgba(217,164,65,0.09); border: 0.5px solid rgba(217,164,65,0.30);
+  border-radius: var(--r-sm); padding: 10px 13px; font-size: 11.5px; line-height: 1.5; color: rgba(242,238,220,0.86);
+}
+.cz-series-note i { color: #d9a441; font-size: 12px; margin-top: 1px; flex-shrink: 0; }
+
+/* Estado vacío */
+.cz-series-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 54px 24px; text-align: center; color: var(--w40);
+}
+.cz-series-empty i { font-size: 30px; opacity: .3; }
+.cz-series-empty-t { font-size: 13.5px; color: var(--w70); }
+.cz-series-empty-s { font-size: 11.5px; max-width: 400px; line-height: 1.6; }
+
+@media (max-width: 1100px) { .cz-series-cards { grid-template-columns: 1fr; } }
+
 /* Leaflet dark tweaks */
 .leaflet-container { background: var(--mapbg); font-family: var(--mono); }
 .leaflet-control-zoom a { background: rgba(4,14,4,0.88) !important; color: var(--w70) !important; border-color: var(--border) !important; }
@@ -658,6 +842,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     ndvi:  ['#6b4f2a','#a98f3e','#c9c24a','#7fae3a','#3d7a2e','#1c4d12'],
     ndwi:  ['#b9a06a','#d8c48f','#7fae9a','#3d9ec4','#2a6fad','#13315f'],
     bosque:['#2a2a24','#56583f','#7e8a4e','#4f8a34','#2f6b23','#16400f'],
+    // Escala Key & Benson: rebrote (verde) → sin quemar (gris) → severidad (rojo)
+    dnbr:  ['#1a9850','#a6d96a','#dddddd','#ffffbf','#fdae61','#f46d43','#a50026'],
     elev:  ['#1c4d12','#3d7a2e','#a98f3e','#b07a45','#8c6a52','#e7e3da'],
     clima: ['#2a6fad','#3d9ec4','#7fae6a','#c9c24a','#d98a3a','#c0392b'],
   };
@@ -684,11 +870,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
         {key:'max',  label:'Cota máxima', fmt:'int', unit:'m', better:'none'},
         {key:'min',  label:'Cota mínima', fmt:'int', unit:'m', better:'none'},
       ]},
-    { id:'bosque', label:'Bosque', icon:'fa-tree', type:'map',
-      prefix:'bosque_', index:'Cobertura', cmap:'bosque', legendMin:'0%', legendMax:'100%',
+    // Severidad de quema (dNBR). Reemplaza al antiguo módulo "Bosque", que
+    // apuntaba a un prefijo que nunca se persistió (Hansen vive solo en el
+    // Monitor) y por eso jamás mostró datos.
+    { id:'dnbr', label:'Severidad', icon:'fa-fire', type:'map',
+      prefix:'dnbr_', index:'dNBR', cmap:'dnbr', legendMin:'rebrote', legendMax:'alta',
       metrics:[
-        {key:'mean', label:'Cobertura prom', fmt:'dec', better:'high'},
-        {key:'max',  label:'Cobertura máx',  fmt:'dec', better:'high'},
+        {key:'afectado_ha', label:'Sup. afectada',  fmt:'dec', unit:'ha', better:'low'},
+        {key:'severa_ha',   label:'Severidad alta', fmt:'dec', unit:'ha', better:'low'},
+        {key:'mean',        label:'dNBR medio',     fmt:'dec', better:'low'},
       ]},
     { id:'biodiversidad', label:'Biodiversidad', icon:'fa-paw', type:'bio',
       prefix:'biodiversidad_',
@@ -700,6 +890,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
         {key:'n_vu',       label:'Vulnerables',           fmt:'int', better:'low'},
         {key:'n_rce',      label:'Catálogo RCE Chile',    fmt:'int', better:'high', accent:true},
       ]},
+    { id:'series', label:'Series', icon:'fa-chart-line', type:'series',
+      tableTitle:'Series estacionales · evolución interanual' },
     { id:'riesgos', label:'Riesgos', icon:'fa-triangle-exclamation', type:'arclim',
       tableTitle:'Riesgos climáticos proyectados · ARClim · MMA / CR2 · UC',
       indicadores:[
@@ -2118,6 +2310,443 @@ function ArclimSummaryTable({serieA,serieB,zoneA,zoneB,indicador}){
   );
 }
 
+/* ══ SERIES ESTACIONALES — comparación interanual A vs B (Fase C) ══
+   Las series se guardan en results con tipo_indice 'agua_serie_<IDX>_<EST>'
+   o 'vegetacion_serie_<IDX>_<EST>'. Como la clave incluye índice y estación,
+   emparejar por clave exacta garantiza que A y B sean comparables. */
+
+const SERIE_ESTACION={DJF:'Verano',MAM:'Otoño',JJA:'Invierno',SON:'Primavera'};
+const SERIE_MESES={DJF:'dic–feb',MAM:'mar–may',JJA:'jun–ago',SON:'sep–nov'};
+
+/* Métricas disponibles según el tipo de serie. `get` extrae el valor de un período. */
+const SERIE_METRICAS={
+  agua:[
+    {id:'water_ha', label:'Superficie', unit:'ha', dec:1, get:p=>p.water_ha},
+    {id:'mean',     label:'Índice',     unit:'',   dec:3, get:p=>p.mean},
+  ],
+  vegetacion:[
+    {id:'mean',     label:'Índice',     unit:'',   dec:3, get:p=>p.mean},
+    {id:'clase_alta',label:'Clase alta',unit:'ha', dec:1, get:p=>{
+      if(!p.classes_ha) return null;
+      return p.classes_ha.c3!==undefined?p.classes_ha.c3:(p.classes_ha.densa!==undefined?p.classes_ha.densa:null);
+    }},
+  ],
+};
+
+function serieTipo(key){ return key.indexOf('vegetacion_')===0?'vegetacion':'agua'; }
+
+/** Etiqueta legible de una clave de serie: 'agua_serie_MNDWI_DJF' → {…} */
+function parseSerieKey(key){
+  const parts=key.split('_');            // [tipo,'serie',INDICE,ESTACION]
+  const tipo=serieTipo(key);
+  const estacion=parts[parts.length-1];
+  const indice=parts.slice(2,parts.length-1).join('_');
+  return {
+    tipo, indice, estacion,
+    label:(tipo==='agua'?'Agua':'Vegetación')+' · '+indice,
+    sub:(SERIE_ESTACION[estacion]||estacion)+' ('+(SERIE_MESES[estacion]||'')+')',
+  };
+}
+
+function SeriesCompare({zoneA,zoneB,dataA,dataB}){
+  const seriesA=(dataA&&dataA._series)||{};
+  const seriesB=(dataB&&dataB._series)||{};
+
+  // Unión de claves; primero las que existen en ambas zonas
+  const keys=useMemo(()=>{
+    const all=Array.from(new Set([...Object.keys(seriesA),...Object.keys(seriesB)]));
+    return all.sort((x,y)=>{
+      const bx=(seriesA[x]&&seriesB[x])?0:1, by=(seriesA[y]&&seriesB[y])?0:1;
+      return bx-by||x.localeCompare(y);
+    });
+  },[dataA,dataB]);
+
+  const[selKey,setSelKey]=useState(null);
+  const[metricId,setMetricId]=useState(null);
+  const[open,setOpen]=useState(false);
+  const pickRef=useRef(null);
+  const chartRef=useRef(null);
+  const canvasRef=useRef(null);
+  const chipRef=useRef(null);
+  const segRef=useRef(null);
+
+  // Selección por defecto: primera clave disponible (prioriza las compartidas)
+  useEffect(()=>{
+    if(keys.length&&(!selKey||keys.indexOf(selKey)<0)) setSelKey(keys[0]);
+    if(!keys.length&&selKey) setSelKey(null);
+  },[keys]);
+
+  useEffect(()=>{
+    const h=e=>{if(pickRef.current&&!pickRef.current.contains(e.target)) setOpen(false);};
+    document.addEventListener('mousedown',h);
+    return()=>document.removeEventListener('mousedown',h);
+  },[]);
+
+  const info=selKey?parseSerieKey(selKey):null;
+  const metricas=info?SERIE_METRICAS[info.tipo]:[];
+  const metric=useMemo(()=>{
+    if(!metricas.length) return null;
+    return metricas.find(m=>m.id===metricId)||metricas[0];
+  },[metricId,selKey]);
+
+  const docA=selKey?seriesA[selKey]:null;
+  const docB=selKey?seriesB[selKey]:null;
+
+  // Eje X = unión de años de ambas series (pueden cubrir rangos distintos)
+  const years=useMemo(()=>{
+    const s=new Set();
+    [docA,docB].forEach(d=>{if(d&&d.periods) d.periods.forEach(p=>s.add(p.year));});
+    return Array.from(s).sort((a,b)=>a-b);
+  },[docA,docB]);
+
+  const serieValores=useCallback((doc)=>{
+    if(!doc||!metric) return null;
+    const byYear={};
+    doc.periods.forEach(p=>{byYear[p.year]=p;});
+    return years.map(y=>{
+      const p=byYear[y];
+      if(!p) return null;
+      const v=metric.get(p);
+      return (v===undefined||v===null)?null:v;
+    });
+  },[years,metric]);
+
+  // Mover el chip del segmented control bajo el botón activo
+  useEffect(()=>{
+    if(!segRef.current||!chipRef.current||!metric) return;
+    const btn=segRef.current.querySelector('.cz-seg-btn.active');
+    if(!btn) return;
+    chipRef.current.style.left=btn.offsetLeft+'px';
+    chipRef.current.style.width=btn.offsetWidth+'px';
+  },[metric,selKey,keys.length]);
+
+  // Chart: una línea por zona sobre el mismo eje
+  useEffect(()=>{
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    if(!canvasRef.current||!metric||!years.length) return;
+    const vA=serieValores(docA), vB=serieValores(docB);
+    const ds=[];
+    const mk=(vals,color,label)=>({
+      label, data:vals, borderColor:color, backgroundColor:color,
+      borderWidth:2.5, tension:.28, spanGaps:true,
+      pointRadius:4, pointHoverRadius:6, pointBackgroundColor:color, pointBorderColor:'rgba(0,0,0,.4)', pointBorderWidth:1,
+    });
+    if(vA&&vA.some(v=>v!==null)) ds.push(mk(vA,'#C8A882',zoneA?.name||'Zona A'));
+    if(vB&&vB.some(v=>v!==null)) ds.push(mk(vB,'#6AAA35',zoneB?.name||'Zona B'));
+    if(!ds.length) return;
+
+    chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
+      type:'line',
+      data:{labels:years,datasets:ds},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:'rgba(8,16,8,0.94)',padding:11,cornerRadius:10,
+            titleFont:{family:"'DM Mono',monospace",size:11},
+            bodyFont:{family:"'DM Sans',sans-serif",size:12},
+            borderColor:'rgba(255,255,255,0.10)',borderWidth:1,
+            callbacks:{
+              title:items=>(info?SERIE_ESTACION[info.estacion]||info.estacion:'')+' '+items[0].label,
+              label:it=>{
+                if(it.parsed.y===null) return null;
+                return ' '+it.dataset.label+': '+it.parsed.y.toFixed(metric.dec)+(metric.unit?' '+metric.unit:'');
+              },
+            },
+          },
+        },
+        scales:{
+          x:{ticks:{color:'rgba(242,245,239,0.42)',font:{family:"'DM Mono',monospace",size:10}},grid:{color:'rgba(255,255,255,0.045)'}},
+          y:{ticks:{color:'rgba(242,245,239,0.42)',font:{family:"'DM Mono',monospace",size:10}},grid:{color:'rgba(255,255,255,0.045)'},
+             title:metric.unit?{display:true,text:metric.unit,color:'rgba(242,245,239,0.32)',font:{family:"'DM Mono',monospace",size:10}}:undefined},
+        },
+        animation:{duration:420},
+      },
+    });
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
+  },[docA,docB,metric,years,zoneA,zoneB]);
+
+  if(!keys.length){
+    return(
+      <div className="cz-series-empty">
+        <i className="fa-solid fa-chart-line"/>
+        <div className="cz-series-empty-t">Ninguna de las zonas tiene series estacionales</div>
+        <div className="cz-series-empty-s">
+          Genera una serie desde el Monitor, en la pestaña «Serie estacional» de los tabs
+          Agua o Vegetación. Al calcularla queda guardada en la zona y aparece aquí.
+        </div>
+      </div>
+    );
+  }
+
+  // Avisos: serie presente en una sola zona, o umbrales distintos (agua)
+  const avisos=[];
+  if(selKey&&(!docA||!docB)){
+    const falta=!docA?(zoneA?.name||'Zona A'):(zoneB?.name||'Zona B');
+    avisos.push('Esta serie solo existe en una de las zonas. Falta calcularla en «'+falta+'» para poder comparar.');
+  }
+  if(docA&&docB&&docA.threshold!==undefined&&docB.threshold!==undefined&&docA.threshold!==docB.threshold){
+    avisos.push('Las series se calcularon con umbrales distintos ('+docA.threshold+' vs '+docB.threshold+'). '+
+                'Las superficies no son comparables entre sí: vuelve a calcular una de las dos con el mismo umbral.');
+  }
+  if(docA&&docB&&docA.composite&&docB.composite&&docA.composite!==docB.composite){
+    avisos.push('Las series usan composiciones distintas ('+docA.composite+' vs '+docB.composite+').');
+  }
+
+  return(
+    <div className="cz-series">
+      {/* Barra de control */}
+      <div className="cz-series-bar">
+        <div className="cz-series-pick" ref={pickRef}>
+          <button className="cz-series-pick-btn" onClick={()=>setOpen(o=>!o)}>
+            <div className="cz-series-pick-label">
+              <span className="cz-series-pick-title">{info?info.label:'Selecciona una serie'}</span>
+              <span className="cz-series-pick-meta">{info?info.sub:''}</span>
+            </div>
+            <i className="fa-solid fa-chevron-down cz-zsel-caret" style={{transform:open?'rotate(180deg)':''}}/>
+          </button>
+          {open&&(
+            <div className="cz-series-pick-menu">
+              {keys.map(k=>{
+                const i2=parseSerieKey(k);
+                return(
+                  <button key={k} className={'cz-series-opt'+(k===selKey?' sel':'')}
+                          onClick={()=>{setSelKey(k);setMetricId(null);setOpen(false);}}>
+                    <div className="cz-series-opt-txt">
+                      <span className="cz-series-opt-name">{i2.label}</span>
+                      <span className="cz-series-opt-meta">{i2.sub}</span>
+                    </div>
+                    <div className="cz-series-dots" title="Zonas con esta serie">
+                      <span className={'cz-series-dot cz-series-dot--a'+(seriesA[k]?' on--a':'')}/>
+                      <span className={'cz-series-dot cz-series-dot--b'+(seriesB[k]?' on--b':'')}/>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {metricas.length>1&&(
+          <div className="cz-seg" ref={segRef}>
+            <span className="cz-seg-chip" ref={chipRef}/>
+            {metricas.map(m=>(
+              <button key={m.id}
+                      className={'cz-seg-btn'+(metric&&m.id===metric.id?' active':'')}
+                      onClick={()=>setMetricId(m.id)}>{m.label}</button>
+            ))}
+          </div>
+        )}
+
+        <div className="cz-series-legend" style={{marginLeft:'auto'}}>
+          {docA&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#C8A882'}}/>{zoneA?.name||'Zona A'}</span>}
+          {docB&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#6AAA35'}}/>{zoneB?.name||'Zona B'}</span>}
+        </div>
+      </div>
+
+      {avisos.map((a,i)=>(
+        <div key={i} className="cz-series-note"><i className="fa-solid fa-circle-info"/><span>{a}</span></div>
+      ))}
+
+      <div className="cz-series-chart"><canvas ref={canvasRef}/></div>
+
+      <div className="cz-series-cards">
+        <SerieCard side="a" zone={zoneA} doc={docA} metric={metric}/>
+        <SerieCard side="b" zone={zoneB} doc={docB} metric={metric}/>
+      </div>
+    </div>
+  );
+}
+
+/** Ficha de una zona: tendencia de Sen, delta del período y calidad del dato. */
+function SerieCard({side,zone,doc,metric}){
+  const cls=side==='a'?'za':'zb';
+  if(!doc||!metric){
+    return(
+      <div className={'cz-series-card '+cls}>
+        <div className="cz-series-card-head">
+          <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+          <span className="cz-series-card-name">{zone?.name||'Sin zona'}</span>
+        </div>
+        <div className="cz-series-rows">
+          <div className="cz-series-row"><span className="cz-series-row-lbl">Serie</span><span className="cz-series-row-val na">no calculada</span></div>
+        </div>
+      </div>
+    );
+  }
+
+  const vals=doc.periods.map(p=>metric.get(p)).filter(v=>v!==null&&v!==undefined);
+  const primero=vals.length?vals[0]:null;
+  const ultimo=vals.length?vals[vals.length-1]:null;
+  const delta=(primero!==null&&ultimo!==null&&vals.length>=2)?(ultimo-primero):null;
+  const u=metric.unit?' '+metric.unit:'';
+
+  // La tendencia del backend se calculó sobre la métrica principal de cada
+  // serie (superficie en agua, media en vegetación); solo aplica a esa.
+  const metricaPrincipal=(doc.tipo==='vegetacion'||doc.indice&&SERIE_METRICAS.vegetacion&&doc.composite==='p90')
+    ?'mean':'water_ha';
+  const trendAplica=doc.trend&&metric.id===metricaPrincipal;
+  const slope=doc.trend?(doc.trend.sen_slope!==undefined?doc.trend.sen_slope:doc.trend.sen_slope_ha):null;
+
+  const pocosDatos=doc.periods.filter(p=>p.reliable).length;
+  const total=doc.periods.length;
+
+  return(
+    <div className={'cz-series-card '+cls}>
+      <div className="cz-series-card-head">
+        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+        <span className="cz-series-card-name">{zone?.name||'Sin zona'}</span>
+        {trendAplica&&(
+          <span className={'cz-series-card-tag'+(doc.trend.significant?' sig':'')}>
+            {doc.trend.significant?'Significativa':'No significativa'}
+          </span>
+        )}
+      </div>
+      <div className="cz-series-rows">
+        <div className="cz-series-row">
+          <span className="cz-series-row-lbl">{metric.label} · último año</span>
+          <span className="cz-series-row-val">{ultimo!==null?ultimo.toFixed(metric.dec)+u:'—'}</span>
+        </div>
+        <div className="cz-series-row">
+          <span className="cz-series-row-lbl">Δ del período</span>
+          <span className={'cz-series-row-val'+(delta===null?'':(delta<0?' neg':(delta>0?' pos':'')))}>
+            {delta!==null?(delta>0?'+':'')+delta.toFixed(metric.dec)+u:'—'}
+          </span>
+        </div>
+        <div className="cz-series-row">
+          <span className="cz-series-row-lbl">Tendencia (Sen)</span>
+          {trendAplica
+            ?<span className={'cz-series-row-val'+(slope<0?' neg':(slope>0?' pos':''))}>
+               {(slope>0?'+':'')+slope.toFixed(metric.dec===3?4:2)+u+'/año'}
+             </span>
+            :<span className="cz-series-row-val na">{doc.trend?'—':'mín. 4 años'}</span>}
+        </div>
+        <div className="cz-series-row">
+          <span className="cz-series-row-lbl">Períodos confiables</span>
+          <span className={'cz-series-row-val'+(pocosDatos<total?' na':'')}>{pocosDatos} / {total}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══ SEVERIDAD dNBR — composición por clase, A vs B ══
+   Redibuja aquí el mismo gráfico del Monitor a partir de figuras.clases.
+   Barras agrupadas (no apiladas): lo que interesa es cuánta superficie
+   cayó en cada clase en una zona frente a la otra. */
+function DnbrCompare({zoneA,zoneB,dataA,dataB}){
+  // dataA/dataB son el objeto completo de la zona: las figuras del módulo
+  // viven bajo su id (dataA.dnbr), no en la raíz.
+  const figA=dataA&&dataA.dnbr&&dataA.dnbr.figuras;
+  const figB=dataB&&dataB.dnbr&&dataB.dnbr.figuras;
+  const clasesA=figA&&figA.clases;
+  const clasesB=figB&&figB.clases;
+  const canvasRef=useRef(null);
+  const chartRef=useRef(null);
+  const[modo,setModo]=useState('ha');   // 'ha' | 'pct'
+  const chipRef=useRef(null);
+  const segRef=useRef(null);
+
+  useEffect(()=>{
+    if(!segRef.current||!chipRef.current) return;
+    const b=segRef.current.querySelector('.cz-seg-btn.active');
+    if(b){chipRef.current.style.left=b.offsetLeft+'px';chipRef.current.style.width=b.offsetWidth+'px';}
+  },[modo,clasesA,clasesB]);
+
+  useEffect(()=>{
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    const base=clasesA||clasesB;
+    if(!canvasRef.current||!base) return;
+
+    const labels=base.map(c=>c.label);
+    const val=(cs,i)=>{
+      if(!cs||!cs[i]) return null;
+      return modo==='pct'?cs[i].pct:cs[i].ha;
+    };
+    const ds=[];
+    if(clasesA) ds.push({label:zoneA?.name||'Zona A',data:labels.map((_,i)=>val(clasesA,i)),
+      backgroundColor:'#C8A882',borderRadius:4,borderSkipped:false});
+    if(clasesB) ds.push({label:zoneB?.name||'Zona B',data:labels.map((_,i)=>val(clasesB,i)),
+      backgroundColor:'#6AAA35',borderRadius:4,borderSkipped:false});
+    if(!ds.length) return;
+
+    const unidad=modo==='pct'?'%':'ha';
+    chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
+      type:'bar',
+      data:{labels,datasets:ds},
+      options:{
+        indexAxis:'y',
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:'rgba(8,16,8,0.94)',padding:11,cornerRadius:10,
+            borderColor:'rgba(255,255,255,0.10)',borderWidth:1,
+            titleFont:{family:"'DM Mono',monospace",size:11},
+            bodyFont:{family:"'DM Sans',sans-serif",size:12},
+            callbacks:{
+              label:it=>it.parsed.x===null?null:
+                ' '+it.dataset.label+': '+it.parsed.x.toFixed(1)+' '+unidad,
+              afterBody:items=>{
+                if(!items.length) return null;
+                const i=items[0].dataIndex, c=base[i];
+                return ['','dNBR '+c.min.toFixed(2)+' a '+c.max.toFixed(2)];
+              },
+            },
+          },
+        },
+        scales:{
+          x:{beginAtZero:true,
+             ticks:{color:'rgba(242,245,239,0.42)',font:{family:"'DM Mono',monospace",size:10}},
+             grid:{color:'rgba(255,255,255,0.045)'},
+             title:{display:true,text:unidad,color:'rgba(242,245,239,0.32)',font:{family:"'DM Mono',monospace",size:10}}},
+          y:{ticks:{color:'rgba(242,245,239,0.55)',font:{family:"'DM Sans',sans-serif",size:11}},
+             grid:{display:false}},
+        },
+        animation:{duration:420},
+      },
+    });
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
+  },[clasesA,clasesB,modo,zoneA,zoneB]);
+
+  if(!clasesA&&!clasesB) return null;
+
+  const avisos=[];
+  if(!clasesA||!clasesB){
+    const falta=!clasesA?(zoneA?.name||'Zona A'):(zoneB?.name||'Zona B');
+    avisos.push('Solo una de las zonas tiene análisis de severidad. Calcula el dNBR en «'+falta+'» para comparar.');
+  }
+  const perA=figA&&figA.periodos;
+  const perB=figB&&figB.periodos;
+  if(perA&&perB&&(perA.pre_inicio!==perB.pre_inicio||perA.post_inicio!==perB.post_inicio)){
+    avisos.push('Las zonas se analizaron con ventanas de fecha distintas. La severidad solo es comparable si ambas cubren el mismo evento.');
+  }
+
+  return(
+    <div className="cz-series" style={{marginTop:14}}>
+      <div className="cz-series-bar">
+        <span className="cz-detail-eyebrow"><i className="fa-solid fa-fire"/>Composición por severidad</span>
+        <div className="cz-seg" ref={segRef}>
+          <span className="cz-seg-chip" ref={chipRef}/>
+          <button className={'cz-seg-btn'+(modo==='ha'?' active':'')} onClick={()=>setModo('ha')}>Hectáreas</button>
+          <button className={'cz-seg-btn'+(modo==='pct'?' active':'')} onClick={()=>setModo('pct')}>% del área</button>
+        </div>
+        <div className="cz-series-legend" style={{marginLeft:'auto'}}>
+          {clasesA&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#C8A882'}}/>{zoneA?.name||'Zona A'}</span>}
+          {clasesB&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#6AAA35'}}/>{zoneB?.name||'Zona B'}</span>}
+        </div>
+      </div>
+      {avisos.map((a,i)=>(
+        <div key={i} className="cz-series-note"><i className="fa-solid fa-circle-info"/><span>{a}</span></div>
+      ))}
+      <div className="cz-series-chart" style={{height:260}}><canvas ref={canvasRef}/></div>
+    </div>
+  );
+}
+
 /* ══ MAP TILE (imperative Leaflet, managed with refs) ══ */
 function MapTile({side,zone,mod,zoneData,syncGate}){
   const elRef=useRef(null);
@@ -2222,9 +2851,16 @@ function App({session,plan,zones}){
           return;
         }
         // Series estacionales (ej. 'agua_serie_MNDWI_DJF'): result_data es un
-        // doc de serie, no mediciones con preview — se integrarán como módulo
-        // propio (Fase C). Excluirlas para que no pisen los módulos de mapa.
-        if(row.tipo_indice&&row.tipo_indice.indexOf('_serie')>-1) return;
+        // doc de serie, no mediciones con preview. Van a _series y las consume
+        // el módulo Series; nunca deben pisar los módulos de mapa.
+        if(row.tipo_indice&&row.tipo_indice.indexOf('_serie')>-1){
+          const sd = Array.isArray(row.result_data) ? row.result_data[0] : row.result_data;
+          if(sd && sd.periods && sd.periods.length){
+            if(!parsed._series) parsed._series = {};
+            parsed._series[row.tipo_indice] = sd;
+          }
+          return;
+        }
         const modDef=CZ.MODULES.find(m=>row.tipo_indice&&m.prefix&&row.tipo_indice.startsWith(m.prefix));
         if(!modDef||!row.result_data||!row.result_data.length) return;
         const item=row.result_data.reduce((a,b)=>((a.ts||0)>(b.ts||0)?a:b));
@@ -2239,6 +2875,11 @@ function App({session,plan,zones}){
           ...(item.stats||{}),
           previewPath:item.previewPath,
           previewBounds:item.previewBounds,
+          // Datos para redibujar los gráficos del análisis (composición de
+          // severidad, distribuciones de biodiversidad, etc.). Se guardan
+          // como datos y no como imagen: es lo único que permite superponer
+          // dos zonas y conservar los tooltips.
+          figuras: item.figuras || null,
           indice: indiceUsado,
           ts: item.ts || null,
           _ts: ts,                     // interno: para tie-breaking entre rows
@@ -2274,6 +2915,7 @@ function App({session,plan,zones}){
   const isMapMode=mod&&mod.type==='map';
   const isBio=mod&&mod.type==='bio';
   const isArclim=mod&&mod.type==='arclim';
+  const isSeries=mod&&mod.type==='series';
 
   const goReanalyze=useCallback(()=>{window.open('acceso-datos.html','_self');},[]);
 
@@ -2344,6 +2986,16 @@ function App({session,plan,zones}){
             <div className="cz-detail">
               {isArclim
                 ?<ArclimDashboard mod={mod} zoneA={zoneA} zoneB={zoneB}/>
+                :isSeries
+                ?<>
+                   <div className="cz-detail-head">
+                     <span className="cz-detail-eyebrow">
+                       <i className="fa-solid fa-chart-line"/>Series estacionales
+                     </span>
+                     <span className="cz-detail-note">Misma estación · año a año</span>
+                   </div>
+                   <SeriesCompare zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>
+                 </>
                 :isBio
                   ?<BioCompare mod={mod} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} onReanalyze={goReanalyze}/>
                   :(
@@ -2356,6 +3008,7 @@ function App({session,plan,zones}){
                       </div>
                       <MetricsCompareSection mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
                       {mod.id==='vegetacion'&&<PisoStrip dataA={dataA} dataB={dataB}/>}
+                      {mod.id==='dnbr'&&<DnbrCompare zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>}
                     </>
                   )
               }
