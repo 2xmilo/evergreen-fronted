@@ -2803,3 +2803,124 @@ body.workspace-mode {
     color: var(--accent-dark);
 }
 .draw-btn--pro.active i { color: var(--accent-dark); }
+
+/* ==========================================================================
+   TOGGLE DE ESCALA + TOOLTIP AYUDA + TABLA HISTORIAL (2026-07-25)
+   ========================================================================== */
+.ap-scale-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 6px;
+}
+.ap-scale-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--ws-text-muted, #666);
+}
+.ap-scale-toggle {
+    display: inline-flex;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.ap-scale-btn {
+    border: none;
+    background: #f4f4f2;
+    color: #555;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.ap-scale-btn + .ap-scale-btn { border-left: 1px solid rgba(0,0,0,0.10); }
+.ap-scale-btn.active {
+    background: #1e4e6e;
+    color: #fff;
+    font-weight: 600;
+}
+.ap-scale-btn:not(.active):hover { background: #e9edf0; }
+
+/* Tooltip de ayuda ("?") */
+.ap-help {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(30,78,110,0.12);
+    color: #1e4e6e;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: help;
+    user-select: none;
+}
+.ap-help-tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: -8px;
+    z-index: 1200;
+    width: 260px;
+    background: rgba(20,30,25,0.96);
+    color: #eef3ee;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.45;
+    padding: 10px 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    cursor: default;
+}
+.ap-help-tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 12px;
+    border: 6px solid transparent;
+    border-top-color: rgba(20,30,25,0.96);
+}
+.ap-help:hover .ap-help-tip,
+.ap-help:focus .ap-help-tip { display: block; }
+
+/* Tabla de historial de análisis */
+.ap-history-table-wrap {
+    margin-top: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 6px;
+}
+.ap-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+.ap-history-table th {
+    position: sticky;
+    top: 0;
+    background: #f4f6f4;
+    color: #556;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 5px 8px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.ap-history-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    color: #444;
+    white-space: nowrap;
+}
+.ap-history-table tr:last-child td { border-bottom: none; }
+.ap-history-table tbody tr { cursor: pointer; transition: background 0.12s; }
+.ap-history-table tbody tr:hover { background: #f0f7ea; }
+.ap-history-table tbody tr.latest td { font-weight: 600; color: #222; }
+.ap-history-table .ht-num { text-align: right; font-variant-numeric: tabular-nums; }

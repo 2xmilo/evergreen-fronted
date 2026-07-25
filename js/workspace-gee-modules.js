@@ -98,7 +98,8 @@ function requestVegetacion() {
         // Registrar capa en el panel de capas (todas las variantes)
         registerLayer('vegetacion_' + payload.indice, vegLayer);
 
-        // Guardar en dashboard Resumen
+        // Guardar en dashboard Resumen (n_imagenes va en stats para el historial)
+        if (data.stats && data.n_imagenes) data.stats.n_imagenes = data.n_imagenes;
         var vegTs = saveResultado('vegetacion', payload.indice, data.stats, data.tiles,
                       payload.fecha_inicio, payload.fecha_fin);
         if (typeof uploadAnalysisPreviewFromPayload === 'function') {
@@ -148,6 +149,45 @@ var AGUA_LABELS = {
     'NDMI':  { min: 'Seco',     max: 'Húmedo', nota: 'Escala simétrica centrada en 0 · azul = alta humedad (valores > 0).' }
 };
 
+// Modos de escala del análisis de agua activo (toggle Centrada en 0 / Adaptada al AOI)
+var _aguaVizModes = null;   // { indice, centered:{url,min,max}, adaptive:{url,min,max}|null }
+
+/**
+ * Cambia la escala de visualización de la capa de agua activa.
+ * Swap de tiles sobre la MISMA instancia Leaflet (setUrl) — mantiene el
+ * registro del panel de capas y la opacidad. La escala canónica que se
+ * persiste (tiles cache / preview Supabase) sigue siendo la centrada en 0.
+ */
+function setAguaScaleMode(mode) {
+    if (!_aguaVizModes) return;
+    var m = _aguaVizModes[mode];
+    if (!m) return;
+
+    var btnC = document.getElementById('agua-scale-centered');
+    var btnA = document.getElementById('agua-scale-adaptive');
+    if (btnC) btnC.classList.toggle('active', mode === 'centered');
+    if (btnA) btnA.classList.toggle('active', mode === 'adaptive');
+
+    if (aguaLayer && typeof aguaLayer.setUrl === 'function') aguaLayer.setUrl(m.url);
+
+    var lblMin = document.getElementById('agua-legend-min');
+    var lblMax = document.getElementById('agua-legend-max');
+    var nota   = document.getElementById('agua-viz-note');
+    var hasNums = (typeof m.min === 'number' && typeof m.max === 'number');
+
+    if (mode === 'centered') {
+        var lbls = AGUA_LABELS[_aguaVizModes.indice] || { min: 'Bajo', max: 'Alto', nota: '' };
+        if (lblMin) lblMin.textContent = lbls.min + (hasNums ? ' (' + m.min.toFixed(2) + ')' : '');
+        if (lblMax) lblMax.textContent = lbls.max + (hasNums ? ' (+' + m.max.toFixed(2) + ')' : '');
+        if (nota && lbls.nota) nota.textContent = lbls.nota;
+    } else {
+        // En modo adaptativo el color NO indica agua absoluta — etiquetas neutras
+        if (lblMin) lblMin.textContent = 'Mín AOI' + (hasNums ? ' (' + m.min.toFixed(2) + ')' : '');
+        if (lblMax) lblMax.textContent = 'Máx AOI' + (hasNums ? ' (' + m.max.toFixed(2) + ')' : '');
+        if (nota) nota.textContent = 'Escala adaptada al rango del AOI (p2–p98) · máximo contraste; el color no indica agua absoluta.';
+    }
+}
+
 function actualizarInfoAgua() {
     var sel = document.getElementById('agua-indice');
     if (!sel) return;
@@ -196,16 +236,21 @@ function requestAgua() {
         var gradBar = document.getElementById('agua-gradient-bar');
         if (gradBar) gradBar.style.background = AGUA_GRADIENTE[indice] || AGUA_GRADIENTE['NDWI'];
 
-        // Etiquetas de extremos con el rango real de visualización (simétrico en 0)
-        var aguaLbls = AGUA_LABELS[indice] || { min: 'Bajo', max: 'Alto', nota: '' };
-        var lblMinAgua = document.getElementById('agua-legend-min');
-        var lblMaxAgua = document.getElementById('agua-legend-max');
-        if (lblMinAgua) lblMinAgua.textContent = aguaLbls.min +
-            (data.min_viz !== undefined ? ' (' + data.min_viz.toFixed(2) + ')' : '');
-        if (lblMaxAgua) lblMaxAgua.textContent = aguaLbls.max +
-            (data.max_viz !== undefined ? ' (' + data.max_viz.toFixed(2) + ')' : '');
-        var notaAgua = document.getElementById('agua-viz-note');
-        if (notaAgua && aguaLbls.nota) notaAgua.textContent = aguaLbls.nota;
+        // Modos de escala: centrada en 0 (canónica) + adaptada al AOI (si el backend la envía)
+        _aguaVizModes = {
+            indice: indice,
+            centered: {
+                url: data.tiles,
+                min: (typeof data.min_viz === 'number') ? data.min_viz : null,
+                max: (typeof data.max_viz === 'number') ? data.max_viz : null
+            },
+            adaptive: (data.tiles_adaptive && typeof data.min_viz_adaptive === 'number')
+                ? { url: data.tiles_adaptive, min: data.min_viz_adaptive, max: data.max_viz_adaptive }
+                : null
+        };
+        var scaleRow = document.getElementById('agua-scale-row');
+        if (scaleRow) scaleRow.style.display = _aguaVizModes.adaptive ? 'flex' : 'none';
+        setAguaScaleMode('centered');
 
         document.getElementById('agua-resultados').style.display = 'block';
         _fitToZone();
@@ -213,7 +258,8 @@ function requestAgua() {
         // Registrar capa en el panel de capas
         registerLayer('agua_' + indice, aguaLayer);
 
-        // Guardar en dashboard de Resumen
+        // Guardar en dashboard de Resumen (n_imagenes va en stats para el historial)
+        if (data.stats && data.n_imagenes) data.stats.n_imagenes = data.n_imagenes;
         var aguaTs = saveResultado('agua', indice, data.stats, data.tiles,
                       payload.fecha_inicio, payload.fecha_fin);
         if (typeof uploadAnalysisPreviewFromPayload === 'function') {

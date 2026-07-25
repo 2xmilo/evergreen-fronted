@@ -213,110 +213,64 @@ function renderChartBosque(perdida, totalHa) {
 }
 
 // ---------------------------------------------------------
-// HISTORY CHARTS — comparación temporal de índices
+// HISTORIAL DE ANÁLISIS — tabla de mediciones por índice
+// (reemplaza los antiguos "history charts": cada medición es una corrida
+// con rango/n imágenes distintos, no una serie temporal comparable.
+// La serie temporal real será el análisis estacional — Fase B.)
 // ---------------------------------------------------------
-var _vegHistoryChart  = null;
-var _aguaHistoryChart = null;
 
 /**
- * Dibuja/actualiza el gráfico de barras temporal para un índice de vegetación.
- * Aparece automáticamente desde la 2.ª medición del mismo índice.
+ * Renderiza la tabla de historial de un índice.
+ * Aparece desde la 2.ª medición. Click en fila → activa esa capa en el mapa.
  */
+function _renderHistoryTable(key, containerId, wrapId) {
+    var arr  = (WorkspaceState.resultados || {})[key];
+    var wrap = document.getElementById(wrapId);
+    if (!arr || arr.length < 2) { if (wrap) wrap.style.display = 'none'; return; }
+    if (wrap) wrap.style.display = 'block';
+
+    var cont = document.getElementById(containerId);
+    if (!cont) return;
+
+    function _fmtNum(v) {
+        var n = parseFloat(v);
+        return isNaN(n) ? '—' : n.toFixed(3);
+    }
+
+    var html = '<table class="ap-history-table"><thead><tr>' +
+        '<th>Período</th>' +
+        '<th class="ht-num">Media</th>' +
+        '<th class="ht-num">Mín (p2)</th>' +
+        '<th class="ht-num">Máx (p98)</th>' +
+        '<th class="ht-num">Imgs</th>' +
+        '</tr></thead><tbody>';
+
+    // Más reciente arriba
+    for (var i = arr.length - 1; i >= 0; i--) {
+        var e = arr[i];
+        var s = e.stats || {};
+        var periodo = (e.fechaInicio && e.fechaFin)
+            ? e.fechaInicio.slice(0, 7) + ' → ' + e.fechaFin.slice(0, 7)
+            : new Date(e.ts).toLocaleDateString('es-CL', { month: 'short', year: 'numeric' });
+        html += '<tr' + (i === arr.length - 1 ? ' class="latest"' : '') +
+            ' onclick="activarIndicador(\'' + key + '\',' + e.ts + ')" title="Ver esta capa en el mapa">' +
+            '<td>' + periodo + '</td>' +
+            '<td class="ht-num">' + _fmtNum(s.mean) + '</td>' +
+            '<td class="ht-num">' + _fmtNum(s.min) + '</td>' +
+            '<td class="ht-num">' + _fmtNum(s.max) + '</td>' +
+            '<td class="ht-num">' + (s.n_imagenes || '—') + '</td>' +
+            '</tr>';
+    }
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+}
+
+/** Tabla de historial para índices de vegetación (nombre legacy — antes chart). */
 function renderVegHistoryChart(indice) {
-    var key = 'vegetacion_' + indice;
-    var arr = (WorkspaceState.resultados || {})[key];
-    var wrap = document.getElementById('veg-historial');
-    if (!arr || arr.length < 2) { if (wrap) wrap.style.display = 'none'; return; }
-    if (wrap) wrap.style.display = 'block';
-
-    var canvas = document.getElementById('veg-history-chart');
-    if (!canvas) return;
-    if (_vegHistoryChart) { try { _vegHistoryChart.destroy(); } catch(e){} }
-
-    var labels = arr.map(function(e) {
-        if (e.fechaInicio && e.fechaFin)
-            return e.fechaInicio.slice(0,7) + '→' + e.fechaFin.slice(0,7);
-        return new Date(e.ts).toLocaleDateString('es-CL', {month:'short', year:'2-digit'});
-    });
-    var values = arr.map(function(e) {
-        return (e.stats && e.stats.mean != null) ? parseFloat(e.stats.mean.toFixed(3)) : null;
-    });
-    var colors = values.map(function(_, i) {
-        return i === values.length - 1 ? '#6aaa35' : 'rgba(106,170,53,0.45)';
-    });
-
-    _vegHistoryChart = new Chart(canvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{ data: values, backgroundColor: colors, borderRadius: 3, borderSkipped: false }]
-        },
-        options: _histChartOptions('rgba(100,140,100,0.6)')
-    });
+    _renderHistoryTable('vegetacion_' + indice, 'veg-history-table', 'veg-historial');
 }
 
-/**
- * Ídem para índices de agua (NDWI, MNDWI, NDMI).
- */
+/** Tabla de historial para índices de agua (nombre legacy — antes chart). */
 function renderAguaHistoryChart(indice) {
-    var key = 'agua_' + indice;
-    var arr = (WorkspaceState.resultados || {})[key];
-    var wrap = document.getElementById('agua-historial');
-    if (!arr || arr.length < 2) { if (wrap) wrap.style.display = 'none'; return; }
-    if (wrap) wrap.style.display = 'block';
-
-    var canvas = document.getElementById('agua-history-chart');
-    if (!canvas) return;
-    if (_aguaHistoryChart) { try { _aguaHistoryChart.destroy(); } catch(e){} }
-
-    var labels = arr.map(function(e) {
-        if (e.fechaInicio && e.fechaFin)
-            return e.fechaInicio.slice(0,7) + '→' + e.fechaFin.slice(0,7);
-        return new Date(e.ts).toLocaleDateString('es-CL', {month:'short', year:'2-digit'});
-    });
-    var values = arr.map(function(e) {
-        return (e.stats && e.stats.mean != null) ? parseFloat(e.stats.mean.toFixed(3)) : null;
-    });
-    var colors = values.map(function(_, i) {
-        return i === values.length - 1 ? '#1e6ea0' : 'rgba(30,110,160,0.4)';
-    });
-
-    _aguaHistoryChart = new Chart(canvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{ data: values, backgroundColor: colors, borderRadius: 3, borderSkipped: false }]
-        },
-        options: _histChartOptions('rgba(80,130,180,0.6)')
-    });
-}
-
-/** Opciones base compartidas para history charts */
-function _histChartOptions(tickColor) {
-    return {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(10,20,10,0.9)',
-                titleColor: '#c8e6c9', bodyColor: '#fff',
-                padding: 5, cornerRadius: 4,
-                callbacks: {
-                    title: function(items) { return items[0].label; },
-                    label: function(item) { return '  Media: ' + item.parsed.y; }
-                }
-            }
-        },
-        scales: {
-            x: {
-                ticks: { color: tickColor, font: { size: 8 }, maxRotation: 25, maxTicksLimit: 8 },
-                grid: { display: false }
-            },
-            y: {
-                ticks: { color: tickColor, font: { size: 8 }, maxTicksLimit: 4 },
-                grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }
-            }
-        },
-        animation: { duration: 350 }
-    };
+    _renderHistoryTable('agua_' + indice, 'agua-history-table', 'agua-historial');
 }

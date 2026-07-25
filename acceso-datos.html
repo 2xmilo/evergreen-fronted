@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=32">
+    <link rel="stylesheet" href="css/workspace.css?v=33">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -612,21 +612,13 @@
                 </div>
                 <p class="ap-note" id="veg-nimages">Mediana de imágenes · p2–p98 adaptado al AOI.</p>
 
-                <!-- Evolución temporal (aparece desde el 2.º análisis) -->
+                <!-- Historial de análisis (aparece desde el 2.º análisis) -->
                 <div id="veg-historial" style="display:none;">
                     <div class="ap-history-section-header">
-                        <span>Evolución temporal</span>
-                        <span class="ap-history-hint">Corre más análisis para comparar</span>
+                        <span>Historial de análisis</span>
+                        <span class="ap-history-hint">Click en una fila para ver su capa</span>
                     </div>
-                    <div class="ap-history-chart-wrap">
-                        <canvas id="veg-history-chart"></canvas>
-                    </div>
-                    <div class="ap-history-legend">
-                        <span class="ap-history-legend-dot" style="background:rgba(106,170,53,0.4);"></span>
-                        <span>Análisis previos</span>
-                        <span class="ap-history-legend-dot" style="background:#6aaa35; margin-left:8px;"></span>
-                        <span>Más reciente</span>
-                    </div>
+                    <div class="ap-history-table-wrap" id="veg-history-table"></div>
                 </div>
             </div>
 
@@ -693,26 +685,39 @@
                         <span class="ap-stat-col-label">Máximo</span>
                     </div>
                 </div>
+                <!-- Toggle de escala de visualización -->
+                <div class="ap-scale-row" id="agua-scale-row">
+                    <span class="ap-scale-label">Escala</span>
+                    <div class="ap-scale-toggle">
+                        <button type="button" class="ap-scale-btn active" id="agua-scale-centered"
+                                onclick="setAguaScaleMode('centered')">Centrada en 0</button>
+                        <button type="button" class="ap-scale-btn" id="agua-scale-adaptive"
+                                onclick="setAguaScaleMode('adaptive')">Adaptada al AOI</button>
+                    </div>
+                    <span class="ap-help" tabindex="0">?
+                        <span class="ap-help-tip">
+                            <b>Centrada en 0:</b> el 0 del índice queda al centro de la paleta —
+                            el azul siempre significa agua/humedad real (valores &gt; 0).
+                            Recomendada para reportes y comparar zonas o fechas.<br><br>
+                            <b>Adaptada al AOI:</b> estira la paleta entre los percentiles 2–98
+                            de la zona — máximo contraste para ver patrones espaciales, pero el
+                            color deja de indicar presencia absoluta de agua. Útil en zonas sin
+                            agua superficial.
+                        </span>
+                    </span>
+                </div>
                 <div class="ap-gradient-bar" id="agua-gradient-bar"
                      style="background:linear-gradient(90deg,#8c510a,#bf812d,#d4a96a,#f5f5dc,#9ecae1,#2166ac,#084081);"></div>
                 <div class="ap-gradient-labels"><span id="agua-legend-min">Sin agua</span><span id="agua-legend-max">Agua</span></div>
                 <p class="ap-note" id="agua-viz-note">Escala simétrica centrada en 0 · azul = agua (valores > 0).</p>
 
-                <!-- Evolución temporal -->
+                <!-- Historial de análisis -->
                 <div id="agua-historial" style="display:none;">
                     <div class="ap-history-section-header">
-                        <span>Evolución temporal</span>
-                        <span class="ap-history-hint">Corre más análisis para comparar</span>
+                        <span>Historial de análisis</span>
+                        <span class="ap-history-hint">Click en una fila para ver su capa</span>
                     </div>
-                    <div class="ap-history-chart-wrap">
-                        <canvas id="agua-history-chart"></canvas>
-                    </div>
-                    <div class="ap-history-legend">
-                        <span class="ap-history-legend-dot" style="background:rgba(30,110,160,0.4);"></span>
-                        <span>Análisis previos</span>
-                        <span class="ap-history-legend-dot" style="background:#1e6ea0; margin-left:8px;"></span>
-                        <span>Más reciente</span>
-                    </div>
+                    <div class="ap-history-table-wrap" id="agua-history-table"></div>
                 </div>
             </div>
 
@@ -1563,9 +1568,9 @@
 <!-- WORKSPACE LOGIC -->
 <script src="js/workspace-core.js?v=10"></script>
 <script src="js/workspace-map.js?v=6"></script>
-<script src="js/workspace-bosque.js?v=5"></script>
+<script src="js/workspace-bosque.js?v=6"></script>
 <script src="js/workspace-summary.js?v=10"></script>
-<script src="js/workspace-gee-modules.js?v=10"></script>
+<script src="js/workspace-gee-modules.js?v=11"></script>
 <script src="js/workspace-zones.js?v=9"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=6"></script>
