@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=35">
+    <link rel="stylesheet" href="css/workspace.css?v=36">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -641,7 +641,7 @@
             <!-- ─── PANE: SERIE ESTACIONAL ─── -->
             <div class="ap-serie-section" id="veg-pane-serie" style="display:none;">
                 <div class="ap-history-section-header" style="margin-top:0;">
-                    <span>Vigor vegetacional por año</span>
+                    <span>Condición vegetacional por año</span>
                     <span class="ap-help" tabindex="0">?
                         <span class="ap-help-tip">
                             Compara la <b>misma estación</b> a lo largo de los años, de modo que
@@ -661,8 +661,11 @@
                     <div class="ap-field" style="margin:0;">
                         <label class="ap-label">Índice</label>
                         <select class="ap-input" id="vserie-indice">
-                            <option value="NDVI" selected>NDVI (recomendado)</option>
-                            <option value="EVI">EVI</option>
+                            <option value="NDVI" selected>NDVI — vigor (recom.)</option>
+                            <option value="EVI">EVI — vigor</option>
+                            <option value="SAVI">SAVI — vigor / suelo</option>
+                            <option value="NDMI">NDMI — humedad foliar</option>
+                            <option value="NBR">NBR — área quemada</option>
                         </select>
                     </div>
                     <div class="ap-field" style="margin:0;">
@@ -1816,11 +1819,11 @@
 <script src="js/acceso-datos.js?v=3"></script>
 
 <!-- WORKSPACE LOGIC -->
-<script src="js/workspace-core.js?v=12"></script>
+<script src="js/workspace-core.js?v=13"></script>
 <script src="js/workspace-map.js?v=6"></script>
 <script src="js/workspace-bosque.js?v=6"></script>
 <script src="js/workspace-summary.js?v=10"></script>
-<script src="js/workspace-gee-modules.js?v=13"></script>
+<script src="js/workspace-gee-modules.js?v=14"></script>
 <script src="js/workspace-zones.js?v=9"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=6"></script>

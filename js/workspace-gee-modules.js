@@ -623,13 +623,49 @@ var _vegSerieData      = null;
 var _vegSerieChart     = null;
 var _vegSerieChartMode = 'vigor';
 
-// Clases de vigor — deben coincidir con _VEG_CLASS_BREAKS del backend (0.2/0.4/0.6)
-var VEG_CLASES = [
-    { key: 'densa',    label: 'Densa (>0.6)',     color: '#1a6b32' },
-    { key: 'moderada', label: 'Moderada (0.4–0.6)', color: '#66bd63' },
-    { key: 'escasa',   label: 'Escasa (0.2–0.4)',  color: '#fee08b' },
-    { key: 'sin_veg',  label: 'Sin veg. (<0.2)',   color: '#d9a679' }
-];
+// Paleta por familia de clases (orden c0→c3, de menor a mayor valor del índice).
+// Las etiquetas las envía el backend en class_labels — dependen del índice.
+var VEG_CLASS_COLORS = {
+    'vigor':   ['#d9a679', '#fee08b', '#66bd63', '#1a6b32'],
+    'humedad': ['#8c510a', '#dfc27d', '#80cdc1', '#01665e'],
+    'quemado': ['#a50026', '#f46d43', '#a6d96a', '#1a9850']
+};
+
+/**
+ * Construye las clases a graficar desde el doc de la serie.
+ * Devuelve orden de apilado: la clase MÁS ALTA arriba.
+ */
+function _vegSerieClases(doc) {
+    var fam    = doc.class_family || 'vigor';
+    var colors = VEG_CLASS_COLORS[fam] || VEG_CLASS_COLORS['vigor'];
+    var labels = doc.class_labels || ['Muy bajo', 'Bajo', 'Medio', 'Alto'];
+    var breaks = doc.class_breaks || [];
+
+    var out = [];
+    for (var i = 0; i < 4; i++) {
+        var rango = '';
+        if (breaks.length === 3) {
+            if (i === 0)      rango = ' (<' + breaks[0] + ')';
+            else if (i === 3) rango = ' (>' + breaks[2] + ')';
+            else              rango = ' (' + breaks[i - 1] + '–' + breaks[i] + ')';
+        }
+        out.push({
+            key:   'c' + i,
+            label: (labels[i] || 'Clase ' + i) + rango,
+            color: colors[i]
+        });
+    }
+    return out.reverse();   // la clase más alta se apila arriba
+}
+
+/** Lee el valor de una clase soportando el formato inicial (sin_veg/escasa/...) */
+function _vegClaseHa(p, key) {
+    if (!p || !p.classes_ha) return null;
+    if (p.classes_ha[key] !== undefined) return p.classes_ha[key];
+    var legacy = { c0: 'sin_veg', c1: 'escasa', c2: 'moderada', c3: 'densa' };
+    var lk = legacy[key];
+    return (lk && p.classes_ha[lk] !== undefined) ? p.classes_ha[lk] : null;
+}
 
 function requestVegSerie() {
     if (!WorkspaceState.zonaGEE) return _noZonaGuard();
@@ -723,28 +759,37 @@ function renderVegSerie(doc) {
         }
     }
 
-    // Tabla — la composición completa vive en el gráfico, aquí lo esencial
+    // Tabla — la composición completa vive en el gráfico; aquí la clase alta
+    var clases  = _vegSerieClases(doc);      // [alta ... baja]
+    var claseTop = clases[0];                // clase de mayor valor del índice
     var cont = document.getElementById('vserie-table');
     if (cont) {
         var html = '<table class="ap-history-table"><thead><tr>' +
             '<th>Período</th><th class="ht-num">Media</th>' +
-            '<th class="ht-num">Densa</th><th class="ht-num">Imgs</th>' +
+            '<th class="ht-num">' + (doc.class_labels ? doc.class_labels[3] : 'Alta') + '</th>' +
+            '<th class="ht-num">Imgs</th>' +
             '<th class="ht-num">Cobert.</th><th></th></tr></thead><tbody>';
         for (var i = periods.length - 1; i >= 0; i--) {
             var p = periods[i];
             var sinDatos = (p.mean === null || p.mean === undefined);
-            var densa = (p.classes_ha && p.classes_ha.densa !== undefined)
-                ? _serieFmtHa(p.classes_ha.densa) + ' ha' : '—';
+            var vTop = _vegClaseHa(p, claseTop.key);
             html += '<tr' + (i === periods.length - 1 ? ' class="latest"' : '') + '>' +
                 '<td>' + seasonLbl + ' ' + p.year + '</td>' +
                 '<td class="ht-num">' + (sinDatos ? 'sin datos' : p.mean.toFixed(3)) + '</td>' +
-                '<td class="ht-num">' + (sinDatos ? '—' : densa) + '</td>' +
+                '<td class="ht-num">' + (vTop !== null ? _serieFmtHa(vTop) + ' ha' : '—') + '</td>' +
                 '<td class="ht-num">' + p.n_images + '</td>' +
                 '<td class="ht-num">' + (p.coverage_pct !== null && p.coverage_pct !== undefined ? p.coverage_pct.toFixed(0) + '%' : '—') + '</td>' +
                 '<td>' + (sinDatos ? '' : (p.reliable ? '' : '⚠')) + '</td>' +
                 '</tr>';
         }
         cont.innerHTML = html + '</tbody></table>';
+    }
+
+    // La vista apilada no siempre es "vigor": depende del índice elegido
+    var btnClases = document.getElementById('vserie-mode-vigor');
+    if (btnClases) {
+        btnClases.textContent = ({ 'vigor': 'Vigor', 'humedad': 'Humedad', 'quemado': 'Cobertura' })
+            [doc.class_family || 'vigor'] || 'Clases';
     }
 
     setVegSerieChartMode('vigor');
@@ -762,8 +807,8 @@ function setVegSerieChartMode(mode) {
     // Leyenda de clases solo aplica a la vista apilada
     var leg = document.getElementById('vserie-legend');
     if (leg) {
-        if (mode === 'vigor') {
-            leg.innerHTML = VEG_CLASES.map(function(c) {
+        if (mode === 'vigor' && _vegSerieData) {
+            leg.innerHTML = _vegSerieClases(_vegSerieData).map(function(c) {
                 return '<span class="ap-history-legend-dot" style="background:' + c.color + ';"></span>' +
                        '<span style="margin-right:8px;">' + c.label + '</span>';
             }).join('');
@@ -793,12 +838,10 @@ function _renderVegSerieChart() {
         stacked = true;
         yOpts.beginAtZero = true;
         yOpts.title = { display: true, text: 'ha', font: { size: 9 } };
-        VEG_CLASES.forEach(function(c) {
+        _vegSerieClases(d).forEach(function(c) {
             datasets.push({
                 label: c.label,
-                data: periods.map(function(p) {
-                    return (p.classes_ha && p.classes_ha[c.key] !== undefined) ? p.classes_ha[c.key] : null;
-                }),
+                data: periods.map(function(p) { return _vegClaseHa(p, c.key); }),
                 backgroundColor: c.color,
                 borderWidth: 0
             });

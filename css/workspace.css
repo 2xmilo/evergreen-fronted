@@ -2859,33 +2859,46 @@ body.workspace-mode {
     cursor: help;
     user-select: none;
 }
+/* position:fixed + JS de posicionamiento (_positionApHelpTip): dentro de
+   un panel con overflow el tooltip absoluto quedaba RECORTADO al abrirse
+   hacia arriba. Se usa visibility/opacity en vez de display para poder
+   medirlo antes de mostrarlo. */
 .ap-help-tip {
-    display: none;
-    position: absolute;
-    bottom: calc(100% + 8px);
-    right: -8px;
-    z-index: 1200;
+    position: fixed;
+    top: 0; left: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+    z-index: 3000;
     width: 260px;
-    background: rgba(20,30,25,0.96);
+    max-width: calc(100vw - 24px);
+    background: rgba(20,30,25,0.97);
     color: #eef3ee;
-    font-size: 11px;
-    font-weight: 400;
+    /* !important necesario: `.ap-history-section-header span:first-child`
+       (0-2-1) alcanza a este tooltip —no usa combinador directo y el tip
+       es el primer hijo de .ap-help— y le gana en especificidad, dejando
+       el texto en MAYÚSCULAS. También neutraliza el uppercase heredado
+       cuando el "?" vive dentro de un <label class="ap-label">. */
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    text-align: left;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    color: #eef3ee !important;
     line-height: 1.45;
     padding: 10px 12px;
     border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    box-shadow: 0 6px 22px rgba(0,0,0,0.30);
     cursor: default;
 }
-.ap-help-tip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    right: 12px;
-    border: 6px solid transparent;
-    border-top-color: rgba(20,30,25,0.96);
-}
+.ap-help-tip b { font-weight: 700; color: #fff; }
 .ap-help:hover .ap-help-tip,
-.ap-help:focus .ap-help-tip { display: block; }
+.ap-help:focus .ap-help-tip {
+    opacity: 1;
+    visibility: visible;
+}
 
 /* Tabla de historial de análisis */
 .ap-history-table-wrap {

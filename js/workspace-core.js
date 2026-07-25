@@ -23,6 +23,53 @@
 // Clave: 'tipo_indice_ts'  (ej: 'vegetacion_NDVI_1737500000000')
 var _tilesCache = {};
 
+// ---------------------------------------------------------
+// TOOLTIPS DE AYUDA (.ap-help) — posicionamiento en viewport
+// ---------------------------------------------------------
+/**
+ * Posiciona el tooltip con coordenadas de viewport (position:fixed).
+ * Necesario porque los paneles del workspace tienen overflow y un
+ * tooltip absoluto se recorta al abrirse hacia arriba.
+ * Prefiere abajo; si no cabe, lo voltea arriba; y lo mantiene siempre
+ * dentro de los márgenes de la ventana.
+ */
+function _positionApHelpTip(help) {
+    var tip = help.querySelector('.ap-help-tip');
+    if (!tip) return;
+
+    var r = help.getBoundingClientRect();
+    var m = 10;
+    var tw = tip.offsetWidth  || 260;
+    var th = tip.offsetHeight || 140;
+
+    var top = r.bottom + 8;
+    if (top + th > window.innerHeight - m) {
+        var arriba = r.top - th - 8;
+        top = (arriba >= m) ? arriba : Math.max(m, window.innerHeight - th - m);
+    }
+
+    var left = r.right - tw;                       // alineado al borde derecho del "?"
+    if (left < m) left = m;
+    if (left + tw > window.innerWidth - m) left = window.innerWidth - tw - m;
+
+    tip.style.top  = Math.round(top) + 'px';
+    tip.style.left = Math.round(left) + 'px';
+}
+
+// Delegación: cubre también los tooltips inyectados dinámicamente
+document.addEventListener('mouseover', function(e) {
+    var t = e.target;
+    if (!t || typeof t.closest !== 'function') return;
+    var help = t.closest('.ap-help');
+    if (help) _positionApHelpTip(help);
+});
+document.addEventListener('focusin', function(e) {
+    var t = e.target;
+    if (!t || typeof t.closest !== 'function') return;
+    var help = t.closest('.ap-help');
+    if (help) _positionApHelpTip(help);
+});
+
 function simplifyZoneForGee(geojson, ha) {
     if (!geojson || !geojson.geometry || !geojson.geometry.type || !geojson.geometry.type.includes('Polygon')) {
         return geojson;
