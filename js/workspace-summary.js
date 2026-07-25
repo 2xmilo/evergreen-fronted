@@ -536,7 +536,8 @@ var _GEE_LAYER_LABELS = {
     'agua_NDMI':        'NDMI · Humedad',
     'dem_Elevacion':    'Elevación · DEM',
     'dem_Pendiente':    'Pendiente · DEM',
-    'bosque':           'Pérdida de Bosque'
+    'bosque':           'Pérdida de Bosque',
+    'dnbr_Severidad':   'Severidad dNBR'
 };
 
 /** Reconstruye la sección dinámica de capas GEE en el panel de capas. */

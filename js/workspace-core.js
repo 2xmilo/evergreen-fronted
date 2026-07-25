@@ -196,7 +196,8 @@ var IND_CONFIG = {
     'vegetacion':   { icon: 'fas fa-seedling',   iconClass: 'rs-ind-icon--veg',  cat: 'Vegetación' },
     'agua':         { icon: 'fas fa-tint',        iconClass: 'rs-ind-icon--agua', cat: 'Agua' },
     'dem':          { icon: 'fas fa-mountain',    iconClass: 'rs-ind-icon--dem',  cat: 'Elevación' },
-    'biodiversidad':{ icon: 'fas fa-leaf',        iconClass: 'rs-ind-icon--bio',  cat: 'Biodiversidad' }
+    'biodiversidad':{ icon: 'fas fa-leaf',        iconClass: 'rs-ind-icon--bio',  cat: 'Biodiversidad' },
+    'dnbr':         { icon: 'fas fa-fire',        iconClass: 'rs-ind-icon--dem',  cat: 'Severidad de quema' }
 };
 
 /**
@@ -232,6 +233,8 @@ var IND_PALETTES = {
     'dem_Pendiente':    { colors:['#ffffcc','#c7e9b4','#7fcdbb','#1d91c0','#225ea8','#253494'],                                         minLbl:'0°',             maxLbl:'60°',        desc:'Pendiente del terreno',                          dotColor:'#1d91c0' },
     // ── Bosque ───────────────────────────────────────────────────
     'bosque':           { colors:['#ffffcc','#ffeda0','#fed976','#feb24c','#fd8d3c','#fc4e2a','#e31a1c','#bd0026','#800026'],           minLbl:'2001',           maxLbl:'2023',       desc:'Pérdida de bosque · Hansen GFC 2023',            dotColor:'#fc4e2a' },
+    // Escala Key & Benson: rebrote (verde) → sin quemar (gris) → severidad (rojo)
+    'dnbr_Severidad':   { colors:['#1a9850','#a6d96a','#dddddd','#ffffbf','#fdae61','#f46d43','#a50026'],                               minLbl:'Rebrote',        maxLbl:'Severidad alta', desc:'Severidad de quema · dNBR (Key & Benson)',    dotColor:'#a50026' },
 };
 
 var _indicadorActivo = null;
@@ -304,6 +307,12 @@ function _getIndicadorValue(r) {
     }
     // Aspecto sin valor útil
     if (r.tipo === 'dem' && r.indice === 'Aspecto') return '—';
+    // dNBR: lo relevante es la superficie afectada, no el dNBR medio
+    if (r.tipo === 'dnbr') {
+        if (s.afectado_ha === undefined || s.afectado_ha === null) return '—';
+        var ha = parseFloat(s.afectado_ha);
+        return (Math.abs(ha) >= 100 ? ha.toFixed(0) : ha.toFixed(1)) + ' ha';
+    }
     // Índices espectrales (mean genérico)
     return s.mean !== undefined ? s.mean.toFixed(3) : '—';
 }

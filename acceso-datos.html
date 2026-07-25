@@ -1067,6 +1067,20 @@
         ════════════════════════════════════════ -->
         <div class="ws-module-content" id="tab-bosque-content">
 
+            <div class="ap-subtabs">
+                <button type="button" class="ap-subtab active" id="bosque-subtab-btn-hansen"
+                        onclick="switchApSubtab('bosque','hansen')">
+                    <i class="fas fa-tree"></i> Pérdida histórica
+                </button>
+                <button type="button" class="ap-subtab" id="bosque-subtab-btn-dnbr"
+                        onclick="switchApSubtab('bosque','dnbr')">
+                    <i class="fas fa-fire"></i> Severidad dNBR
+                </button>
+            </div>
+
+            <!-- ─── PANE: HANSEN GFC ─── -->
+            <div id="bosque-pane-hansen">
+
             <div class="ap-source-row">
                 <span class="ap-source-badge" style="background:rgba(30,100,50,0.10);color:#1a5a2a;border-color:rgba(30,100,50,0.2);">Hansen GFC 2023</span>
                 <span class="ap-source-text">Hansen GFC 30 m · NASA ORNL Biomass ~300 m</span>
@@ -1126,6 +1140,113 @@
                     Calcula pérdida de bosque y stock de carbono usando datos Hansen GFC y NASA ORNL (2000–2023).
                 </p>
             </div>
+
+            </div><!-- /bosque-pane-hansen -->
+
+            <!-- ─── PANE: SEVERIDAD dNBR ─── -->
+            <div id="bosque-pane-dnbr" style="display:none;">
+
+                <div class="ap-source-row">
+                    <span class="ap-source-badge" style="background:rgba(165,0,38,0.10);color:#a50026;border-color:rgba(165,0,38,0.2);">Sentinel-2 SR</span>
+                    <span class="ap-source-text">dNBR · Key &amp; Benson (USGS-FIREMON)</span>
+                </div>
+
+                <div class="ap-history-section-header" style="margin-top:0;border-top:none;padding-top:0;">
+                    <span>Período PRE</span>
+                    <span class="ap-help" tabindex="0">?
+                        <span class="ap-help-tip">
+                            Lo ideal es abarcar <b>1 mes antes</b> del evento en el período PRE y
+                            <b>1 mes después</b> en el POST: así cada período junta suficientes
+                            imágenes para calcular una mediana confiable.<br><br>
+                            Con rangos muy cortos puede que no haya imágenes libres de nubes y el
+                            cálculo falle o quede con pocos datos. Si el resultado sale con pocas
+                            imágenes, amplía los rangos.
+                        </span>
+                    </span>
+                </div>
+                <div class="ap-date-row">
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Desde</label>
+                        <input type="date" class="ap-input" id="dnbr-pre-inicio" value="2024-01-01">
+                    </div>
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Hasta</label>
+                        <input type="date" class="ap-input" id="dnbr-pre-fin" value="2024-02-01">
+                    </div>
+                </div>
+
+                <div class="ap-history-section-header">
+                    <span>Período POST</span>
+                </div>
+                <div class="ap-date-row">
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Desde</label>
+                        <input type="date" class="ap-input" id="dnbr-post-inicio" value="2024-03-01">
+                    </div>
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Hasta</label>
+                        <input type="date" class="ap-input" id="dnbr-post-fin" value="2024-04-01">
+                    </div>
+                </div>
+
+                <button class="ap-btn-generate" id="btn-dnbr-gen" onclick="requestDnbr()"
+                        style="background:#8c2d04;">
+                    <i class="fas fa-fire"></i> Calcular Severidad dNBR
+                </button>
+
+                <div id="dnbr-resultados" style="display:none; margin-top:14px;">
+                    <div class="ap-meta-strip">
+                        <div class="meta-item"><span class="meta-label">Imágenes PRE</span><span class="meta-val" id="dnbr-n-pre">—</span></div>
+                        <div class="meta-item"><span class="meta-label">Imágenes POST</span><span class="meta-val" id="dnbr-n-post">—</span></div>
+                        <div class="meta-item"><span class="meta-label">Cobertura</span><span class="meta-val" id="dnbr-coverage">—</span></div>
+                    </div>
+
+                    <div class="ap-stats-3">
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" style="color:#a50026;" id="dnbr-afectado">—</span>
+                            <span class="ap-stat-col-label">Superficie afectada</span>
+                        </div>
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" style="color:#f46d43;" id="dnbr-severa">—</span>
+                            <span class="ap-stat-col-label">Severidad alta</span>
+                        </div>
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" id="dnbr-mean">—</span>
+                            <span class="ap-stat-col-label">dNBR medio</span>
+                        </div>
+                    </div>
+
+                    <p class="ap-note" id="dnbr-warning" style="display:none;color:#a05000;"></p>
+
+                    <div class="ap-history-section-header">
+                        <span>Severidad por clase</span>
+                        <span class="ap-help" tabindex="0">?
+                            <span class="ap-help-tip">
+                                Umbrales <b>Key &amp; Benson (USGS-FIREMON)</b> sobre dNBR:<br>
+                                &lt; -0.25 rebrote alto · -0.25 a -0.10 rebrote bajo ·
+                                -0.10 a 0.10 sin quemar · 0.10 a 0.27 severidad baja ·
+                                0.27 a 0.44 moderada-baja · 0.44 a 0.66 moderada-alta ·
+                                &gt; 0.66 severidad alta.<br><br>
+                                <b>Superficie afectada</b> suma desde severidad baja (dNBR ≥ 0.10).
+                            </span>
+                        </span>
+                    </div>
+                    <div style="height:170px; margin-top:4px;">
+                        <canvas id="dnbr-chart"></canvas>
+                    </div>
+                    <div class="ap-history-table-wrap" id="dnbr-table" style="margin-top:10px;"></div>
+                </div>
+
+                <!-- Empty state dNBR -->
+                <div id="dnbr-empty" style="text-align:center;padding:34px 16px;color:var(--muted);">
+                    <i class="fas fa-fire" style="font-size:28px;opacity:.15;display:block;margin-bottom:10px;"></i>
+                    <p style="font-size:12px;line-height:1.6;margin:0;">
+                        Compara un período antes y otro después del evento para mapear la severidad
+                        de quema y estimar la superficie afectada.
+                    </p>
+                </div>
+
+            </div><!-- /bosque-pane-dnbr -->
 
         </div>
 
@@ -1819,11 +1940,11 @@
 <script src="js/acceso-datos.js?v=3"></script>
 
 <!-- WORKSPACE LOGIC -->
-<script src="js/workspace-core.js?v=13"></script>
+<script src="js/workspace-core.js?v=14"></script>
 <script src="js/workspace-map.js?v=6"></script>
-<script src="js/workspace-bosque.js?v=6"></script>
-<script src="js/workspace-summary.js?v=10"></script>
-<script src="js/workspace-gee-modules.js?v=14"></script>
+<script src="js/workspace-bosque.js?v=7"></script>
+<script src="js/workspace-summary.js?v=11"></script>
+<script src="js/workspace-gee-modules.js?v=15"></script>
 <script src="js/workspace-zones.js?v=9"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=6"></script>

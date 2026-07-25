@@ -213,6 +213,172 @@ function renderChartBosque(perdida, totalHa) {
 }
 
 // ---------------------------------------------------------
+// dNBR — SEVERIDAD DE QUEMA (Key & Benson / USGS-FIREMON)
+// ---------------------------------------------------------
+var _dnbrLayer = null;
+var _dnbrChart = null;
+var _dnbrData  = null;
+
+function requestDnbr() {
+    if (!WorkspaceState.zonaGEE) return _noZonaGuard();
+
+    var preIni  = document.getElementById('dnbr-pre-inicio').value;
+    var preFin  = document.getElementById('dnbr-pre-fin').value;
+    var postIni = document.getElementById('dnbr-post-inicio').value;
+    var postFin = document.getElementById('dnbr-post-fin').value;
+
+    var notif = (typeof mostrarNotificacion === 'function') ? mostrarNotificacion : alert;
+    if (!preIni || !preFin || !postIni || !postFin) { notif('⚠️ Completa los cuatro campos de fecha.'); return; }
+    if (preFin > postIni) { notif('⚠️ El período PRE debe terminar antes de que empiece el POST.'); return; }
+
+    var btn = document.getElementById('btn-dnbr-gen');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    btn.disabled = true;
+
+    fetchBackendJson('https://evergreen-backend-awv1.onrender.com/api/bosque/dnbr', {
+        geojson: WorkspaceState.zonaGEE.geometry,
+        pre_inicio: preIni, pre_fin: preFin,
+        post_inicio: postIni, post_fin: postFin
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.innerHTML = '<i class="fas fa-fire"></i> Calcular Severidad dNBR';
+        btn.disabled = false;
+        if (data.error) { notif('❌ ' + data.error); return; }
+
+        _dnbrData = data;
+
+        // Capa en el mapa
+        if (_dnbrLayer) map.removeLayer(_dnbrLayer);
+        _dnbrLayer = L.tileLayer(data.tiles, { pane: 'overlayPane', zIndex: 400, crossOrigin: 'anonymous' });
+        _dnbrLayer.addTo(map);
+        registerLayer('dnbr_Severidad', _dnbrLayer);
+        if (typeof _fitToZone === 'function') _fitToZone();
+
+        renderDnbr(data);
+
+        // Persistir como medición del dashboard (dNBR es un resultado con capa)
+        if (typeof saveResultado === 'function') {
+            var ts = saveResultado('dnbr', 'Severidad',
+                { mean: data.dnbr_mean, min: 0, max: data.dnbr_max,
+                  afectado_ha: data.afectado_ha, severa_ha: data.severa_ha,
+                  n_imagenes: (data.n_pre + data.n_post) },
+                data.tiles, preIni, postFin);
+            if (typeof uploadAnalysisPreviewFromPayload === 'function') {
+                uploadAnalysisPreviewFromPayload('dnbr_Severidad', ts, data);
+            }
+        }
+        if (typeof showMiniLegend === 'function') {
+            try { showMiniLegend('dnbr_Severidad'); } catch(e) {}
+        }
+    })
+    .catch(function() {
+        btn.innerHTML = '<i class="fas fa-fire"></i> Calcular Severidad dNBR';
+        btn.disabled = false;
+        notif('❌ Error de conexión al servidor.');
+    });
+}
+
+function renderDnbr(d) {
+    var empty = document.getElementById('dnbr-empty');
+    if (empty) empty.style.display = 'none';
+
+    function _ha(v) {
+        if (v === null || v === undefined) return '—';
+        var n = parseFloat(v);
+        return (Math.abs(n) >= 100 ? n.toFixed(0) : n.toFixed(1)) + ' ha';
+    }
+
+    var set = function(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
+    set('dnbr-n-pre',  d.n_pre);
+    set('dnbr-n-post', d.n_post);
+    set('dnbr-coverage', (d.coverage_pct !== null && d.coverage_pct !== undefined) ? d.coverage_pct.toFixed(0) + '%' : '—');
+    set('dnbr-afectado', _ha(d.afectado_ha));
+    set('dnbr-severa',   _ha(d.severa_ha));
+    set('dnbr-mean',     (d.dnbr_mean !== null && d.dnbr_mean !== undefined) ? d.dnbr_mean.toFixed(3) : '—');
+
+    // Aviso de confiabilidad
+    var warn = document.getElementById('dnbr-warning');
+    if (warn) {
+        var motivos = [];
+        if (d.n_pre  < 2) motivos.push('solo ' + d.n_pre  + ' imagen(es) en el período PRE');
+        if (d.n_post < 2) motivos.push('solo ' + d.n_post + ' imagen(es) en el período POST');
+        if (d.coverage_pct !== undefined && d.coverage_pct < 85) motivos.push('cobertura válida de ' + d.coverage_pct.toFixed(0) + '%');
+        if (motivos.length) {
+            warn.textContent = '⚠ Resultado poco confiable: ' + motivos.join(' y ') +
+                '. Amplía los rangos de fecha (idealmente 1 mes antes y 1 mes después).';
+            warn.style.display = 'block';
+        } else {
+            warn.style.display = 'none';
+        }
+    }
+
+    // Tabla de clases (mayor severidad primero)
+    var cont = document.getElementById('dnbr-table');
+    if (cont && d.clases) {
+        var html = '<table class="ap-history-table"><thead><tr>' +
+            '<th>Clase</th><th class="ht-num">Rango dNBR</th>' +
+            '<th class="ht-num">Superficie</th><th class="ht-num">%</th>' +
+            '</tr></thead><tbody>';
+        d.clases.slice().reverse().forEach(function(c) {
+            html += '<tr>' +
+                '<td><span class="ap-history-legend-dot" style="background:' + c.color + ';"></span> ' + c.label + '</td>' +
+                '<td class="ht-num">' + c.min.toFixed(2) + ' – ' + c.max.toFixed(2) + '</td>' +
+                '<td class="ht-num">' + _ha(c.ha) + '</td>' +
+                '<td class="ht-num">' + c.pct.toFixed(1) + '%</td>' +
+                '</tr>';
+        });
+        cont.innerHTML = html + '</tbody></table>';
+    }
+
+    // Gráfico de barras horizontales por clase
+    var canvas = document.getElementById('dnbr-chart');
+    if (canvas && d.clases) {
+        if (_dnbrChart) { try { _dnbrChart.destroy(); } catch(e) {} }
+        var clasesRev = d.clases.slice().reverse();
+        _dnbrChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: clasesRev.map(function(c) { return c.label; }),
+                datasets: [{
+                    data: clasesRev.map(function(c) { return c.ha; }),
+                    backgroundColor: clasesRev.map(function(c) { return c.color; }),
+                    borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1,
+                    borderRadius: 3, borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(10,20,10,0.92)', padding: 8, cornerRadius: 5,
+                        callbacks: {
+                            label: function(item) {
+                                var c = clasesRev[item.dataIndex];
+                                return [_ha(c.ha) + ' (' + c.pct.toFixed(1) + '%)',
+                                        'dNBR ' + c.min.toFixed(2) + ' a ' + c.max.toFixed(2)];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { font: { size: 9 } },
+                         title: { display: true, text: 'ha', font: { size: 9 } },
+                         grid: { color: 'rgba(0,0,0,0.05)' } },
+                    y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                },
+                animation: { duration: 300 }
+            }
+        });
+    }
+
+    var res = document.getElementById('dnbr-resultados');
+    if (res) res.style.display = 'block';
+}
+
+// ---------------------------------------------------------
 // HISTORIAL DE ANÁLISIS — tabla de mediciones por índice
 // (reemplaza los antiguos "history charts": cada medición es una corrida
 // con rango/n imágenes distintos, no una serie temporal comparable.

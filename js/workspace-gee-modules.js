@@ -283,12 +283,28 @@ function requestAgua() {
 // SUB-PESTAÑAS DE MÓDULO — "Período único" / "Serie estacional"
 // ---------------------------------------------------------
 
+// Modos de sub-pestaña por módulo (ids: '<modulo>-pane-<modo>')
+var AP_SUBTAB_MODES = {
+    'agua':   ['unico', 'serie'],
+    'veg':    ['unico', 'serie'],
+    'bosque': ['hansen', 'dnbr']
+};
+
+// Gráfico asociado a cada pane, para re-dimensionar al mostrarlo
+function _apSubtabChart(modulo, modo) {
+    if (modulo === 'agua'   && modo === 'serie') return (typeof _serieChart    !== 'undefined') ? _serieChart : null;
+    if (modulo === 'veg'    && modo === 'serie') return (typeof _vegSerieChart !== 'undefined') ? _vegSerieChart : null;
+    if (modulo === 'bosque' && modo === 'dnbr')  return (typeof _dnbrChart     !== 'undefined') ? _dnbrChart : null;
+    return null;
+}
+
 /**
- * Alterna entre el análisis de período único y la serie estacional
- * dentro de un mismo tab. modulo: 'agua' | 'veg'.
+ * Alterna entre las sub-pestañas de un tab.
+ * modulo: 'agua' | 'veg' | 'bosque'.
  */
 function switchApSubtab(modulo, modo) {
-    ['unico', 'serie'].forEach(function(m) {
+    var modos = AP_SUBTAB_MODES[modulo] || ['unico', 'serie'];
+    modos.forEach(function(m) {
         var pane = document.getElementById(modulo + '-pane-' + m);
         var btn  = document.getElementById(modulo + '-subtab-btn-' + m);
         if (pane) pane.style.display = (m === modo) ? 'block' : 'none';
@@ -297,12 +313,10 @@ function switchApSubtab(modulo, modo) {
 
     // Chart.js mide 0px si se creó con el contenedor oculto — re-dimensionar
     // al mostrar el pane.
-    if (modo === 'serie') {
-        setTimeout(function() {
-            var chart = (modulo === 'agua') ? _serieChart : _vegSerieChart;
-            if (chart) { try { chart.resize(); } catch(e) {} }
-        }, 30);
-    }
+    setTimeout(function() {
+        var chart = _apSubtabChart(modulo, modo);
+        if (chart) { try { chart.resize(); } catch(e) {} }
+    }, 30);
 }
 
 // ---------------------------------------------------------
