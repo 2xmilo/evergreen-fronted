@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=33">
+    <link rel="stylesheet" href="css/workspace.css?v=34">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -718,6 +718,117 @@
                         <span class="ap-history-hint">Click en una fila para ver su capa</span>
                     </div>
                     <div class="ap-history-table-wrap" id="agua-history-table"></div>
+                </div>
+            </div>
+
+            <!-- ═══ SERIE ESTACIONAL (análisis temporal real) ═══ -->
+            <div class="ap-serie-section">
+                <div class="ap-history-section-header" style="margin-top:18px;">
+                    <span>Serie estacional</span>
+                    <span class="ap-help" tabindex="0">?
+                        <span class="ap-help-tip">
+                            Compara la <b>misma estación</b> a lo largo de los años para que la
+                            variación observada sea real y no un efecto del ciclo anual.<br><br>
+                            La métrica principal es la <b>superficie de agua persistente</b>:
+                            hectáreas donde la mediana estacional del índice supera el umbral.
+                            Al usar la mediana, refleja el agua estable del período — no captura
+                            crecidas o inundaciones breves.
+                        </span>
+                    </span>
+                </div>
+                <p class="ap-note" style="margin-top:2px;">Superficie de agua persistente por año, misma estación. Máx. 10 años.</p>
+
+                <div class="ap-date-row">
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Índice</label>
+                        <select class="ap-input" id="serie-indice">
+                            <option value="MNDWI" selected>MNDWI (recomendado)</option>
+                            <option value="NDWI">NDWI</option>
+                        </select>
+                    </div>
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Estación</label>
+                        <select class="ap-input" id="serie-season">
+                            <option value="DJF" selected>Verano (dic–feb)</option>
+                            <option value="MAM">Otoño (mar–may)</option>
+                            <option value="JJA">Invierno (jun–ago)</option>
+                            <option value="SON">Primavera (sep–nov)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ap-date-row">
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Desde <span>(año)</span></label>
+                        <input type="number" class="ap-input" id="serie-year-start" value="2019" min="2016" max="2026" step="1">
+                    </div>
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Hasta <span>(año)</span></label>
+                        <input type="number" class="ap-input" id="serie-year-end" value="2026" min="2016" max="2026" step="1">
+                    </div>
+                </div>
+                <div class="ap-field">
+                    <label class="ap-label">Umbral de agua
+                        <span class="ap-help" tabindex="0" style="margin-left:4px;">?
+                            <span class="ap-help-tip">
+                                Un píxel cuenta como agua si el índice supera este valor.
+                                <b>0.00</b> es la convención estándar; sube a <b>0.10–0.20</b>
+                                si el resultado sobreestima (aguas turbias, sombras urbanas).
+                                El umbral queda guardado con la serie: compara siempre series
+                                calculadas con el mismo umbral.
+                            </span>
+                        </span>
+                    </label>
+                    <select class="ap-input" id="serie-threshold">
+                        <option value="0" selected>0.00 — estándar</option>
+                        <option value="0.1">0.10 — conservador</option>
+                        <option value="0.2">0.20 — estricto</option>
+                    </select>
+                </div>
+
+                <button class="ap-btn-generate" id="btn-serie-gen" onclick="requestAguaSerie()"
+                        style="background:#14584a;">
+                    <i class="fas fa-chart-line"></i> Generar Serie Estacional
+                </button>
+
+                <div id="serie-resultados" style="display:none; margin-top:14px;">
+                    <div class="ap-stats-3">
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" style="color:#1e6ea0;" id="serie-last-ha">—</span>
+                            <span class="ap-stat-col-label" id="serie-last-lbl">Última superficie</span>
+                        </div>
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" id="serie-delta">—</span>
+                            <span class="ap-stat-col-label">Δ del período</span>
+                        </div>
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" id="serie-trend">—</span>
+                            <span class="ap-stat-col-label" id="serie-trend-lbl">Tendencia</span>
+                        </div>
+                    </div>
+
+                    <div class="ap-scale-row" style="margin-top:10px;">
+                        <span class="ap-scale-label">Vista</span>
+                        <div class="ap-scale-toggle">
+                            <button type="button" class="ap-scale-btn active" id="serie-mode-superficie"
+                                    onclick="setSerieChartMode('superficie')">Superficie</button>
+                            <button type="button" class="ap-scale-btn" id="serie-mode-indice"
+                                    onclick="setSerieChartMode('indice')">Índice</button>
+                            <button type="button" class="ap-scale-btn" id="serie-mode-anomalias"
+                                    onclick="setSerieChartMode('anomalias')">Anomalías</button>
+                        </div>
+                    </div>
+                    <div style="height:190px; margin-top:8px;">
+                        <canvas id="serie-chart"></canvas>
+                    </div>
+
+                    <div class="ap-history-section-header" style="margin-top:12px;">
+                        <span>Detalle por período</span>
+                    </div>
+                    <div class="ap-history-table-wrap" id="serie-table"></div>
+                    <p class="ap-note" id="serie-nota">
+                        Mediana estacional = agua persistente (no captura eventos breves).
+                        ⚠ = período poco confiable: menos de 3 imágenes o cobertura válida &lt; 85%.
+                    </p>
                 </div>
             </div>
 
@@ -1543,7 +1654,7 @@
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/auth.js?v=10"></script>
+<script src="js/auth.js?v=11"></script>
 
 <!-- OVERRIDES requeridos por acceso-datos.js -->
 <script>
@@ -1566,11 +1677,11 @@
 <script src="js/acceso-datos.js?v=3"></script>
 
 <!-- WORKSPACE LOGIC -->
-<script src="js/workspace-core.js?v=10"></script>
+<script src="js/workspace-core.js?v=11"></script>
 <script src="js/workspace-map.js?v=6"></script>
 <script src="js/workspace-bosque.js?v=6"></script>
 <script src="js/workspace-summary.js?v=10"></script>
-<script src="js/workspace-gee-modules.js?v=11"></script>
+<script src="js/workspace-gee-modules.js?v=12"></script>
 <script src="js/workspace-zones.js?v=9"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=6"></script>

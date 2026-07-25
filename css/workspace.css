@@ -2924,3 +2924,10 @@ body.workspace-mode {
 .ap-history-table tbody tr:hover { background: #f0f7ea; }
 .ap-history-table tbody tr.latest td { font-weight: 600; color: #222; }
 .ap-history-table .ht-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Fix: los <select class=ap-input> heredan color-scheme:dark de
+   acceso-datos.css (intocable) y el popup nativo de opciones salia con
+   fondo oscuro + texto negro (ilegible). Mismo fix ya aplicado antes a
+   .ap-select y ARClim. */
+select.ap-input { color-scheme: light; background: #fff; color: #333; }
+select.ap-input option { background: #fff; color: #333; }

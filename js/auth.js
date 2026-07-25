@@ -188,6 +188,15 @@ async function loadCloudWorkspace(userId) {
                     // La capa de streams (Hidromorfología) es complementaria y solo
                     // se consume en el Comparador; no es un indicador del dashboard.
                     if (row.tipo_indice === 'hidromorfologia_streams') return;
+                    // Series estacionales (ej. 'agua_serie_MNDWI_DJF'): van a
+                    // WorkspaceState.series — su result_data es [serieDoc], no
+                    // el array de mediciones que espera el dashboard.
+                    if (row.tipo_indice && row.tipo_indice.indexOf('_serie') > -1) {
+                        if (!WorkspaceState.series) WorkspaceState.series = {};
+                        var serieDoc = Array.isArray(row.result_data) ? row.result_data[0] : row.result_data;
+                        if (serieDoc) WorkspaceState.series[row.tipo_indice] = serieDoc;
+                        return;
+                    }
                     WorkspaceState.resultados[row.tipo_indice] = row.result_data;
                 });
                 changed = true;
@@ -206,6 +215,10 @@ async function loadCloudWorkspace(userId) {
             if (typeof _restoreTilesCache     === 'function') _restoreTilesCache();
             if (typeof restoreLastActiveLayer  === 'function') {
                 setTimeout(restoreLastActiveLayer, 700);
+            }
+            // Restaurar la serie estacional guardada en el tab Agua
+            if (typeof restoreAguaSerieUI === 'function') {
+                try { restoreAguaSerieUI(); } catch(e) {}
             }
         }
 

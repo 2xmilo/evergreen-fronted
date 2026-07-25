@@ -14,7 +14,9 @@
     zonaHa: 0,
     zonaId: null,     // UUID del workspace en Supabase
     capasActivas: {},
-    resultados: {}    // Cache de análisis: key = 'tipo_indice' (sin tilesUrl — expiran)
+    resultados: {},   // Cache de análisis: key = 'tipo_indice' (sin tilesUrl — expiran)
+    series: {}        // Series estacionales: key = 'agua_serie_MNDWI_DJF' → serieDoc
+                      // (en Supabase van como result_data = [serieDoc] bajo el mismo key)
 };
 
 // Caché en MEMORIA de URLs de tiles GEE (expiran ~24h, nunca van a localStorage)
@@ -53,7 +55,12 @@ function clearAnalysisStateForZoneChange() {
     }
 
     WorkspaceState.resultados = {};
+    WorkspaceState.series = {};
     _tilesCache = {};
+
+    // Ocultar resultados de serie estacional de la zona anterior
+    var serieRes = document.getElementById('serie-resultados');
+    if (serieRes) serieRes.style.display = 'none';
 
     if (typeof _previewOverlays !== 'undefined' && typeof map !== 'undefined') {
         Object.keys(_previewOverlays).forEach(function(key) {
@@ -89,6 +96,7 @@ function loadWorkspaceState() {
             var parsed = JSON.parse(stored);
             WorkspaceState = parsed;
             if (!WorkspaceState.resultados) WorkspaceState.resultados = {};
+            if (!WorkspaceState.series)     WorkspaceState.series = {};
             // Migrar formato viejo (objeto) → nuevo (array por índice)
             Object.keys(WorkspaceState.resultados).forEach(function(k) {
                 var v = WorkspaceState.resultados[k];
@@ -108,6 +116,9 @@ function loadWorkspaceState() {
             renderIndicadorCards();
             refreshIndRows();
             restoreDetailVegStats();
+            if (typeof restoreAguaSerieUI === 'function') {
+                try { restoreAguaSerieUI(); } catch(e) {}
+            }
         } catch (e) {
             console.error("Error restaurando workspace", e);
         }

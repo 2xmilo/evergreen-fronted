@@ -2221,6 +2221,10 @@ function App({session,plan,zones}){
           if(sd && sd.streams) parsed._streams = sd;
           return;
         }
+        // Series estacionales (ej. 'agua_serie_MNDWI_DJF'): result_data es un
+        // doc de serie, no mediciones con preview — se integrarán como módulo
+        // propio (Fase C). Excluirlas para que no pisen los módulos de mapa.
+        if(row.tipo_indice&&row.tipo_indice.indexOf('_serie')>-1) return;
         const modDef=CZ.MODULES.find(m=>row.tipo_indice&&m.prefix&&row.tipo_indice.startsWith(m.prefix));
         if(!modDef||!row.result_data||!row.result_data.length) return;
         const item=row.result_data.reduce((a,b)=>((a.ts||0)>(b.ts||0)?a:b));
