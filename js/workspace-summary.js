@@ -536,7 +536,6 @@ var _GEE_LAYER_LABELS = {
     'agua_NDMI':        'NDMI · Humedad',
     'dem_Elevacion':    'Elevación · DEM',
     'dem_Pendiente':    'Pendiente · DEM',
-    'dem_Aspecto':      'Aspecto · DEM',
     'bosque':           'Pérdida de Bosque'
 };
 
@@ -667,6 +666,29 @@ function toggleLayerById(id, rowEl) {
         if (wasOn) map.removeLayer(layer);
         else       map.addLayer(layer);
     }
+
+    // Sincronizar leyenda flotante con la capa activada/desactivada
+    try {
+        if (!wasOn) {
+            // Capa encendida → mostrar su leyenda
+            showMiniLegend(id);
+        } else {
+            // Capa apagada → mostrar la leyenda de otra capa GEE que siga
+            // visible en el mapa, o esconder el mini-panel si no queda ninguna
+            var otraActiva = null;
+            Object.keys(_layerRegistry).forEach(function(k) {
+                if (otraActiva || k === id) return;
+                var l = _layerRegistry[k];
+                if (l && typeof map !== 'undefined' && map.hasLayer(l)) otraActiva = k;
+            });
+            if (otraActiva) {
+                showMiniLegend(otraActiva);
+            } else {
+                var mp = document.getElementById('mini-panel');
+                if (mp) mp.classList.add('hidden');
+            }
+        }
+    } catch(e) { console.warn('toggleLayerById legend:', e); }
 }
 
 function setCuencasOpacity(val) {

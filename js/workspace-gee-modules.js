@@ -17,10 +17,10 @@ var VEG_GRADIENTE = {
     'VARI':  'linear-gradient(90deg,#d73027,#f46d43,#fdae61,#ffffbf,#a6d96a,#1a9850,#006837)',
     'NDMI':  'linear-gradient(90deg,#d7191c,#fdae61,#ffffbf,#abd9e9,#2c7bb6)',
     'MSI':   'linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c)',
-    'NDWI':  'linear-gradient(90deg,#d4a96a,#f5f5dc,#9ecae1,#2166ac,#084081)',
-    'MNDWI': 'linear-gradient(90deg,#c7a46b,#faf0dc,#74b9d4,#1a6aaa,#053061)',
-    'NBR':   'linear-gradient(90deg,#006837,#1a9850,#a6d96a,#ffffbf,#fdae61,#f46d43,#d73027)',
-    'NBR2':  'linear-gradient(90deg,#006837,#1a9850,#a6d96a,#ffffbf,#fdae61,#f46d43,#d73027)',
+    'NDWI':  'linear-gradient(90deg,#8c510a,#bf812d,#d4a96a,#f5f5dc,#9ecae1,#2166ac,#084081)',
+    'MNDWI': 'linear-gradient(90deg,#7a4f1d,#a97e3c,#c7a46b,#faf0dc,#74b9d4,#1a6aaa,#053061)',
+    'NBR':   'linear-gradient(90deg,#d73027,#f46d43,#fdae61,#ffffbf,#a6d96a,#1a9850,#006837)',
+    'NBR2':  'linear-gradient(90deg,#d73027,#f46d43,#fdae61,#ffffbf,#a6d96a,#1a9850,#006837)',
     'NDDI':  'linear-gradient(90deg,#2c7bb6,#abd9e9,#ffffbf,#fdae61,#d7191c)',
     'BSI':   'linear-gradient(90deg,#1a9850,#ffffbf,#d73027)',
     'NDSI':  'linear-gradient(90deg,#f7fbff,#c6dbef,#6baed6,#2171b5,#084594)'
@@ -108,6 +108,9 @@ function requestVegetacion() {
         // Actualizar panel detalle 1 en Resumen con datos reales
         updateDetailVegStats(payload.indice, data.stats, payload.fecha_inicio, payload.fecha_fin);
 
+        // Sincronizar leyenda flotante del mapa con el índice recién calculado
+        try { showMiniLegend('vegetacion_' + payload.indice); } catch(e) {}
+
         // Gráfico de evolución temporal (aparece desde la 2.ª medición)
         renderVegHistoryChart(payload.indice);
     })
@@ -131,11 +134,18 @@ var AGUA_INFO = {
     'NDMI':  'Índice de humedad foliar y del suelo usando NIR (B8) y SWIR (B11). Útil para detectar estrés hídrico en vegetación.'
 };
 
-// Gradiente visual por índice
+// Gradiente visual por índice — neutro al centro (escala simétrica en 0, igual que backend)
 var AGUA_GRADIENTE = {
-    'NDWI':  'linear-gradient(90deg, #d4a96a, #f5f5dc, #9ecae1, #2166ac, #084081)',
-    'MNDWI': 'linear-gradient(90deg, #c7a46b, #faf0dc, #74b9d4, #1a6aaa, #053061)',
+    'NDWI':  'linear-gradient(90deg, #8c510a, #bf812d, #d4a96a, #f5f5dc, #9ecae1, #2166ac, #084081)',
+    'MNDWI': 'linear-gradient(90deg, #7a4f1d, #a97e3c, #c7a46b, #faf0dc, #74b9d4, #1a6aaa, #053061)',
     'NDMI':  'linear-gradient(90deg, #d7191c, #fdae61, #ffffbf, #abd9e9, #2c7bb6)'
+};
+
+// Etiquetas de extremos y nota de escala por índice
+var AGUA_LABELS = {
+    'NDWI':  { min: 'Sin agua', max: 'Agua',   nota: 'Escala simétrica centrada en 0 · azul = agua (valores > 0).' },
+    'MNDWI': { min: 'Sin agua', max: 'Agua',   nota: 'Escala simétrica centrada en 0 · azul = agua (valores > 0).' },
+    'NDMI':  { min: 'Seco',     max: 'Húmedo', nota: 'Escala simétrica centrada en 0 · azul = alta humedad (valores > 0).' }
 };
 
 function actualizarInfoAgua() {
@@ -186,6 +196,17 @@ function requestAgua() {
         var gradBar = document.getElementById('agua-gradient-bar');
         if (gradBar) gradBar.style.background = AGUA_GRADIENTE[indice] || AGUA_GRADIENTE['NDWI'];
 
+        // Etiquetas de extremos con el rango real de visualización (simétrico en 0)
+        var aguaLbls = AGUA_LABELS[indice] || { min: 'Bajo', max: 'Alto', nota: '' };
+        var lblMinAgua = document.getElementById('agua-legend-min');
+        var lblMaxAgua = document.getElementById('agua-legend-max');
+        if (lblMinAgua) lblMinAgua.textContent = aguaLbls.min +
+            (data.min_viz !== undefined ? ' (' + data.min_viz.toFixed(2) + ')' : '');
+        if (lblMaxAgua) lblMaxAgua.textContent = aguaLbls.max +
+            (data.max_viz !== undefined ? ' (' + data.max_viz.toFixed(2) + ')' : '');
+        var notaAgua = document.getElementById('agua-viz-note');
+        if (notaAgua && aguaLbls.nota) notaAgua.textContent = aguaLbls.nota;
+
         document.getElementById('agua-resultados').style.display = 'block';
         _fitToZone();
 
@@ -198,6 +219,9 @@ function requestAgua() {
         if (typeof uploadAnalysisPreviewFromPayload === 'function') {
             uploadAnalysisPreviewFromPayload('agua_' + indice, aguaTs, data);
         }
+
+        // Sincronizar leyenda flotante del mapa con el índice recién calculado
+        try { showMiniLegend('agua_' + indice); } catch(e) {}
 
         // Gráfico de evolución temporal
         renderAguaHistoryChart(indice);
@@ -224,10 +248,30 @@ function switchDemLayer(tipo) {
         if (panel) panel.style.display = (t === tipo) ? 'block' : 'none';
     });
 
-    // Cambiar capa en el mapa
-    if (_demLayerActual) map.removeLayer(_demLayerActual);
-    _demLayerActual = L.tileLayer(_demTiles[tipo], { pane: 'overlayPane', zIndex: 390, crossOrigin: 'anonymous' });
+    var key = (tipo === 'slope') ? 'dem_Pendiente' : 'dem_Elevacion';
+
+    // Quitar del mapa ambas capas DEM (instancia suelta y las del registro de capas)
+    // y desmarcar sus filas en el panel — evita rasters DEM apilados.
+    if (_demLayerActual) { map.removeLayer(_demLayerActual); _demLayerActual = null; }
+    ['dem_Elevacion', 'dem_Pendiente'].forEach(function(k) {
+        var l = (typeof _layerRegistry !== 'undefined') ? _layerRegistry[k] : null;
+        if (l && map.hasLayer(l)) map.removeLayer(l);
+        var rowEl = document.getElementById('glayer-' + k.replace(/_/g, '-'));
+        if (rowEl) { rowEl.classList.remove('on'); rowEl.classList.add('off'); }
+    });
+
+    // Reusar la MISMA instancia registrada en el panel de capas (si existe)
+    _demLayerActual = (typeof _layerRegistry !== 'undefined' && _layerRegistry[key])
+        ? _layerRegistry[key]
+        : L.tileLayer(_demTiles[tipo], { pane: 'overlayPane', zIndex: 390, crossOrigin: 'anonymous' });
     _demLayerActual.addTo(map);
+
+    // Marcar la fila correspondiente como activa en el panel de capas
+    var rowOn = document.getElementById('glayer-' + key.replace(/_/g, '-'));
+    if (rowOn) { rowOn.classList.add('on'); rowOn.classList.remove('off'); }
+
+    // Sincronizar leyenda flotante del mapa
+    try { showMiniLegend(key); } catch(e) {}
 }
 
 function requestElevacion() {
@@ -283,6 +327,19 @@ function requestElevacion() {
             slopeMeanEl.textContent = data.stats.slope_mean.toFixed(1) + '°';
         }
 
+        // Rango de visualización de pendiente adaptado a la zona (backend: p98, 5°–60°).
+        // Fallback 60° si el backend aún no envía slope_viz_max.
+        var slopeVizMax = (data.slope_viz_max !== undefined && data.slope_viz_max !== null)
+            ? data.slope_viz_max : 60;
+        var slopeRangeMeta = document.getElementById('dem-slope-range-meta');
+        if (slopeRangeMeta) slopeRangeMeta.textContent = '0°–' + slopeVizMax + '°';
+        var slopeMaxLbl = document.getElementById('dem-slope-max-lbl');
+        if (slopeMaxLbl) slopeMaxLbl.textContent = 'Escarpado (' + slopeVizMax + '°)';
+        // Mantener coherente la leyenda flotante del mini-panel
+        if (typeof IND_PALETTES !== 'undefined' && IND_PALETTES['dem_Pendiente']) {
+            IND_PALETTES['dem_Pendiente'].maxLbl = slopeVizMax + '°';
+        }
+
         // Mostrar panel y activar capa DEM por defecto
         document.getElementById('dem-resultados').style.display = 'block';
 
@@ -290,13 +347,14 @@ function requestElevacion() {
         if (demLayer) { map.removeLayer(demLayer); demLayer = null; }
         if (_demLayerActual) { map.removeLayer(_demLayerActual); _demLayerActual = null; }
 
-        // Reset pills al DEM y centrar mapa
-        switchDemLayer('dem');
-        _fitToZone();
-
-        // Registrar capas DEM en el panel de capas (instancias independientes para el registro)
+        // Registrar capas DEM en el panel de capas ANTES de activarlas:
+        // switchDemLayer() reutiliza estas mismas instancias (una sola capa por tipo)
         registerLayer('dem_Elevacion', L.tileLayer(data.tiles_dem, { pane: 'overlayPane', zIndex: 390, crossOrigin: 'anonymous' }));
         if (data.tiles_slope) registerLayer('dem_Pendiente', L.tileLayer(data.tiles_slope, { pane: 'overlayPane', zIndex: 390, crossOrigin: 'anonymous' }));
+
+        // Reset pills al DEM (activa capa + leyenda) y centrar mapa
+        switchDemLayer('dem');
+        _fitToZone();
 
         // Guardar en dashboard de Resumen
         var demTs = saveResultado('dem', 'Elevacion',
@@ -311,7 +369,7 @@ function requestElevacion() {
         }
         if (data.stats.slope_mean !== undefined && data.stats.slope_mean !== null) {
             var slopeTs = saveResultado('dem', 'Pendiente',
-                { mean: data.stats.slope_mean },
+                { mean: data.stats.slope_mean, min: 0, max: slopeVizMax },
                 data.tiles_slope, null, null);
             if (typeof uploadAnalysisPreviewFromPayload === 'function') {
                 uploadAnalysisPreviewFromPayload('dem_Pendiente', slopeTs, {
@@ -321,6 +379,9 @@ function requestElevacion() {
                 });
             }
         }
+
+        // Re-sincronizar leyenda ahora que las stats ya están guardadas
+        try { showMiniLegend('dem_Elevacion'); } catch(e) {}
     })
     .catch(function() {
         btn.innerHTML = '<i class="fas fa-layer-group"></i> Procesar Capas';

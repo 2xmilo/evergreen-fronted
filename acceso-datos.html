@@ -694,9 +694,9 @@
                     </div>
                 </div>
                 <div class="ap-gradient-bar" id="agua-gradient-bar"
-                     style="background:linear-gradient(90deg,#d4a96a,#f5f5dc,#9ecae1,#2166ac,#084081);"></div>
-                <div class="ap-gradient-labels"><span>Sin agua</span><span>Agua</span></div>
-                <p class="ap-note">Visualización adaptada al rango del AOI (p2–p98). Umbral de agua ≈ 0.</p>
+                     style="background:linear-gradient(90deg,#8c510a,#bf812d,#d4a96a,#f5f5dc,#9ecae1,#2166ac,#084081);"></div>
+                <div class="ap-gradient-labels"><span id="agua-legend-min">Sin agua</span><span id="agua-legend-max">Agua</span></div>
+                <p class="ap-note" id="agua-viz-note">Escala simétrica centrada en 0 · azul = agua (valores > 0).</p>
 
                 <!-- Evolución temporal -->
                 <div id="agua-historial" style="display:none;">
@@ -787,7 +787,7 @@
                     <div class="ap-meta-strip">
                         <div class="meta-item"><span class="meta-label">Derivada de</span><span class="meta-val">DEM</span></div>
                         <div class="meta-item"><span class="meta-label">Unidad</span><span class="meta-val">Grados (°)</span></div>
-                        <div class="meta-item"><span class="meta-label">Rango mapa</span><span class="meta-val">0°–60°</span></div>
+                        <div class="meta-item"><span class="meta-label">Rango mapa</span><span class="meta-val" id="dem-slope-range-meta">0°–60°</span></div>
                     </div>
                     <div class="ap-stat-row-wrap">
                         <div class="ap-stat">
@@ -796,8 +796,8 @@
                         </div>
                     </div>
                     <div class="ap-gradient-bar" style="background:linear-gradient(90deg,#ffffcc,#c7e9b4,#7fcdbb,#1d91c0,#225ea8,#253494);"></div>
-                    <div class="ap-gradient-labels"><span>Plano (0°)</span><span>Escarpado (60°)</span></div>
-                    <p class="ap-note">Zonas planas concentran flujo superficial y acumulan agua.</p>
+                    <div class="ap-gradient-labels"><span>Plano (0°)</span><span id="dem-slope-max-lbl">Escarpado (60°)</span></div>
+                    <p class="ap-note">Rango adaptado al p98 de pendiente de la zona. Zonas planas concentran flujo superficial y acumulan agua.</p>
                 </div>
 
 
@@ -1561,11 +1561,11 @@
 <script src="js/acceso-datos.js?v=3"></script>
 
 <!-- WORKSPACE LOGIC -->
-<script src="js/workspace-core.js?v=9"></script>
+<script src="js/workspace-core.js?v=10"></script>
 <script src="js/workspace-map.js?v=6"></script>
 <script src="js/workspace-bosque.js?v=5"></script>
-<script src="js/workspace-summary.js?v=9"></script>
-<script src="js/workspace-gee-modules.js?v=9"></script>
+<script src="js/workspace-summary.js?v=10"></script>
+<script src="js/workspace-gee-modules.js?v=10"></script>
 <script src="js/workspace-zones.js?v=9"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=6"></script>

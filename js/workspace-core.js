@@ -153,16 +153,16 @@ var IND_PALETTES = {
     'vegetacion_VARI':  { colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],                               minLbl:'Sin follaje',    maxLbl:'Verde vivo', desc:'Índice de Resistencia Atmosférica Visible',      dotColor:'#6aaa35' },
     'vegetacion_NDMI':  { colors:['#d7191c','#fdae61','#ffffbf','#abd9e9','#2c7bb6'],                                                   minLbl:'Estrés hídrico', maxLbl:'Húmedo',     desc:'Índice de Humedad de la Vegetación',             dotColor:'#2c7bb6' },
     'vegetacion_MSI':   { colors:['#2c7bb6','#abd9e9','#ffffbf','#fdae61','#d7191c'],                                                   minLbl:'Húmedo',         maxLbl:'Estrés',     desc:'Índice de Estrés de Humedad',                    dotColor:'#fd8d3c' },
-    'vegetacion_NDWI':  { colors:['#d4a96a','#f5f5dc','#9ecae1','#2166ac','#084081'],                                                   minLbl:'Tierra',         maxLbl:'Agua',       desc:'Índice de Agua de Vegetación (Gao)',             dotColor:'#2166ac' },
-    'vegetacion_MNDWI': { colors:['#c7a46b','#faf0dc','#74b9d4','#1a6aaa','#053061'],                                                   minLbl:'Tierra',         maxLbl:'Agua',       desc:'NDWI Modificado (Xu)',                            dotColor:'#1a6aaa' },
+    'vegetacion_NDWI':  { colors:['#8c510a','#bf812d','#d4a96a','#f5f5dc','#9ecae1','#2166ac','#084081'],                               minLbl:'Tierra',         maxLbl:'Agua',       desc:'Índice de Agua Normalizado (McFeeters)',         dotColor:'#2166ac' },
+    'vegetacion_MNDWI': { colors:['#7a4f1d','#a97e3c','#c7a46b','#faf0dc','#74b9d4','#1a6aaa','#053061'],                               minLbl:'Tierra',         maxLbl:'Agua',       desc:'NDWI Modificado (Xu)',                            dotColor:'#1a6aaa' },
     'vegetacion_NBR':   { colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],                               minLbl:'Quemado',        maxLbl:'Vegetación', desc:'Índice de Área Quemada Normalizado',             dotColor:'#6aaa35' },
     'vegetacion_NBR2':  { colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],                               minLbl:'Afectado',       maxLbl:'Recuperado', desc:'NBR de Segunda Banda SWIR',                      dotColor:'#6aaa35' },
     'vegetacion_NDDI':  { colors:['#2c7bb6','#abd9e9','#ffffbf','#fdae61','#d7191c'],                                                   minLbl:'Sin déficit',    maxLbl:'Déficit',    desc:'Índice de Déficit Hídrico Normalizado',          dotColor:'#d7191c' },
     'vegetacion_BSI':   { colors:['#1a9850','#ffffbf','#d73027'],                                                                       minLbl:'Vegetado',       maxLbl:'Suelo',      desc:'Índice de Suelo Desnudo',                        dotColor:'#d73027' },
     'vegetacion_NDSI':  { colors:['#f7fbff','#c6dbef','#6baed6','#2171b5','#084594'],                                                   minLbl:'Sin nieve',      maxLbl:'Nieve/Hielo',desc:'Índice de Nieve Normalizado',                    dotColor:'#6baed6' },
     // ── Agua ─────────────────────────────────────────────────────
-    'agua_NDWI':        { colors:['#d4a96a','#f5f5dc','#9ecae1','#2166ac','#084081'],                                                   minLbl:'Tierra',         maxLbl:'Agua',       desc:'Índice de Agua Normalizado',                     dotColor:'#2166ac' },
-    'agua_MNDWI':       { colors:['#c7a46b','#faf0dc','#74b9d4','#1a6aaa','#053061'],                                                   minLbl:'Tierra',         maxLbl:'Agua',       desc:'NDWI Modificado',                                dotColor:'#1a6aaa' },
+    'agua_NDWI':        { colors:['#8c510a','#bf812d','#d4a96a','#f5f5dc','#9ecae1','#2166ac','#084081'],                               minLbl:'Tierra',         maxLbl:'Agua',       desc:'Índice de Agua Normalizado',                     dotColor:'#2166ac' },
+    'agua_MNDWI':       { colors:['#7a4f1d','#a97e3c','#c7a46b','#faf0dc','#74b9d4','#1a6aaa','#053061'],                               minLbl:'Tierra',         maxLbl:'Agua',       desc:'NDWI Modificado',                                dotColor:'#1a6aaa' },
     'agua_NDMI':        { colors:['#d7191c','#fdae61','#ffffbf','#abd9e9','#2c7bb6'],                                                   minLbl:'Seco',           maxLbl:'Húmedo',     desc:'Índice de Humedad Normalizado',                  dotColor:'#2c7bb6' },
     // ── Elevación ────────────────────────────────────────────────
     'dem_Elevacion':    { colors:['#440154','#3b528b','#21918c','#5ec962','#fde725'],                                                   minLbl:'Bajo',           maxLbl:'Alto (m)',   desc:'Modelo Digital de Elevación · 30 m',             dotColor:'#21918c' },
@@ -527,10 +527,12 @@ function activarIndicador(key, ts) {
     });
     _previewOverlays = {};
 
-    // Toggle: si ya estaba activo, desactivar
+    // Toggle: si ya estaba activo, desactivar (y esconder la leyenda flotante)
     if (_indicadorActivo === activeKey) {
         _indicadorActivo = null;
         renderIndicadorCards();
+        var mpOff = document.getElementById('mini-panel');
+        if (mpOff) mpOff.classList.add('hidden');
         return;
     }
 
@@ -538,6 +540,7 @@ function activarIndicador(key, ts) {
         _restorePreviewOnMap(key, entry.previewPath, entry.previewBounds);
         _indicadorActivo = activeKey;
         renderIndicadorCards();
+        try { showMiniLegend(key); } catch(e) {}
         mostrarNotificacion('Mostrando capa guardada');
         return;
     }
@@ -554,6 +557,7 @@ function activarIndicador(key, ts) {
     _indicadorLayer.addTo(map);
     _indicadorActivo = activeKey;
     renderIndicadorCards();
+    try { showMiniLegend(key); } catch(e) {}
 }
 
 // Actualiza el UI del panel izquierdo con la info de la zona
