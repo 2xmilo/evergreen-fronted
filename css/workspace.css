@@ -2931,3 +2931,46 @@ body.workspace-mode {
    .ap-select y ARClim. */
 select.ap-input { color-scheme: light; background: #fff; color: #333; }
 select.ap-input option { background: #fff; color: #333; }
+
+/* ==========================================================================
+   SUB-PESTAÑAS DE MODULO (Periodo unico / Serie estacional) — 2026-07-25
+   ========================================================================== */
+.ap-subtabs {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding-bottom: 2px;
+}
+.ap-subtab {
+    flex: 1;
+    border: 1px solid rgba(0,0,0,0.10);
+    background: #f4f5f3;
+    color: #5a6b5a;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    padding: 8px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ap-subtab i { font-size: 11px; opacity: 0.85; }
+.ap-subtab:hover:not(.active) { background: #e9ede8; color: #3d4f3d; }
+.ap-subtab.active {
+    background: var(--ws-topbar-bg, #1B3A0D);
+    border-color: var(--ws-topbar-bg, #1B3A0D);
+    color: #fff;
+}
+.ap-subtab-hint {
+    font-size: 10.5px;
+    color: var(--ws-text-muted, #666);
+    font-style: italic;
+    margin: -8px 0 12px;
+    line-height: 1.4;
+}
+/* Tabla de serie: puede tener varias columnas en panel angosto */
+.ap-history-table-wrap { overflow-x: auto; }

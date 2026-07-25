@@ -216,9 +216,12 @@ async function loadCloudWorkspace(userId) {
             if (typeof restoreLastActiveLayer  === 'function') {
                 setTimeout(restoreLastActiveLayer, 700);
             }
-            // Restaurar la serie estacional guardada en el tab Agua
+            // Restaurar las series estacionales guardadas (Agua y Vegetación)
             if (typeof restoreAguaSerieUI === 'function') {
                 try { restoreAguaSerieUI(); } catch(e) {}
+            }
+            if (typeof restoreVegSerieUI === 'function') {
+                try { restoreVegSerieUI(); } catch(e) {}
             }
         }
 

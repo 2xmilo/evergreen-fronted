@@ -280,6 +280,32 @@ function requestAgua() {
 }
 
 // ---------------------------------------------------------
+// SUB-PESTAÑAS DE MÓDULO — "Período único" / "Serie estacional"
+// ---------------------------------------------------------
+
+/**
+ * Alterna entre el análisis de período único y la serie estacional
+ * dentro de un mismo tab. modulo: 'agua' | 'veg'.
+ */
+function switchApSubtab(modulo, modo) {
+    ['unico', 'serie'].forEach(function(m) {
+        var pane = document.getElementById(modulo + '-pane-' + m);
+        var btn  = document.getElementById(modulo + '-subtab-btn-' + m);
+        if (pane) pane.style.display = (m === modo) ? 'block' : 'none';
+        if (btn)  btn.classList.toggle('active', m === modo);
+    });
+
+    // Chart.js mide 0px si se creó con el contenedor oculto — re-dimensionar
+    // al mostrar el pane.
+    if (modo === 'serie') {
+        setTimeout(function() {
+            var chart = (modulo === 'agua') ? _serieChart : _vegSerieChart;
+            if (chart) { try { chart.resize(); } catch(e) {} }
+        }, 30);
+    }
+}
+
+// ---------------------------------------------------------
 // AGUA — SERIE ESTACIONAL (análisis temporal real)
 // ---------------------------------------------------------
 var _serieData      = null;   // doc de la serie activa (respuesta backend + ts)
@@ -588,6 +614,309 @@ function restoreAguaSerieUI() {
     if (selThr && best.threshold !== undefined) selThr.value = String(best.threshold);
 
     renderAguaSerie(best);
+}
+
+// ---------------------------------------------------------
+// VEGETACIÓN — SERIE ESTACIONAL (clases de vigor)
+// ---------------------------------------------------------
+var _vegSerieData      = null;
+var _vegSerieChart     = null;
+var _vegSerieChartMode = 'vigor';
+
+// Clases de vigor — deben coincidir con _VEG_CLASS_BREAKS del backend (0.2/0.4/0.6)
+var VEG_CLASES = [
+    { key: 'densa',    label: 'Densa (>0.6)',     color: '#1a6b32' },
+    { key: 'moderada', label: 'Moderada (0.4–0.6)', color: '#66bd63' },
+    { key: 'escasa',   label: 'Escasa (0.2–0.4)',  color: '#fee08b' },
+    { key: 'sin_veg',  label: 'Sin veg. (<0.2)',   color: '#d9a679' }
+];
+
+function requestVegSerie() {
+    if (!WorkspaceState.zonaGEE) return _noZonaGuard();
+
+    var indice = document.getElementById('vserie-indice').value;
+    var season = document.getElementById('vserie-season').value;
+    var y0 = parseInt(document.getElementById('vserie-year-start').value, 10);
+    var y1 = parseInt(document.getElementById('vserie-year-end').value, 10);
+
+    var notif = (typeof mostrarNotificacion === 'function') ? mostrarNotificacion : alert;
+    if (isNaN(y0) || isNaN(y1) || y1 < y0) { notif('⚠️ Revisa el rango de años.'); return; }
+    if (y1 - y0 + 1 < 2)  { notif('⚠️ La serie necesita al menos 2 años.'); return; }
+    if (y1 - y0 + 1 > 10) { notif('⚠️ Máximo 10 años por serie.'); return; }
+    if (y0 < 2016)        { notif('⚠️ Sentinel-2 no tiene cobertura confiable antes de 2016.'); return; }
+
+    var btn = document.getElementById('btn-vserie-gen');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando serie (~1 min)...';
+    btn.disabled = true;
+
+    fetchBackendJson('https://evergreen-backend-awv1.onrender.com/api/vegetacion/serie-estacional', {
+        geojson: WorkspaceState.zonaGEE.geometry,
+        indice: indice, season: season,
+        year_start: y0, year_end: y1
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.innerHTML = '<i class="fas fa-chart-line"></i> Generar Serie Estacional';
+        btn.disabled = false;
+        if (data.error) { notif('❌ ' + data.error); return; }
+
+        var doc = data;
+        doc.ts = Date.now();
+
+        var key = 'vegetacion_serie_' + doc.indice + '_' + doc.season;
+        if (!WorkspaceState.series) WorkspaceState.series = {};
+        WorkspaceState.series[key] = doc;
+        saveWorkspaceState();
+        if (window._sbUserId && typeof saveResultsToCloud === 'function') {
+            saveResultsToCloud(window._sbUserId, key, [doc]);
+        }
+
+        renderVegSerie(doc);
+    })
+    .catch(function() {
+        btn.innerHTML = '<i class="fas fa-chart-line"></i> Generar Serie Estacional';
+        btn.disabled = false;
+        notif('❌ Error de conexión al servidor.');
+    });
+}
+
+function renderVegSerie(doc) {
+    if (!doc || !doc.periods || !doc.periods.length) return;
+    _vegSerieData = doc;
+
+    var periods   = doc.periods;
+    var valid     = periods.filter(function(p) { return p.mean !== null && p.mean !== undefined; });
+    var seasonLbl = SERIE_SEASON_LABELS[doc.season] || doc.season;
+
+    // Headline: media del último período válido
+    var last    = valid.length ? valid[valid.length - 1] : null;
+    var meanEl  = document.getElementById('vserie-last-mean');
+    var meanLbl = document.getElementById('vserie-last-lbl');
+    if (meanEl)  meanEl.textContent  = last ? last.mean.toFixed(3) : '—';
+    if (meanLbl) meanLbl.textContent = last
+        ? doc.indice + ' · ' + seasonLbl.toLowerCase() + ' ' + last.year
+        : 'Última media';
+
+    // Delta del período
+    var deltaEl = document.getElementById('vserie-delta');
+    if (deltaEl) {
+        if (valid.length >= 2) {
+            var d = valid[valid.length - 1].mean - valid[0].mean;
+            deltaEl.textContent = (d > 0 ? '+' : '') + d.toFixed(3);
+            deltaEl.style.color = d < 0 ? '#c0392b' : (d > 0 ? '#1a6b32' : '');
+        } else { deltaEl.textContent = '—'; deltaEl.style.color = ''; }
+    }
+
+    // Tendencia
+    var trendEl  = document.getElementById('vserie-trend');
+    var trendLbl = document.getElementById('vserie-trend-lbl');
+    if (trendEl) {
+        if (doc.trend) {
+            var s = (doc.trend.sen_slope !== undefined) ? doc.trend.sen_slope : doc.trend.sen_slope_ha;
+            trendEl.textContent = (s > 0 ? '+' : '') + s.toFixed(4) + '/año';
+            trendEl.style.color = s < 0 ? '#c0392b' : (s > 0 ? '#1a6b32' : '');
+            if (trendLbl) trendLbl.textContent = doc.trend.significant
+                ? 'Tendencia · significativa' : 'Tendencia · no significativa';
+        } else {
+            trendEl.textContent = '—'; trendEl.style.color = '';
+            if (trendLbl) trendLbl.textContent = 'Tendencia (mín. 4 años con datos)';
+        }
+    }
+
+    // Tabla — la composición completa vive en el gráfico, aquí lo esencial
+    var cont = document.getElementById('vserie-table');
+    if (cont) {
+        var html = '<table class="ap-history-table"><thead><tr>' +
+            '<th>Período</th><th class="ht-num">Media</th>' +
+            '<th class="ht-num">Densa</th><th class="ht-num">Imgs</th>' +
+            '<th class="ht-num">Cobert.</th><th></th></tr></thead><tbody>';
+        for (var i = periods.length - 1; i >= 0; i--) {
+            var p = periods[i];
+            var sinDatos = (p.mean === null || p.mean === undefined);
+            var densa = (p.classes_ha && p.classes_ha.densa !== undefined)
+                ? _serieFmtHa(p.classes_ha.densa) + ' ha' : '—';
+            html += '<tr' + (i === periods.length - 1 ? ' class="latest"' : '') + '>' +
+                '<td>' + seasonLbl + ' ' + p.year + '</td>' +
+                '<td class="ht-num">' + (sinDatos ? 'sin datos' : p.mean.toFixed(3)) + '</td>' +
+                '<td class="ht-num">' + (sinDatos ? '—' : densa) + '</td>' +
+                '<td class="ht-num">' + p.n_images + '</td>' +
+                '<td class="ht-num">' + (p.coverage_pct !== null && p.coverage_pct !== undefined ? p.coverage_pct.toFixed(0) + '%' : '—') + '</td>' +
+                '<td>' + (sinDatos ? '' : (p.reliable ? '' : '⚠')) + '</td>' +
+                '</tr>';
+        }
+        cont.innerHTML = html + '</tbody></table>';
+    }
+
+    setVegSerieChartMode('vigor');
+    var res = document.getElementById('vserie-resultados');
+    if (res) res.style.display = 'block';
+}
+
+function setVegSerieChartMode(mode) {
+    _vegSerieChartMode = mode;
+    ['vigor', 'indice', 'anomalias'].forEach(function(m) {
+        var b = document.getElementById('vserie-mode-' + m);
+        if (b) b.classList.toggle('active', m === mode);
+    });
+
+    // Leyenda de clases solo aplica a la vista apilada
+    var leg = document.getElementById('vserie-legend');
+    if (leg) {
+        if (mode === 'vigor') {
+            leg.innerHTML = VEG_CLASES.map(function(c) {
+                return '<span class="ap-history-legend-dot" style="background:' + c.color + ';"></span>' +
+                       '<span style="margin-right:8px;">' + c.label + '</span>';
+            }).join('');
+            leg.style.display = 'flex';
+        } else {
+            leg.style.display = 'none';
+        }
+    }
+    _renderVegSerieChart();
+}
+
+function _renderVegSerieChart() {
+    var d = _vegSerieData;
+    var canvas = document.getElementById('vserie-chart');
+    if (!d || !canvas) return;
+    if (_vegSerieChart) { try { _vegSerieChart.destroy(); } catch(e) {} }
+
+    var periods = d.periods;
+    var years   = periods.map(function(p) { return p.year; });
+    var valid   = periods.filter(function(p) { return p.mean !== null && p.mean !== undefined; });
+    var datasets = [];
+    var chartType = 'bar';
+    var stacked = false;
+    var yOpts = { beginAtZero: false, ticks: { font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' } };
+
+    if (_vegSerieChartMode === 'vigor') {
+        stacked = true;
+        yOpts.beginAtZero = true;
+        yOpts.title = { display: true, text: 'ha', font: { size: 9 } };
+        VEG_CLASES.forEach(function(c) {
+            datasets.push({
+                label: c.label,
+                data: periods.map(function(p) {
+                    return (p.classes_ha && p.classes_ha[c.key] !== undefined) ? p.classes_ha[c.key] : null;
+                }),
+                backgroundColor: c.color,
+                borderWidth: 0
+            });
+        });
+    } else if (_vegSerieChartMode === 'indice') {
+        chartType = 'line';
+        datasets.push({
+            label: 'p75', data: periods.map(function(p) { return p.p75; }),
+            borderColor: 'rgba(0,0,0,0)', pointRadius: 0, fill: false, spanGaps: true, order: 3
+        });
+        datasets.push({
+            label: 'p25–p75', data: periods.map(function(p) { return p.p25; }),
+            borderColor: 'rgba(0,0,0,0)', pointRadius: 0,
+            fill: '-1', backgroundColor: 'rgba(26,107,50,0.15)', spanGaps: true, order: 2
+        });
+        datasets.push({
+            label: 'Media ' + d.indice,
+            data: periods.map(function(p) { return p.mean; }),
+            borderColor: '#1a6b32', borderWidth: 2,
+            pointRadius: periods.map(function(p) { return p.reliable ? 3 : 4; }),
+            pointBackgroundColor: periods.map(function(p) { return p.reliable ? '#1a6b32' : '#fff'; }),
+            pointBorderColor: '#1a6b32', fill: false, spanGaps: true, order: 1
+        });
+        if (d.trend) {
+            var slope = (d.trend.sen_slope !== undefined) ? d.trend.sen_slope : d.trend.sen_slope_ha;
+            datasets.push({
+                label: 'Tendencia (Sen)',
+                data: years.map(function(y) { return slope * y + d.trend.sen_intercept; }),
+                borderColor: '#d98a3a', borderWidth: 2, borderDash: [5, 4],
+                pointRadius: 0, fill: false, order: 4
+            });
+        }
+    } else { // anomalías sobre la media
+        var avg = valid.length
+            ? valid.reduce(function(a, p) { return a + p.mean; }, 0) / valid.length : 0;
+        datasets.push({
+            label: 'Anomalía vs promedio',
+            data: periods.map(function(p) {
+                return (p.mean === null || p.mean === undefined) ? null : p.mean - avg;
+            }),
+            backgroundColor: periods.map(function(p) {
+                if (p.mean === null || p.mean === undefined) return 'rgba(0,0,0,0)';
+                var v = p.mean - avg;
+                var col = v >= 0 ? '#1a6b32' : '#c0392b';
+                return p.reliable ? col : 'rgba(150,150,150,0.55)';
+            }),
+            borderRadius: 3, borderSkipped: false
+        });
+    }
+
+    _vegSerieChart = new Chart(canvas.getContext('2d'), {
+        type: chartType,
+        data: { labels: years, datasets: datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(10,20,10,0.92)',
+                    padding: 8, cornerRadius: 5,
+                    filter: function(item) { return item.dataset.label !== 'p75' && item.dataset.label !== 'p25–p75'; },
+                    callbacks: {
+                        title: function(items) {
+                            if (!items.length) return '';
+                            var lbl = SERIE_SEASON_LABELS[d.season] || d.season;
+                            return lbl + ' ' + items[0].label + ' (' + (SERIE_SEASON_MONTHS[d.season] || '') + ')';
+                        },
+                        label: function(item) {
+                            if (item.parsed.y === null) return null;
+                            var v = item.parsed.y;
+                            if (_vegSerieChartMode === 'vigor') return item.dataset.label + ': ' + _serieFmtHa(v) + ' ha';
+                            if (item.dataset.label === 'Tendencia (Sen)') return 'Tendencia: ' + v.toFixed(3);
+                            if (_vegSerieChartMode === 'anomalias') return 'Anomalía: ' + (v > 0 ? '+' : '') + v.toFixed(3);
+                            return 'Media ' + d.indice + ': ' + v.toFixed(3);
+                        },
+                        afterBody: function(items) {
+                            if (!items.length) return null;
+                            var p = periods[items[0].dataIndex];
+                            var out = ['', 'Imágenes: ' + p.n_images];
+                            if (p.coverage_pct !== null && p.coverage_pct !== undefined) {
+                                out.push('Cobertura válida: ' + p.coverage_pct.toFixed(0) + '%');
+                            }
+                            if (p.mean !== null && !p.reliable) out.push('⚠ Período poco confiable');
+                            return out;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: stacked, ticks: { font: { size: 9 } }, grid: { display: false } },
+                y: Object.assign({ stacked: stacked }, yOpts)
+            },
+            animation: { duration: 300 }
+        }
+    });
+}
+
+/** Restaura la serie de vegetación guardada (localStorage o Supabase). */
+function restoreVegSerieUI() {
+    var series = (WorkspaceState && WorkspaceState.series) || {};
+    var best = null;
+    Object.keys(series).forEach(function(k) {
+        if (k.indexOf('vegetacion_serie_') !== 0) return;
+        var doc = series[k];
+        if (doc && doc.periods && (!best || (doc.ts || 0) > (best.ts || 0))) best = doc;
+    });
+    if (!best) return;
+
+    var selIdx = document.getElementById('vserie-indice');
+    var selSea = document.getElementById('vserie-season');
+    var inY0   = document.getElementById('vserie-year-start');
+    var inY1   = document.getElementById('vserie-year-end');
+    if (selIdx && best.indice) selIdx.value = best.indice;
+    if (selSea && best.season) selSea.value = best.season;
+    if (inY0 && best.year_start) inY0.value = best.year_start;
+    if (inY1 && best.year_end)   inY1.value = best.year_end;
+
+    renderVegSerie(best);
 }
 
 // Almacena las 3 URLs de tiles del DEM para alternar sin re-procesar

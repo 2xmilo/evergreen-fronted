@@ -58,9 +58,11 @@ function clearAnalysisStateForZoneChange() {
     WorkspaceState.series = {};
     _tilesCache = {};
 
-    // Ocultar resultados de serie estacional de la zona anterior
-    var serieRes = document.getElementById('serie-resultados');
-    if (serieRes) serieRes.style.display = 'none';
+    // Ocultar resultados de series estacionales de la zona anterior
+    ['serie-resultados', 'vserie-resultados'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
 
     if (typeof _previewOverlays !== 'undefined' && typeof map !== 'undefined') {
         Object.keys(_previewOverlays).forEach(function(key) {
@@ -118,6 +120,9 @@ function loadWorkspaceState() {
             restoreDetailVegStats();
             if (typeof restoreAguaSerieUI === 'function') {
                 try { restoreAguaSerieUI(); } catch(e) {}
+            }
+            if (typeof restoreVegSerieUI === 'function') {
+                try { restoreVegSerieUI(); } catch(e) {}
             }
         } catch (e) {
             console.error("Error restaurando workspace", e);

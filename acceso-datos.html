@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=34">
+    <link rel="stylesheet" href="css/workspace.css?v=35">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -567,6 +567,21 @@
                 <span class="ap-source-text">Google Earth Engine · 10 m resolución</span>
             </div>
 
+            <div class="ap-subtabs">
+                <button type="button" class="ap-subtab active" id="veg-subtab-btn-unico"
+                        onclick="switchApSubtab('veg','unico')">
+                    <i class="fas fa-map"></i> Período único
+                </button>
+                <button type="button" class="ap-subtab" id="veg-subtab-btn-serie"
+                        onclick="switchApSubtab('veg','serie')">
+                    <i class="fas fa-chart-line"></i> Serie estacional
+                </button>
+            </div>
+
+            <!-- ─── PANE: PERÍODO ÚNICO ─── -->
+            <div id="veg-pane-unico">
+            <p class="ap-subtab-hint">Un rango de fechas acotado: genera la capa en el mapa y sus estadísticas.</p>
+
             <div class="ap-field">
                 <label class="ap-label">Índice a calcular</label>
                 <select class="ap-select" id="veg-indice">
@@ -621,6 +636,114 @@
                     <div class="ap-history-table-wrap" id="veg-history-table"></div>
                 </div>
             </div>
+            </div><!-- /veg-pane-unico -->
+
+            <!-- ─── PANE: SERIE ESTACIONAL ─── -->
+            <div class="ap-serie-section" id="veg-pane-serie" style="display:none;">
+                <div class="ap-history-section-header" style="margin-top:0;">
+                    <span>Vigor vegetacional por año</span>
+                    <span class="ap-help" tabindex="0">?
+                        <span class="ap-help-tip">
+                            Compara la <b>misma estación</b> a lo largo de los años, de modo que
+                            la variación observada no sea el ciclo estacional normal.<br><br>
+                            Cada año se compone con el <b>percentil 90</b> de la temporada: la
+                            nubosidad residual y las sombras siempre bajan el índice, nunca lo
+                            suben, así que el p90 recupera el verdor real sin depender de un
+                            único píxel como haría el máximo.<br><br>
+                            La composición por <b>clases de vigor</b> muestra hectáreas
+                            migrando entre niveles — señal que la media promedia y esconde.
+                        </span>
+                    </span>
+                </div>
+                <p class="ap-subtab-hint" style="margin-top:2px;">Vigor año a año en la misma estación. Máx. 10 años.</p>
+
+                <div class="ap-date-row">
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Índice</label>
+                        <select class="ap-input" id="vserie-indice">
+                            <option value="NDVI" selected>NDVI (recomendado)</option>
+                            <option value="EVI">EVI</option>
+                        </select>
+                    </div>
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Estación
+                            <span class="ap-help" tabindex="0" style="margin-left:4px;">?
+                                <span class="ap-help-tip">
+                                    En Chile mediterráneo la vegetación natural alcanza su peak
+                                    en <b>primavera</b>; el verano es cuando se seca. Para
+                                    cultivos regados o bosque siempreverde el peak sí es el
+                                    verano.<br><br>
+                                    Elegir mal la estación puede mostrar una "caída" que es solo
+                                    fenología normal.
+                                </span>
+                            </span>
+                        </label>
+                        <select class="ap-input" id="vserie-season">
+                            <option value="SON" selected>Primavera (sep–nov)</option>
+                            <option value="DJF">Verano (dic–feb)</option>
+                            <option value="MAM">Otoño (mar–may)</option>
+                            <option value="JJA">Invierno (jun–ago)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ap-date-row">
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Desde <span>(año)</span></label>
+                        <input type="number" class="ap-input" id="vserie-year-start" value="2019" min="2016" max="2026" step="1">
+                    </div>
+                    <div class="ap-field" style="margin:0;">
+                        <label class="ap-label">Hasta <span>(año)</span></label>
+                        <input type="number" class="ap-input" id="vserie-year-end" value="2026" min="2016" max="2026" step="1">
+                    </div>
+                </div>
+
+                <button class="ap-btn-generate" id="btn-vserie-gen" onclick="requestVegSerie()"
+                        style="background:#2c5e1a;">
+                    <i class="fas fa-chart-line"></i> Generar Serie Estacional
+                </button>
+
+                <div id="vserie-resultados" style="display:none; margin-top:14px;">
+                    <div class="ap-stats-3">
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" style="color:var(--accent-dark);" id="vserie-last-mean">—</span>
+                            <span class="ap-stat-col-label" id="vserie-last-lbl">Última media</span>
+                        </div>
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" id="vserie-delta">—</span>
+                            <span class="ap-stat-col-label">Δ del período</span>
+                        </div>
+                        <div class="ap-stat-col">
+                            <span class="ap-stat-col-val" id="vserie-trend">—</span>
+                            <span class="ap-stat-col-label" id="vserie-trend-lbl">Tendencia</span>
+                        </div>
+                    </div>
+
+                    <div class="ap-scale-row" style="margin-top:10px;">
+                        <span class="ap-scale-label">Vista</span>
+                        <div class="ap-scale-toggle">
+                            <button type="button" class="ap-scale-btn active" id="vserie-mode-vigor"
+                                    onclick="setVegSerieChartMode('vigor')">Vigor</button>
+                            <button type="button" class="ap-scale-btn" id="vserie-mode-indice"
+                                    onclick="setVegSerieChartMode('indice')">Índice</button>
+                            <button type="button" class="ap-scale-btn" id="vserie-mode-anomalias"
+                                    onclick="setVegSerieChartMode('anomalias')">Anomalías</button>
+                        </div>
+                    </div>
+                    <div style="height:190px; margin-top:8px;">
+                        <canvas id="vserie-chart"></canvas>
+                    </div>
+                    <div class="ap-history-legend" id="vserie-legend" style="flex-wrap:wrap;"></div>
+
+                    <div class="ap-history-section-header" style="margin-top:12px;">
+                        <span>Detalle por período</span>
+                    </div>
+                    <div class="ap-history-table-wrap" id="vserie-table"></div>
+                    <p class="ap-note" id="vserie-nota">
+                        Composición p90 de la estación (verdor real, sin sesgo de nubosidad).
+                        ⚠ = período poco confiable: menos de 3 imágenes o cobertura válida &lt; 85%.
+                    </p>
+                </div>
+            </div>
 
         </div>
 
@@ -633,6 +756,21 @@
                 <span class="ap-source-badge" style="background:rgba(67,147,195,0.10);color:#1e6ea0;border-color:rgba(67,147,195,0.2);">Sentinel-2 SR</span>
                 <span class="ap-source-text">Google Earth Engine · 10 m resolución</span>
             </div>
+
+            <div class="ap-subtabs">
+                <button type="button" class="ap-subtab active" id="agua-subtab-btn-unico"
+                        onclick="switchApSubtab('agua','unico')">
+                    <i class="fas fa-map"></i> Período único
+                </button>
+                <button type="button" class="ap-subtab" id="agua-subtab-btn-serie"
+                        onclick="switchApSubtab('agua','serie')">
+                    <i class="fas fa-chart-line"></i> Serie estacional
+                </button>
+            </div>
+
+            <!-- ─── PANE: PERÍODO ÚNICO ─── -->
+            <div id="agua-pane-unico">
+            <p class="ap-subtab-hint">Un rango de fechas acotado: genera la capa en el mapa y sus estadísticas.</p>
 
             <div class="ap-field">
                 <label class="ap-label">Índice a calcular</label>
@@ -720,11 +858,12 @@
                     <div class="ap-history-table-wrap" id="agua-history-table"></div>
                 </div>
             </div>
+            </div><!-- /agua-pane-unico -->
 
-            <!-- ═══ SERIE ESTACIONAL (análisis temporal real) ═══ -->
-            <div class="ap-serie-section">
-                <div class="ap-history-section-header" style="margin-top:18px;">
-                    <span>Serie estacional</span>
+            <!-- ─── PANE: SERIE ESTACIONAL ─── -->
+            <div class="ap-serie-section" id="agua-pane-serie" style="display:none;">
+                <div class="ap-history-section-header" style="margin-top:0;">
+                    <span>Superficie de agua por año</span>
                     <span class="ap-help" tabindex="0">?
                         <span class="ap-help-tip">
                             Compara la <b>misma estación</b> a lo largo de los años para que la
@@ -1654,7 +1793,7 @@
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/auth.js?v=11"></script>
+<script src="js/auth.js?v=12"></script>
 
 <!-- OVERRIDES requeridos por acceso-datos.js -->
 <script>
@@ -1677,11 +1816,11 @@
 <script src="js/acceso-datos.js?v=3"></script>
 
 <!-- WORKSPACE LOGIC -->
-<script src="js/workspace-core.js?v=11"></script>
+<script src="js/workspace-core.js?v=12"></script>
 <script src="js/workspace-map.js?v=6"></script>
 <script src="js/workspace-bosque.js?v=6"></script>
 <script src="js/workspace-summary.js?v=10"></script>
-<script src="js/workspace-gee-modules.js?v=12"></script>
+<script src="js/workspace-gee-modules.js?v=13"></script>
 <script src="js/workspace-zones.js?v=9"></script>
 <script src="js/workspace-biodiversidad.js?v=4"></script>
 <script src="js/workspace-dmc.js?v=6"></script>
