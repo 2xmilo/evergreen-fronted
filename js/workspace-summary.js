@@ -949,7 +949,7 @@ function showMiniLegend(key) {
     if (legendView) legendView.style.display = 'block';
 
     // Obtener el nombre del índice (segunda parte del key: 'vegetacion_NDVI' → 'NDVI')
-    var indNombre = key.indexOf('_') >= 0 ? key.split('_').slice(1).join('_') : key;
+    var indNombre = cfg.name || (key.indexOf('_') >= 0 ? key.split('_').slice(1).join('_') : key);
 
     if (titleEl) titleEl.textContent = 'Leyenda · ' + indNombre;
     if (dotEl)   dotEl.style.background = cfg.dotColor || 'var(--accent)';

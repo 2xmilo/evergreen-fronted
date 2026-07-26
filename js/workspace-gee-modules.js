@@ -377,6 +377,7 @@ function requestAguaSerie() {
             saveResultsToCloud(window._sbUserId, key, [doc]);
         }
 
+        _removeSerieTemporalLayer();
         renderAguaSerie(doc);
     })
     .catch(function() {
@@ -462,6 +463,8 @@ function renderAguaSerie(doc) {
 
     // Reset a vista Superficie y dibujar
     setSerieChartMode('superficie');
+
+    _renderSerieMapPicker('agua', doc);
 
     var res = document.getElementById('serie-resultados');
     if (res) res.style.display = 'block';
@@ -721,6 +724,7 @@ function requestVegSerie() {
             saveResultsToCloud(window._sbUserId, key, [doc]);
         }
 
+        _removeSerieTemporalLayer();
         renderVegSerie(doc);
     })
     .catch(function() {
@@ -807,6 +811,7 @@ function renderVegSerie(doc) {
     }
 
     setVegSerieChartMode('vigor');
+    _renderSerieMapPicker('vegetacion', doc);
     var res = document.getElementById('vserie-resultados');
     if (res) res.style.display = 'block';
 }
@@ -974,6 +979,132 @@ function restoreVegSerieUI() {
     if (inY1 && best.year_end)   inY1.value = best.year_end;
 
     renderVegSerie(best);
+}
+
+// One ephemeral layer is enough for inspecting a single period of either series.
+// It intentionally is not persisted: a new map ID is requested when needed.
+var _serieTemporalLayer = null;
+var _serieTemporalRequest = 0;
+
+function _serieMapDomIds(tipo) {
+    return tipo === 'agua'
+        ? { picker: 'serie-map-picker', year: 'serie-map-year', button: 'btn-serie-map', status: 'serie-map-status' }
+        : { picker: 'vserie-map-picker', year: 'vserie-map-year', button: 'btn-vserie-map', status: 'vserie-map-status' };
+}
+
+function _serieDocForMap(tipo) {
+    return tipo === 'agua' ? _serieData : _vegSerieData;
+}
+
+function _renderSerieMapPicker(tipo, doc) {
+    var ids = _serieMapDomIds(tipo);
+    var picker = document.getElementById(ids.picker);
+    var select = document.getElementById(ids.year);
+    var status = document.getElementById(ids.status);
+    if (!picker || !select || !doc || !doc.periods) return;
+
+    var available = doc.periods.filter(function(p) { return p && p.n_images > 0; });
+    if (!available.length) {
+        picker.style.display = 'none';
+        if (status) status.style.display = 'none';
+        return;
+    }
+
+    var season = SERIE_SEASON_LABELS[doc.season] || doc.season;
+    select.innerHTML = available.slice().reverse().map(function(p) {
+        var reliability = p.reliable ? '' : ' (cobertura limitada)';
+        return '<option value="' + p.year + '">' + season + ' ' + p.year + reliability + '</option>';
+    }).join('');
+    picker.style.display = 'flex';
+    if (status) status.style.display = 'none';
+}
+
+function _removeSerieTemporalLayer() {
+    if (_serieTemporalLayer && typeof map !== 'undefined' && map.hasLayer(_serieTemporalLayer)) {
+        map.removeLayer(_serieTemporalLayer);
+    }
+    _serieTemporalLayer = null;
+    if (typeof _layerRegistry !== 'undefined') delete _layerRegistry.serie_temporal;
+    if (typeof _refreshGeeLayersPanel === 'function') _refreshGeeLayersPanel();
+}
+
+function loadSeriePeriodMap(tipo) {
+    var doc = _serieDocForMap(tipo);
+    var ids = _serieMapDomIds(tipo);
+    var select = document.getElementById(ids.year);
+    var button = document.getElementById(ids.button);
+    var status = document.getElementById(ids.status);
+    var notif = (typeof mostrarNotificacion === 'function') ? mostrarNotificacion : alert;
+    if (!doc || !select || !WorkspaceState.zonaGEE) return;
+
+    var year = parseInt(select.value, 10);
+    if (isNaN(year)) return;
+    var requestId = ++_serieTemporalRequest;
+    var zoneId = WorkspaceState.zonaId;
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+    if (status) {
+        status.textContent = 'Cargando capa temporal...';
+        status.style.display = 'block';
+    }
+
+    fetchBackendJson('https://evergreen-backend-awv1.onrender.com/api/serie-estacional/capa', {
+        geojson: WorkspaceState.zonaGEE.geometry,
+        tipo: tipo,
+        indice: doc.indice,
+        season: doc.season,
+        year: year
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (requestId !== _serieTemporalRequest || WorkspaceState.zonaId !== zoneId) return;
+        if (data.error) throw new Error(data.error);
+
+        _removeSerieTemporalLayer();
+        _serieTemporalLayer = L.tileLayer(data.tiles, {
+            pane: 'overlayPane', zIndex: 410, crossOrigin: 'anonymous'
+        });
+
+        var baseKey = (tipo === 'agua' ? 'agua_' : 'vegetacion_') + data.indice;
+        var season = SERIE_SEASON_LABELS[data.season] || data.season;
+        if (typeof IND_PALETTES !== 'undefined' && IND_PALETTES[baseKey]) {
+            IND_PALETTES.serie_temporal = Object.assign({}, IND_PALETTES[baseKey], {
+                name: data.indice + ' · ' + season + ' ' + data.year
+            });
+        }
+        if (typeof _GEE_LAYER_LABELS !== 'undefined') {
+            _GEE_LAYER_LABELS.serie_temporal = data.indice + ' · ' + season + ' ' + data.year + ' · temporal';
+        }
+        if (typeof registerLayer === 'function') {
+            registerLayer('serie_temporal', _serieTemporalLayer);
+            if (typeof _activateMapLayer === 'function') _activateMapLayer('serie_temporal');
+            if (typeof showMiniLegend === 'function') showMiniLegend('serie_temporal');
+        } else {
+            _serieTemporalLayer.addTo(map);
+        }
+
+        if (status) {
+            status.textContent = 'Capa temporal cargada: ' + data.n_images + ' imagen(es). Si expira, vuelve a cargar este periodo.';
+            status.style.display = 'block';
+        }
+    })
+    .catch(function(err) {
+        if (requestId !== _serieTemporalRequest || WorkspaceState.zonaId !== zoneId) return;
+        if (status) {
+            status.textContent = 'No se pudo cargar la capa: ' + (err.message || 'error de conexion') + '.';
+            status.style.display = 'block';
+        }
+        notif('No se pudo cargar la capa temporal.');
+    })
+    .finally(function() {
+        if (requestId !== _serieTemporalRequest || WorkspaceState.zonaId !== zoneId) return;
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-map-marked-alt"></i>';
+        }
+    });
 }
 
 // Almacena las 3 URLs de tiles del DEM para alternar sin re-procesar

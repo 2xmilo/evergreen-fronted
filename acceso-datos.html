@@ -736,6 +736,15 @@
                         <canvas id="vserie-chart"></canvas>
                     </div>
                     <div class="ap-history-legend" id="vserie-legend" style="flex-wrap:wrap;"></div>
+                    <div class="ap-scale-row" id="vserie-map-picker" style="display:none; margin-top:10px;">
+                        <span class="ap-scale-label">Mapa</span>
+                        <select class="ap-input" id="vserie-map-year" style="flex:1; min-width:0;"></select>
+                        <button type="button" class="ap-scale-btn" id="btn-vserie-map"
+                                onclick="loadSeriePeriodMap('vegetacion')" title="Ver periodo seleccionado en el mapa">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </button>
+                    </div>
+                    <p class="ap-note" id="vserie-map-status" style="display:none; margin-top:6px;"></p>
 
                     <div class="ap-history-section-header" style="margin-top:12px;">
                         <span>Detalle por período</span>
@@ -962,6 +971,15 @@
                     <div style="height:190px; margin-top:8px;">
                         <canvas id="serie-chart"></canvas>
                     </div>
+                    <div class="ap-scale-row" id="serie-map-picker" style="display:none; margin-top:10px;">
+                        <span class="ap-scale-label">Mapa</span>
+                        <select class="ap-input" id="serie-map-year" style="flex:1; min-width:0;"></select>
+                        <button type="button" class="ap-scale-btn" id="btn-serie-map"
+                                onclick="loadSeriePeriodMap('agua')" title="Ver periodo seleccionado en el mapa">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </button>
+                    </div>
+                    <p class="ap-note" id="serie-map-status" style="display:none; margin-top:6px;"></p>
 
                     <div class="ap-history-section-header" style="margin-top:12px;">
                         <span>Detalle por período</span>
@@ -1943,8 +1961,8 @@
 <script src="js/workspace-core.js?v=16"></script>
 <script src="js/workspace-map.js?v=6"></script>
 <script src="js/workspace-bosque.js?v=9"></script>
-<script src="js/workspace-summary.js?v=13"></script>
-<script src="js/workspace-gee-modules.js?v=15"></script>
+<script src="js/workspace-summary.js?v=14"></script>
+<script src="js/workspace-gee-modules.js?v=16"></script>
 <script src="js/workspace-zones.js?v=10"></script>
 <script src="js/workspace-biodiversidad.js?v=10"></script>
 <script src="js/workspace-dmc.js?v=6"></script>
