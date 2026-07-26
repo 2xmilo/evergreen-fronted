@@ -27,6 +27,31 @@ var VEG_GRADIENTE = {
 };
 var _VEG_GRADIENTE_DEFAULT = 'linear-gradient(90deg,#440154,#31688e,#35b779,#fde725)';
 
+var INDICE_HELP = {
+    'NDVI':  'Vigor y cobertura verde. Util para seguir cambios de vegetacion; no mide agua directamente.',
+    'EVI':   'Vigor de coberturas densas. Reduce parte de la saturacion y la influencia atmosferica del NDVI.',
+    'SAVI':  'Vigor ajustado por suelo. Preferible cuando la vegetacion es escasa y el suelo queda expuesto.',
+    'NDMI':  'Humedad relativa de vegetacion y suelo. Es un proxy de estres hidrico, no una medicion directa de agua superficial.',
+    'NBR':   'Estado de la vegetacion frente a quema. Para severidad de incendio compara periodos con dNBR.',
+    'NDWI':  'Agua superficial con Verde y NIR. Valores sobre cero son una referencia util, pero conviene validar en terreno.',
+    'MNDWI': 'Agua superficial con Verde y SWIR. Suele separar mejor agua de vegetacion, suelo y zonas construidas.'
+};
+
+function _setIndiceHelp(elementId, indice) {
+    var el = document.getElementById(elementId);
+    if (el) el.textContent = INDICE_HELP[indice] || '';
+}
+
+function actualizarInfoVeg() {
+    var sel = document.getElementById('veg-indice');
+    if (sel) _setIndiceHelp('veg-index-tip', sel.value);
+}
+
+function actualizarInfoVegSerie() {
+    var sel = document.getElementById('vserie-indice');
+    if (sel) _setIndiceHelp('vserie-index-tip', sel.value);
+}
+
 var vegLayer = null;
 var demLayer = null;
 
@@ -194,6 +219,7 @@ function actualizarInfoAgua() {
     var indice = sel.value;
     var infoEl = document.getElementById('agua-info-text');
     if (infoEl) infoEl.textContent = AGUA_INFO[indice] || '';
+    _setIndiceHelp('agua-index-tip', indice);
 }
 
 function requestAgua() {
@@ -335,6 +361,35 @@ function _serieFmtHa(v) {
     return (Math.abs(n) >= 100 ? n.toFixed(0) : n.toFixed(1));
 }
 
+function _esSerieHumedad(doc) {
+    return !!doc && (doc.analysis_kind === 'humedad' || doc.indice === 'NDMI');
+}
+
+function actualizarInfoAguaSerie() {
+    var sel = document.getElementById('serie-indice');
+    if (!sel) return;
+    var indice = sel.value;
+    var esHumedad = indice === 'NDMI';
+    var threshold = document.getElementById('serie-threshold-wrap');
+    var title = document.getElementById('serie-section-title');
+    var tip = document.getElementById('serie-section-tip');
+    var hint = document.getElementById('serie-section-hint');
+    var button = document.getElementById('btn-serie-gen');
+
+    _setIndiceHelp('serie-index-tip', indice);
+    if (threshold) threshold.style.display = esHumedad ? 'none' : '';
+    if (title) title.textContent = esHumedad ? 'Humedad estacional por año' : 'Superficie de agua por año';
+    if (hint) hint.textContent = esHumedad
+        ? 'Humedad relativa por año, misma estacion. No equivale a agua superficial ni a humedad de suelo medida en terreno.'
+        : 'Superficie de agua persistente por año, misma estacion. Max. 10 anos.';
+    if (tip) tip.textContent = esHumedad
+        ? 'NDMI resume humedad relativa de vegetacion y suelo para la misma estacion cada ano. Sirve para detectar estres hidrico; no calcula hectareas de agua.'
+        : 'Compara la misma estacion a lo largo de los anos. La mediana estacional y el umbral estiman agua persistente, no eventos breves.';
+    if (button) button.innerHTML = esHumedad
+        ? '<i class="fas fa-chart-line"></i> Generar Serie de Humedad'
+        : '<i class="fas fa-chart-line"></i> Generar Serie Estacional';
+}
+
 function requestAguaSerie() {
     if (!WorkspaceState.zonaGEE) return _noZonaGuard();
 
@@ -363,6 +418,7 @@ function requestAguaSerie() {
     .then(function(data) {
         btn.innerHTML = '<i class="fas fa-chart-line"></i> Generar Serie Estacional';
         btn.disabled = false;
+        actualizarInfoAguaSerie();
         if (data.error) { notif('❌ ' + data.error); return; }
 
         var doc = data;
@@ -383,6 +439,7 @@ function requestAguaSerie() {
     .catch(function() {
         btn.innerHTML = '<i class="fas fa-chart-line"></i> Generar Serie Estacional';
         btn.disabled = false;
+        actualizarInfoAguaSerie();
         notif('❌ Error de conexión al servidor.');
     });
 }
@@ -393,7 +450,11 @@ function renderAguaSerie(doc) {
     _serieData = doc;
 
     var periods = doc.periods;
-    var valid = periods.filter(function(p) { return p.water_ha !== null && p.water_ha !== undefined; });
+    var esHumedad = _esSerieHumedad(doc);
+    var valid = periods.filter(function(p) {
+        var value = esHumedad ? p.mean : p.water_ha;
+        return value !== null && value !== undefined;
+    });
     var seasonLbl = SERIE_SEASON_LABELS[doc.season] || doc.season;
 
     // Headline: última superficie válida
@@ -461,8 +522,58 @@ function renderAguaSerie(doc) {
         cont.innerHTML = html;
     }
 
-    // Reset a vista Superficie y dibujar
-    setSerieChartMode('superficie');
+    var btnSuperficie = document.getElementById('serie-mode-superficie');
+    var nota = document.getElementById('serie-nota');
+    if (esHumedad) {
+        var humedadLast = valid.length ? valid[valid.length - 1] : null;
+        if (lastEl) lastEl.textContent = humedadLast ? humedadLast.mean.toFixed(3) : '—';
+        if (lastLbl) lastLbl.textContent = humedadLast
+            ? 'Media NDMI · ' + seasonLbl.toLowerCase() + ' ' + humedadLast.year
+            : 'Ultima media NDMI';
+        if (deltaEl) {
+            var humedadDelta = valid.length >= 2 ? valid[valid.length - 1].mean - valid[0].mean : null;
+            deltaEl.textContent = humedadDelta === null ? '—' : (humedadDelta > 0 ? '+' : '') + humedadDelta.toFixed(3);
+            deltaEl.style.color = humedadDelta === null ? '' : (humedadDelta < 0 ? '#c0392b' : (humedadDelta > 0 ? '#1e6ea0' : ''));
+        }
+        if (trendEl) {
+            if (doc.trend) {
+                var humedadSlope = doc.trend.sen_slope;
+                trendEl.textContent = (humedadSlope > 0 ? '+' : '') + humedadSlope.toFixed(4) + '/ano';
+                trendEl.style.color = humedadSlope < 0 ? '#c0392b' : (humedadSlope > 0 ? '#1e6ea0' : '');
+                if (trendLbl) trendLbl.textContent = doc.trend.significant ? 'Tendencia · significativa' : 'Tendencia · no significativa';
+            } else {
+                trendEl.textContent = '—';
+                trendEl.style.color = '';
+                if (trendLbl) trendLbl.textContent = 'Tendencia (min. 4 anos con datos)';
+            }
+        }
+        if (cont) {
+            var humedadHtml = '<table class="ap-history-table"><thead><tr>' +
+                '<th>Periodo</th><th class="ht-num">Media NDMI</th><th class="ht-num">p25-p75</th>' +
+                '<th class="ht-num">Imgs</th><th class="ht-num">Cobert.</th><th></th></tr></thead><tbody>';
+            for (var j = periods.length - 1; j >= 0; j--) {
+                var hp = periods[j];
+                var sinHumedad = hp.mean === null || hp.mean === undefined;
+                var rango = hp.p25 !== null && hp.p25 !== undefined && hp.p75 !== null && hp.p75 !== undefined
+                    ? hp.p25.toFixed(3) + ' a ' + hp.p75.toFixed(3) : '—';
+                humedadHtml += '<tr' + (j === periods.length - 1 ? ' class="latest"' : '') + '>' +
+                    '<td>' + seasonLbl + ' ' + hp.year + '</td>' +
+                    '<td class="ht-num">' + (sinHumedad ? 'sin datos' : hp.mean.toFixed(3)) + '</td>' +
+                    '<td class="ht-num">' + rango + '</td>' +
+                    '<td class="ht-num">' + hp.n_images + '</td>' +
+                    '<td class="ht-num">' + (hp.coverage_pct !== null && hp.coverage_pct !== undefined ? hp.coverage_pct.toFixed(0) + '%' : '—') + '</td>' +
+                    '<td>' + (sinHumedad ? '' : (hp.reliable ? '' : '⚠')) + '</td></tr>';
+            }
+            cont.innerHTML = humedadHtml + '</tbody></table>';
+        }
+        if (btnSuperficie) btnSuperficie.style.display = 'none';
+        if (nota) nota.textContent = 'NDMI = humedad relativa de vegetacion y suelo; no equivale a agua superficial ni a humedad de suelo medida en terreno.';
+        setSerieChartMode('indice');
+    } else {
+        if (btnSuperficie) btnSuperficie.style.display = '';
+        if (nota) nota.textContent = 'Mediana estacional = agua persistente (no captura eventos breves). ⚠ = periodo poco confiable: menos de 3 imagenes o cobertura valida < 85%.';
+        setSerieChartMode('superficie');
+    }
 
     _renderSerieMapPicker('agua', doc);
 
@@ -487,7 +598,9 @@ function _renderSerieChart() {
 
     var periods = d.periods;
     var years = periods.map(function(p) { return p.year; });
-    var valid = periods.filter(function(p) { return p.water_ha !== null && p.water_ha !== undefined; });
+    var esHumedad = _esSerieHumedad(d);
+    var metricKey = esHumedad ? 'mean' : 'water_ha';
+    var valid = periods.filter(function(p) { return p[metricKey] !== null && p[metricKey] !== undefined; });
     var datasets = [];
     var yOpts = { beginAtZero: false, ticks: { font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' } };
     var chartType = 'bar';
@@ -545,17 +658,17 @@ function _renderSerieChart() {
         });
     } else { // anomalías
         var avg = valid.length
-            ? valid.reduce(function(a, p) { return a + p.water_ha; }, 0) / valid.length
+            ? valid.reduce(function(a, p) { return a + p[metricKey]; }, 0) / valid.length
             : 0;
         datasets.push({
             type: 'bar',
-            label: 'Anomalía vs promedio (ha)',
+            label: 'Anomalía vs promedio' + (esHumedad ? '' : ' (ha)'),
             data: periods.map(function(p) {
-                return (p.water_ha === null || p.water_ha === undefined) ? null : p.water_ha - avg;
+                return (p[metricKey] === null || p[metricKey] === undefined) ? null : p[metricKey] - avg;
             }),
             backgroundColor: periods.map(function(p) {
-                if (p.water_ha === null || p.water_ha === undefined) return 'rgba(0,0,0,0)';
-                var v = p.water_ha - avg;
+                if (p[metricKey] === null || p[metricKey] === undefined) return 'rgba(0,0,0,0)';
+                var v = p[metricKey] - avg;
                 var col = v >= 0 ? '#2c7bb6' : '#d98a3a';
                 return p.reliable ? col : 'rgba(140,155,165,0.55)';
             }),
@@ -585,6 +698,7 @@ function _renderSerieChart() {
                             var v = item.parsed.y;
                             if (item.dataset.label === 'Tendencia (Sen)') return 'Tendencia: ' + v.toFixed(1) + ' ha';
                             if (_serieChartMode === 'indice') return 'Media ' + d.indice + ': ' + v.toFixed(3);
+                            if (_serieChartMode === 'anomalias' && esHumedad) return 'Anomalía: ' + (v > 0 ? '+' : '') + v.toFixed(3);
                             return (_serieChartMode === 'anomalias' ? 'Anomalía: ' : 'Superficie: ') +
                                 (v > 0 && _serieChartMode === 'anomalias' ? '+' : '') + _serieFmtHa(v) + ' ha';
                         },
@@ -628,8 +742,9 @@ function restoreAguaSerieUI() {
     if (selSea && best.season) selSea.value = best.season;
     if (inY0 && best.year_start) inY0.value = best.year_start;
     if (inY1 && best.year_end)   inY1.value = best.year_end;
-    if (selThr && best.threshold !== undefined) selThr.value = String(best.threshold);
+    if (selThr && best.threshold !== undefined && best.threshold !== null) selThr.value = String(best.threshold);
 
+    actualizarInfoAguaSerie();
     renderAguaSerie(best);
 }
 

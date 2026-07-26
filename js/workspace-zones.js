@@ -214,6 +214,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Texto descriptivo del índice de agua
     actualizarInfoAgua();
+    if (typeof actualizarInfoVeg === 'function') actualizarInfoVeg();
+    if (typeof actualizarInfoVegSerie === 'function') actualizarInfoVegSerie();
+    if (typeof actualizarInfoAguaSerie === 'function') actualizarInfoAguaSerie();
 
     // Mini-panel: NO se muestra al cargar. Aparece solo cuando hay contenido real
     // — al ejecutar el análisis de Bosque, o al activar una capa con leyenda.

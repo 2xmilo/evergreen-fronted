@@ -583,8 +583,12 @@
             <p class="ap-subtab-hint">Un rango de fechas acotado: genera la capa en el mapa y sus estadísticas.</p>
 
             <div class="ap-field">
-                <label class="ap-label">Índice a calcular</label>
-                <select class="ap-select" id="veg-indice">
+                <label class="ap-label">Índice a calcular
+                    <span class="ap-help" tabindex="0" style="margin-left:4px;">?
+                        <span class="ap-help-tip" id="veg-index-tip"></span>
+                    </span>
+                </label>
+                <select class="ap-select" id="veg-indice" onchange="actualizarInfoVeg()">
                     <option value="NDVI">NDVI — Vigor Vegetacional</option>
                     <option value="EVI">EVI — Vegetación Mejorado</option>
                     <option value="SAVI">SAVI — Ajustado por Suelo</option>
@@ -659,8 +663,12 @@
 
                 <div class="ap-date-row">
                     <div class="ap-field" style="margin:0;">
-                        <label class="ap-label">Índice</label>
-                        <select class="ap-input" id="vserie-indice">
+                        <label class="ap-label">Índice
+                            <span class="ap-help" tabindex="0" style="margin-left:4px;">?
+                                <span class="ap-help-tip" id="vserie-index-tip"></span>
+                            </span>
+                        </label>
+                        <select class="ap-input" id="vserie-indice" onchange="actualizarInfoVegSerie()">
                             <option value="NDVI" selected>NDVI — vigor (recom.)</option>
                             <option value="EVI">EVI — vigor</option>
                             <option value="SAVI">SAVI — vigor / suelo</option>
@@ -785,7 +793,11 @@
             <p class="ap-subtab-hint">Un rango de fechas acotado: genera la capa en el mapa y sus estadísticas.</p>
 
             <div class="ap-field">
-                <label class="ap-label">Índice a calcular</label>
+                <label class="ap-label">Índice a calcular
+                    <span class="ap-help" tabindex="0" style="margin-left:4px;">?
+                        <span class="ap-help-tip" id="agua-index-tip"></span>
+                    </span>
+                </label>
                 <select class="ap-select" id="agua-indice" onchange="actualizarInfoAgua()">
                     <option value="NDWI">NDWI — Agua Superficial</option>
                     <option value="MNDWI">MNDWI — Agua Modificada</option>
@@ -875,26 +887,24 @@
             <!-- ─── PANE: SERIE ESTACIONAL ─── -->
             <div class="ap-serie-section" id="agua-pane-serie" style="display:none;">
                 <div class="ap-history-section-header" style="margin-top:0;">
-                    <span>Superficie de agua por año</span>
+                    <span id="serie-section-title">Superficie de agua por año</span>
                     <span class="ap-help" tabindex="0">?
-                        <span class="ap-help-tip">
-                            Compara la <b>misma estación</b> a lo largo de los años para que la
-                            variación observada sea real y no un efecto del ciclo anual.<br><br>
-                            La métrica principal es la <b>superficie de agua persistente</b>:
-                            hectáreas donde la mediana estacional del índice supera el umbral.
-                            Al usar la mediana, refleja el agua estable del período — no captura
-                            crecidas o inundaciones breves.
-                        </span>
+                        <span class="ap-help-tip" id="serie-section-tip"></span>
                     </span>
                 </div>
-                <p class="ap-note" style="margin-top:2px;">Superficie de agua persistente por año, misma estación. Máx. 10 años.</p>
+                <p class="ap-note" id="serie-section-hint" style="margin-top:2px;">Superficie de agua persistente por año, misma estación. Máx. 10 años.</p>
 
                 <div class="ap-date-row">
                     <div class="ap-field" style="margin:0;">
-                        <label class="ap-label">Índice</label>
-                        <select class="ap-input" id="serie-indice">
+                        <label class="ap-label">Índice
+                            <span class="ap-help" tabindex="0" style="margin-left:4px;">?
+                                <span class="ap-help-tip" id="serie-index-tip"></span>
+                            </span>
+                        </label>
+                        <select class="ap-input" id="serie-indice" onchange="actualizarInfoAguaSerie()">
                             <option value="MNDWI" selected>MNDWI (recomendado)</option>
                             <option value="NDWI">NDWI</option>
+                            <option value="NDMI">NDMI — humedad estacional</option>
                         </select>
                     </div>
                     <div class="ap-field" style="margin:0;">
@@ -917,7 +927,7 @@
                         <input type="number" class="ap-input" id="serie-year-end" value="2026" min="2016" max="2026" step="1">
                     </div>
                 </div>
-                <div class="ap-field">
+                <div class="ap-field" id="serie-threshold-wrap">
                     <label class="ap-label">Umbral de agua
                         <span class="ap-help" tabindex="0" style="margin-left:4px;">?
                             <span class="ap-help-tip">
@@ -1962,8 +1972,8 @@
 <script src="js/workspace-map.js?v=6"></script>
 <script src="js/workspace-bosque.js?v=9"></script>
 <script src="js/workspace-summary.js?v=14"></script>
-<script src="js/workspace-gee-modules.js?v=16"></script>
-<script src="js/workspace-zones.js?v=10"></script>
+<script src="js/workspace-gee-modules.js?v=17"></script>
+<script src="js/workspace-zones.js?v=11"></script>
 <script src="js/workspace-biodiversidad.js?v=10"></script>
 <script src="js/workspace-dmc.js?v=6"></script>
 <script src="js/workspace-simbio.js?v=1"></script>
