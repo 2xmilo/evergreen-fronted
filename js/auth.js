@@ -333,22 +333,40 @@ async function saveWorkspaceToCloud(userId, state) {
 }
 
 /* ── Guardar resultados de análisis en cloud ──────────────────────────── */
-async function saveResultsToCloud(userId, tipoIndice, arr) {
-    if (!_sb || !userId) return;
+var _resultSaveQueue = {};
+
+function saveResultsToCloud(userId, tipoIndice, arr) {
+    if (!_sb || !userId) return Promise.resolve(false);
     var workspaceId = WorkspaceState && WorkspaceState.zonaId;
-    if (!workspaceId) return;
-    try {
-        var res = await _sb.from('results').upsert({
-            workspace_id: workspaceId,
-            user_id:      userId,
-            tipo_indice:  tipoIndice,
-            result_data:  arr,
-            updated_at:   new Date().toISOString()
-        }, { onConflict: 'workspace_id,tipo_indice' });
-        if (res.error) throw res.error;
-    } catch (e) {
-        console.warn('[Auth] saveResultsToCloud:', e);
-    }
+    if (!workspaceId) return Promise.resolve(false);
+
+    // A layer first saves its stats and then adds the PNG preview. Serializing
+    // both writes prevents a late first response from clearing previewPath.
+    var queueKey = workspaceId + ':' + tipoIndice;
+    var resultData = JSON.parse(JSON.stringify(arr || []));
+    var previous = _resultSaveQueue[queueKey] || Promise.resolve();
+    var task = previous.catch(function() {}).then(async function() {
+        try {
+            var res = await _sb.from('results').upsert({
+                workspace_id: workspaceId,
+                user_id:      userId,
+                tipo_indice:  tipoIndice,
+                result_data:  resultData,
+                updated_at:   new Date().toISOString()
+            }, { onConflict: 'workspace_id,tipo_indice' });
+            if (res.error) throw res.error;
+            return true;
+        } catch (e) {
+            console.warn('[Auth] saveResultsToCloud:', e);
+            return false;
+        }
+    });
+
+    _resultSaveQueue[queueKey] = task;
+    task.finally(function() {
+        if (_resultSaveQueue[queueKey] === task) delete _resultSaveQueue[queueKey];
+    });
+    return task;
 }
 
 /* ── Cuotas por plan ──────────────────────────────────────────────────── */

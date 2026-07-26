@@ -799,10 +799,10 @@ function legacyCaptureAndSavePreview(key, ts) {
  * @param {string} filePath - ruta en Storage
  */
 async function uploadAnalysisPreviewFromPayload(key, ts, payload) {
-    if (!_sb || !window._sbUserId || !WorkspaceState.zonaId || !payload) return;
+    if (!_sb || !window._sbUserId || !WorkspaceState.zonaId || !payload) return false;
 
     var source = payload.preview_data_url || payload.preview_url;
-    if (!source) return;
+    if (!source) return false;
 
     try {
         var response = await fetch(source);
@@ -819,24 +819,28 @@ async function uploadAnalysisPreviewFromPayload(key, ts, payload) {
 
         if (uploadRes.error) {
             console.warn('[Preview] upload error:', uploadRes.error);
-            return;
+            return false;
         }
 
         var arr = (WorkspaceState.resultados || {})[key];
-        if (!arr) return;
+        if (!arr) return false;
         var entry = arr.find(function(e) { return e.ts === ts; });
-        if (!entry) return;
+        if (!entry) return false;
 
         entry.previewPath = filePath;
         entry.previewBounds = payload.preview_bounds || payload.previewBounds || entry.previewBounds;
         entry.previewContentType = 'image/png';
         saveWorkspaceState();
         if (window._sbUserId && typeof saveResultsToCloud === 'function') {
-            saveResultsToCloud(window._sbUserId, key, WorkspaceState.resultados[key]);
+            var saved = await saveResultsToCloud(window._sbUserId, key, WorkspaceState.resultados[key]);
+            if (saved) console.log('[Preview] PNG AOI guardado:', filePath);
+            return saved;
         }
         console.log('[Preview] PNG AOI guardado:', filePath);
+        return true;
     } catch (e) {
         console.warn('[Preview] no se pudo guardar PNG AOI:', e);
+        return false;
     }
 }
 

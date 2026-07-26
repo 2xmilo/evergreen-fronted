@@ -261,6 +261,7 @@ function requestDnbr() {
         // `figuras.clases` guarda la composición completa por severidad: es lo
         // que permite redibujar el gráfico aquí tras recargar y compararlo
         // contra otra zona en el Comparador.
+        var previewPromise = Promise.resolve(true);
         if (typeof saveResultado === 'function') {
             var ts = saveResultado('dnbr', 'Severidad',
                 { mean: data.dnbr_mean, min: 0, max: data.dnbr_max,
@@ -273,12 +274,19 @@ function requestDnbr() {
                   periodos: { pre_inicio: preIni, pre_fin: preFin,
                               post_inicio: postIni, post_fin: postFin } });
             if (typeof uploadAnalysisPreviewFromPayload === 'function') {
-                uploadAnalysisPreviewFromPayload('dnbr_Severidad', ts, data);
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando capa...';
+                btn.disabled = true;
+                previewPromise = uploadAnalysisPreviewFromPayload('dnbr_Severidad', ts, data);
             }
         }
         if (typeof showMiniLegend === 'function') {
             try { showMiniLegend('dnbr_Severidad'); } catch(e) {}
         }
+        return previewPromise.then(function(saved) {
+            if (!saved) console.warn('[dNBR] Resultado guardado sin preview PNG; revisar respuesta de preview.');
+            btn.innerHTML = '<i class="fas fa-fire"></i> Calcular Severidad dNBR';
+            btn.disabled = false;
+        });
     })
     .catch(function() {
         btn.innerHTML = '<i class="fas fa-fire"></i> Calcular Severidad dNBR';
