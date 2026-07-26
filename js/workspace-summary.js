@@ -288,7 +288,14 @@ function refreshIndRows() {
             var arr = WorkspaceState.resultados[key];
             if (!arr || !arr.length) return;
             var last = arr[arr.length - 1];
-            rows.push({ key: key, tipo: last.tipo, indice: last.indice, result: last });
+            if (!last || typeof last !== 'object') return;
+            var parts = key.split('_');
+            rows.push({
+                key: key,
+                tipo: last.tipo || parts[0] || '',
+                indice: last.indice || parts.slice(1).join('_') || key,
+                result: last
+            });
         });
     }
     if (_bosqueRealData && _bosqueRealData.total_ha_perdida != null) {
@@ -310,7 +317,7 @@ function refreshIndRows() {
 
 function _buildIndRow(r) {
     var key    = r.key;
-    var tipo   = r.tipo;
+    var tipo   = r.tipo || '';
     var indice = r.indice;
     var result = r.result;
 

@@ -94,6 +94,25 @@ function getValidStoredZones(zones) {
     return (zones || []).filter(isValidStoredZone);
 }
 
+function hydrateCloudResults(rows) {
+    WorkspaceState.resultados = {};
+    WorkspaceState.series = {};
+
+    (rows || []).forEach(function(row) {
+        if (row.tipo_indice === 'hidromorfologia_streams') return;
+
+        if (row.tipo_indice && row.tipo_indice.indexOf('_serie') > -1) {
+            var serieDoc = Array.isArray(row.result_data) ? row.result_data[0] : row.result_data;
+            if (serieDoc && serieDoc.periods) WorkspaceState.series[row.tipo_indice] = serieDoc;
+            return;
+        }
+
+        if (row.tipo_indice && Array.isArray(row.result_data)) {
+            WorkspaceState.resultados[row.tipo_indice] = row.result_data;
+        }
+    });
+}
+
 function notifyCloudSaveError(error) {
     var msg = (error && (error.message || error.details || error.hint)) || '';
     if (msg.indexOf('Zone quota exceeded') >= 0) {
@@ -201,6 +220,9 @@ async function loadCloudWorkspace(userId) {
                 });
                 changed = true;
             }
+            if (resResult.error) throw resResult.error;
+            hydrateCloudResults(res);
+            changed = true;
         }
 
         if (changed) {
@@ -442,15 +464,22 @@ async function switchZoneCloud(userId, zoneId) {
         WorkspaceState.zonaGEE    = (typeof simplifyZoneForGee === 'function' && zone.polygon_geojson)
             ? simplifyZoneForGee(zone.polygon_geojson, zone.zona_ha)
             : (zone.polygon_geojson || null);
-        WorkspaceState.resultados = {};
-
-        res.forEach(function(row) {
-            WorkspaceState.resultados[row.tipo_indice] = row.result_data;
-        });
+        if (wsRes.error) throw wsRes.error;
+        if (resRes.error) throw resRes.error;
+        hydrateCloudResults(res);
 
         localStorage.setItem('evergreen_workspace', JSON.stringify(WorkspaceState));
         // Restaurar tiles de la zona cargada
         if (typeof _restoreTilesCache === 'function') _restoreTilesCache();
+        if (typeof restoreAguaSerieUI === 'function') {
+            try { restoreAguaSerieUI(); } catch(e) {}
+        }
+        if (typeof restoreVegSerieUI === 'function') {
+            try { restoreVegSerieUI(); } catch(e) {}
+        }
+        if (typeof restoreDnbrUI === 'function') {
+            try { restoreDnbrUI(); } catch(e) {}
+        }
         return zone;
     } catch (e) {
         console.warn('[Auth] switchZoneCloud:', e);

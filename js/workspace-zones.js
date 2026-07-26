@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
     (function() {
         var bioIframe = document.getElementById('iframe-biodiversidad');
         if (bioIframe && (!bioIframe.src || bioIframe.src === window.location.href)) {
-            bioIframe.src = 'inaturalist/index.html';
+            bioIframe.src = 'inaturalist/';
         }
     })();
 });

@@ -54,7 +54,7 @@ function runBioAnalysis() {
 
     // Asegurar carga del iframe
     if (!iframe.src || iframe.src === window.location.href) {
-        iframe.src = 'inaturalist/index.html';
+        iframe.src = 'inaturalist/';
     }
 
     // Mostrar barra de progreso

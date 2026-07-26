@@ -134,6 +134,33 @@ function clearAnalysisStateForZoneChange() {
     return hadResults;
 }
 
+function normalizeWorkspaceResults() {
+    if (!WorkspaceState.resultados) WorkspaceState.resultados = {};
+    if (!WorkspaceState.series) WorkspaceState.series = {};
+
+    Object.keys(WorkspaceState.resultados).forEach(function(key) {
+        var value = WorkspaceState.resultados[key];
+        var entries = Array.isArray(value) ? value : (value ? [value] : []);
+
+        if (key === 'hidromorfologia_streams') {
+            delete WorkspaceState.resultados[key];
+            return;
+        }
+
+        if (key.indexOf('_serie') > -1) {
+            var serieDoc = entries[entries.length - 1];
+            if (serieDoc && serieDoc.periods) WorkspaceState.series[key] = serieDoc;
+            delete WorkspaceState.resultados[key];
+            return;
+        }
+
+        WorkspaceState.resultados[key] = entries.filter(function(entry) {
+            return entry && typeof entry === 'object';
+        });
+        if (!WorkspaceState.resultados[key].length) delete WorkspaceState.resultados[key];
+    });
+}
+
 // Instancias Chart.js del panel de monitoreo (para poder destruirlas en re-render)
 var _monitorCharts = {};
 
@@ -151,6 +178,8 @@ function loadWorkspaceState() {
                 var v = WorkspaceState.resultados[k];
                 if (v && !Array.isArray(v)) WorkspaceState.resultados[k] = [v];
             });
+            normalizeWorkspaceResults();
+            localStorage.setItem('evergreen_workspace', JSON.stringify(WorkspaceState));
             // Asegurar zonaGEE siempre disponible si hay zona
             if (WorkspaceState.zona && !WorkspaceState.zonaGEE) {
                 try {
@@ -768,7 +797,7 @@ function switchWorkspaceTab(tabId) {
     if (bioIframe) {
         bioIframe.classList.remove('ws-iframe-active');
         if (!bioIframe.src || bioIframe.src === window.location.href) {
-            bioIframe.src = 'inaturalist/index.html';
+            bioIframe.src = 'inaturalist/';
         }
         if (tabId === 'biodiversidad') {
             setTimeout(function() { enviarZonaABiodiversidad(); }, 800);
