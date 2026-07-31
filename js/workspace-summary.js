@@ -544,7 +544,9 @@ var _GEE_LAYER_LABELS = {
     'dem_Elevacion':    'Elevación · DEM',
     'dem_Pendiente':    'Pendiente · DEM',
     'bosque':           'Pérdida de Bosque',
-    'dnbr_Severidad':   'Severidad dNBR'
+    'dnbr_Severidad':   'Severidad dNBR',
+    'hidromorfologia_streams':         'Red de cauces - Cuenca',
+    'hidromorfologia_cauce_principal': 'Cauce principal - Cuenca'
 };
 
 /** Reconstruye la sección dinámica de capas GEE en el panel de capas. */
@@ -554,9 +556,10 @@ function _refreshGeeLayersPanel() {
     var ids = Object.keys(_layerRegistry);
     if (ids.length === 0) { container.style.display = 'none'; return; }
     container.style.display = 'block';
-    var html = '<div class="gee-layers-sep"></div><div class="gee-layers-header">Análisis GEE</div>';
+    var html = '<div class="gee-layers-sep"></div><div class="gee-layers-header">Análisis</div>';
     ids.forEach(function(id) {
         var label = _GEE_LAYER_LABELS[id] || id;
+        var badge = id.indexOf('hidromorfologia_') === 0 ? 'HIDRO' : 'GEE';
         var rowId = 'glayer-' + id.replace(/_/g, '-');
         var layerOnMap = _layerRegistry[id] && typeof map !== 'undefined' && map.hasLayer(_layerRegistry[id]);
         var rowState = layerOnMap ? 'on' : 'off';
@@ -564,7 +567,7 @@ function _refreshGeeLayersPanel() {
                 ' onclick="toggleLayerById(\'' + id + '\', this);">' +
                 '<div class="map-layer-check"><i class="fas fa-check"></i></div>' +
                 '<span class="map-layer-label">' + label + '</span>' +
-                '<span class="map-gee-badge">GEE</span>' +
+                '<span class="map-gee-badge">' + badge + '</span>' +
                 '</div>' +
                 '<div class="map-layer-opacity">' +
                 '<span class="opacity-label">Opacidad</span>' +

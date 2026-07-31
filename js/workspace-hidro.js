@@ -484,6 +484,13 @@
         try { if (_cauceLayer) map.removeLayer(_cauceLayer); } catch (e) {}
         try { if (_cuencaLayer) map.removeLayer(_cuencaLayer); } catch (e) {}
         _streamsLayer = _cauceLayer = _cuencaLayer = null;
+
+        // Evitar que el panel conserve referencias a capas ya retiradas.
+        if (typeof _layerRegistry !== 'undefined') {
+            delete _layerRegistry.hidromorfologia_streams;
+            delete _layerRegistry.hidromorfologia_cauce_principal;
+            if (typeof _refreshGeeLayersPanel === 'function') _refreshGeeLayersPanel();
+        }
     }
 
     function _clearMapLayers() {
@@ -491,6 +498,38 @@
         try { if (_outletMarker) map.removeLayer(_outletMarker); } catch (e) {}
         try { if (_rectLayer) map.removeLayer(_rectLayer); } catch (e) {}
         _outletMarker = _rectLayer = null;
+    }
+
+    function _registrarCapaHidro(id, layer) {
+        if (!layer || typeof registerLayer !== 'function') return;
+        registerLayer(id, layer);
+    }
+
+    // Los cauces son overlays complementarios de la zona, separados del perimetro.
+    function _dibujarStreamsEnMapa(data) {
+        if (typeof map === 'undefined' || typeof L === 'undefined') return;
+
+        try { if (_streamsLayer) map.removeLayer(_streamsLayer); } catch (e) {}
+        try { if (_cauceLayer) map.removeLayer(_cauceLayer); } catch (e) {}
+        _streamsLayer = _cauceLayer = null;
+
+        if (data && data.streams && data.streams.features && data.streams.features.length) {
+            try {
+                _streamsLayer = L.geoJSON(data.streams, {
+                    style: { color: '#29b6f6', weight: 2.5, opacity: 0.95 },
+                }).addTo(map);
+                _registrarCapaHidro('hidromorfologia_streams', _streamsLayer);
+            } catch (e) { console.warn('[Hidro] streams:', e); }
+        }
+
+        if (data && data.cauce_principal && data.cauce_principal.coordinates && data.cauce_principal.coordinates.length) {
+            try {
+                _cauceLayer = L.geoJSON(data.cauce_principal, {
+                    style: { color: '#0d47a1', weight: 4, opacity: 1.0 },
+                }).addTo(map);
+                _registrarCapaHidro('hidromorfologia_cauce_principal', _cauceLayer);
+            } catch (e) { console.warn('[Hidro] cauce:', e); }
+        }
     }
 
     function _dibujarEnMapa(data) {
@@ -504,23 +543,7 @@
             map.fitBounds(_cuencaLayer.getBounds(), { padding: [40, 40] });
         } catch (e) { console.warn('[Hidro] cuenca:', e); }
 
-        // Streams
-        if (data.streams && data.streams.features && data.streams.features.length) {
-            try {
-                _streamsLayer = L.geoJSON(data.streams, {
-                    style: { color: '#29b6f6', weight: 2.5, opacity: 0.95 },
-                }).addTo(map);
-            } catch (e) { console.warn('[Hidro] streams:', e); }
-        }
-
-        // Cauce principal
-        if (data.cauce_principal && data.cauce_principal.coordinates && data.cauce_principal.coordinates.length) {
-            try {
-                _cauceLayer = L.geoJSON(data.cauce_principal, {
-                    style: { color: '#0d47a1', weight: 4, opacity: 1.0 },
-                }).addTo(map);
-            } catch (e) { console.warn('[Hidro] cauce:', e); }
-        }
+        _dibujarStreamsEnMapa(data);
 
         // Outlet: mantener marcador donde el usuario clickeó (no moverlo al snap).
         // El snap se usa internamente para el cálculo pero el UX no debe saltar.
@@ -651,9 +674,10 @@
                 WorkspaceState.zonaNombre = nombre;
                 WorkspaceState.zonaGEE    = (typeof simplifyZoneForGee === 'function')
                     ? simplifyZoneForGee(feature, ha) : feature;
-                try { _clearResultLayers(); } catch (e) {}   // quitar cuenca/streams del módulo hidro
+                try { _clearResultLayers(); } catch (e) {}   // quitar el resultado temporal del módulo hidro
                 if (typeof restoreZoneOnMap === 'function') restoreZoneOnMap();
                 if (typeof agregarPoligonoDesdeWorkspace === 'function') agregarPoligonoDesdeWorkspace(feature, nombre, ha);
+                _dibujarStreamsEnMapa(_lastResult); // conservar cauces como overlays de la zona
                 if (typeof updateZoneUI === 'function') updateZoneUI();
                 if (typeof saveWorkspaceState === 'function') saveWorkspaceState();
                 _guardarStreamsCloud(nombre);   // guarda los streams como capa complementaria (para el Comparador)
