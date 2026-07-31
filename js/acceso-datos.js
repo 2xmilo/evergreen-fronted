@@ -25,7 +25,9 @@ const MENSAJES_PROCESAMIENTO = [
 let map;
 let drawnItems;
 let drawControl;
-let mapaCalles, satelite, topografico;
+let mapaCalles, satelite, topografico, mapaClaro;
+let dpaIdeLayer = null;
+let dpaIdeErrorShown = false;
 let cuencasLayer = null;
 let cuencaSeleccionada = null;
 let puntos = [];
@@ -49,6 +51,12 @@ function initMap() {
         attribution: 'Tiles © Esri'
     });
 
+    mapaClaro = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 20
+    });
+
     map = L.map('map', {
         center: [-39.8142, -73.2459],
         zoom: 8,
@@ -57,6 +65,10 @@ function initMap() {
 
     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
+
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('#map-basemap-control')) toggleMapBaseMenu(false);
+    });
 
     // Cuencas BNA: lazy-load — se descargan SOLO cuando el usuario activa el toggle
     // (evita bajar 3MB al inicio si nunca se usa la capa)
@@ -122,12 +134,60 @@ function activarDibujo(tipo) {
 // CONTROL DE CAPAS (panel propio)
 // ================================
 function cambiarCapaBase(tipo) {
-    map.removeLayer(mapaCalles);
-    map.removeLayer(satelite);
-    map.removeLayer(topografico);
-    if (tipo === 'calles') map.addLayer(mapaCalles);
-    else if (tipo === 'satelite') map.addLayer(satelite);
-    else if (tipo === 'topo') map.addLayer(topografico);
+    const bases = { calles: mapaCalles, satelite, topo: topografico, claro: mapaClaro };
+    Object.values(bases).forEach(layer => {
+        if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+    });
+
+    const baseSeleccionada = bases[tipo] || satelite;
+    map.addLayer(baseSeleccionada);
+
+    document.querySelectorAll('[data-map-base]').forEach(button => {
+        button.classList.toggle('active', button.dataset.mapBase === (bases[tipo] ? tipo : 'satelite'));
+    });
+    const current = document.getElementById('map-basemap-current');
+    if (current) current.textContent = baseSeleccionada === mapaClaro
+        ? 'Claro analitico'
+        : baseSeleccionada === mapaCalles
+            ? 'Calles'
+            : baseSeleccionada === topografico
+                ? 'Topografico'
+                : 'Satelite';
+    toggleMapBaseMenu(false);
+}
+
+function toggleMapBaseMenu(force) {
+    const control = document.getElementById('map-basemap-control');
+    const trigger = document.getElementById('map-basemap-trigger');
+    const menu = document.getElementById('map-basemap-menu');
+    if (!control || !trigger || !menu) return;
+    const open = typeof force === 'boolean' ? force : !control.classList.contains('open');
+    control.classList.toggle('open', open);
+    trigger.setAttribute('aria-expanded', String(open));
+    menu.setAttribute('aria-hidden', String(!open));
+}
+
+function toggleDpaIde(visible) {
+    if (!map) return;
+    if (!dpaIdeLayer) {
+        if (!window.L.esri || typeof L.esri.dynamicMapLayer !== 'function') {
+            console.warn('[Mapa] No se cargo el conector de mapas de IDE Chile.');
+            return;
+        }
+        dpaIdeLayer = L.esri.dynamicMapLayer({
+            url: 'https://rest-sit.mop.gob.cl/arcgis/rest/services/MAPA_BASE/LIMITES/MapServer',
+            layers: [0, 1, 2],
+            opacity: 0.85,
+            attribution: '&copy; IDE MOP / MOP'
+        });
+        dpaIdeLayer.on('requesterror', function () {
+            if (dpaIdeErrorShown) return;
+            dpaIdeErrorShown = true;
+            console.warn('[Mapa] No fue posible cargar la DPA de IDE Chile.');
+        });
+    }
+    if (visible) dpaIdeLayer.addTo(map);
+    else if (map.hasLayer(dpaIdeLayer)) map.removeLayer(dpaIdeLayer);
 }
 
 function toggleOverlay(nombre, visible) {

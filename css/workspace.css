@@ -206,6 +206,56 @@ body.workspace-mode {
 .map-layers-body .map-layer-opacity { display:none; }
 .map-layers-body .map-layer-opacity.op-show { display:flex; }
 
+/* MAP BASE SELECTOR: compacto, en la esquina inferior derecha */
+.map-basemap-control {
+  position:absolute; right:16px; bottom:30px; z-index:450;
+  display:flex; flex-direction:column; align-items:flex-end;
+  font-family:inherit;
+}
+.map-basemap-trigger {
+  display:flex; align-items:center; gap:7px;
+  border:1px solid rgba(106,170,53,0.24); border-radius:8px;
+  padding:7px 10px; background:rgba(16,28,12,0.94);
+  color:rgba(255,255,255,0.78); box-shadow:0 4px 16px rgba(0,0,0,0.35);
+  backdrop-filter:blur(12px); cursor:pointer; font:500 10.5px/1 inherit;
+  transition:color .15s, border-color .15s;
+}
+.map-basemap-trigger:hover, .map-basemap-control.open .map-basemap-trigger {
+  color:#fff; border-color:rgba(106,170,53,0.5);
+}
+.map-basemap-trigger > i:first-child { color:var(--accent); font-size:10px; }
+.map-basemap-chevron { color:rgba(255,255,255,0.4); font-size:8px; transition:transform .2s; }
+.map-basemap-control.open .map-basemap-chevron { transform:rotate(180deg); }
+.map-basemap-menu {
+  display:none; min-width:166px; margin-bottom:6px; padding:6px;
+  border:1px solid rgba(106,170,53,0.24); border-radius:9px;
+  background:rgba(16,28,12,0.96); box-shadow:0 8px 24px rgba(0,0,0,0.42);
+  backdrop-filter:blur(12px);
+}
+.map-basemap-control.open .map-basemap-menu { display:block; }
+.map-basemap-title {
+  padding:3px 7px 6px; color:rgba(255,255,255,0.38);
+  font-size:9px; text-transform:uppercase; letter-spacing:.08em;
+}
+.map-basemap-option {
+  width:100%; display:flex; align-items:center; gap:8px;
+  padding:7px; border:0; border-radius:6px; background:transparent;
+  color:rgba(255,255,255,0.56); cursor:pointer; font:500 10.5px/1.2 inherit;
+  text-align:left; transition:background .15s, color .15s;
+}
+.map-basemap-option:hover { background:rgba(106,170,53,0.12); color:#fff; }
+.map-basemap-option > i:first-child { width:13px; color:rgba(255,255,255,0.38); text-align:center; }
+.map-basemap-option.active { color:#eaf4e4; }
+.map-basemap-option.active > i:first-child { color:var(--accent); }
+.map-basemap-check { display:none; margin-left:auto; color:var(--accent); font-size:9px; }
+.map-basemap-option.active .map-basemap-check { display:block; }
+.map-ide-badge { background:rgba(226,179,66,0.16); color:#e8c56a; }
+
+@media (max-width: 640px) {
+  .map-basemap-control { right:10px; bottom:28px; }
+  .map-basemap-menu { min-width:154px; }
+}
+
 /* colapso de secciones */
 .layers-section-hdr .sec-chev { font-size:8px; margin-right:5px; transition:transform .2s; display:inline-block; }
 /* ZONA (cabecera no-clickable): título pegado al chevron, a la izquierda como ANÁLISIS GEE */

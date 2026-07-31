@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="css/acceso-datos.css">
-    <link rel="stylesheet" href="css/workspace.css?v=36">
+    <link rel="stylesheet" href="css/workspace.css?v=37">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
@@ -162,6 +162,22 @@
             <div id="gee-layers-dynamic" style="display:none;"></div>
 
             <!-- ── CONTEXTO TERRITORIAL ── -->
+            <div class="layers-section-hdr">
+                <span>Referencias territoriales</span>
+                <span class="layers-section-source">IDE Chile</span>
+            </div>
+            <div class="map-layer-row off" id="layer-dpa-ide"
+                 onclick="toggleDpaIde(this.classList.toggle('on')); this.classList.toggle('off');">
+                <div class="map-layer-check"><i class="fas fa-check"></i></div>
+                <span class="map-layer-label">Limites administrativos</span>
+                <span class="map-gee-badge map-ide-badge">IDE Chile</span>
+            </div>
+            <div class="map-layer-opacity">
+                <input type="range" min="0" max="100" value="85" class="opacity-slider"
+                    oninput="if (dpaIdeLayer) dpaIdeLayer.setOpacity(this.value/100); document.getElementById('oval-dpa-ide').textContent=this.value+'%'">
+                <span class="opacity-val" id="oval-dpa-ide">85%</span>
+            </div>
+
             <div class="layers-section-hdr layers-section-hdr--clickable" onclick="toggleSimbioSection()">
                 <span>Contexto territorial</span>
                 <span class="layers-section-source">MMA · SIMBIO&nbsp;<i class="fas fa-chevron-down" id="simbio-section-chev" style="font-size:7px;transition:transform .2s;"></i></span>
@@ -254,6 +270,35 @@
 
             </div><!-- /simbio-section-body -->
 
+        </div>
+    </div>
+
+    <!-- MAP BASE SELECTOR -->
+    <div class="map-basemap-control" id="map-basemap-control">
+        <button type="button" class="map-basemap-trigger" id="map-basemap-trigger"
+                onclick="toggleMapBaseMenu()" aria-expanded="false" aria-controls="map-basemap-menu">
+            <i class="fas fa-map"></i>
+            <span id="map-basemap-current">Satelite</span>
+            <i class="fas fa-chevron-up map-basemap-chevron"></i>
+        </button>
+        <div class="map-basemap-menu" id="map-basemap-menu" aria-hidden="true">
+            <div class="map-basemap-title">Mapa base</div>
+            <button type="button" class="map-basemap-option active" data-map-base="satelite"
+                    onclick="cambiarCapaBase('satelite')">
+                <i class="fas fa-satellite"></i><span>Satelite</span><i class="fas fa-check map-basemap-check"></i>
+            </button>
+            <button type="button" class="map-basemap-option" data-map-base="calles"
+                    onclick="cambiarCapaBase('calles')">
+                <i class="fas fa-road"></i><span>Calles</span><i class="fas fa-check map-basemap-check"></i>
+            </button>
+            <button type="button" class="map-basemap-option" data-map-base="topo"
+                    onclick="cambiarCapaBase('topo')">
+                <i class="fas fa-mountain"></i><span>Topografico</span><i class="fas fa-check map-basemap-check"></i>
+            </button>
+            <button type="button" class="map-basemap-option" data-map-base="claro"
+                    onclick="cambiarCapaBase('claro')">
+                <i class="fas fa-sun"></i><span>Claro analitico</span><i class="fas fa-check map-basemap-check"></i>
+            </button>
         </div>
     </div>
 
@@ -1942,6 +1987,7 @@
 
 <!-- JS EXTERNAL LIBS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet@3.0.16/dist/esri-leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
 <script src="js/supabase-client.js"></script>
@@ -1965,7 +2011,7 @@
 </script>
 
 <!-- CLIMA SCRIPT (SAGRADO) -->
-<script src="js/acceso-datos.js?v=3"></script>
+<script src="js/acceso-datos.js?v=4"></script>
 
 <!-- WORKSPACE LOGIC -->
 <script src="js/workspace-core.js?v=16"></script>
