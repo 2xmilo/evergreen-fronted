@@ -205,14 +205,11 @@
             var meta = [dist + ' km', region, altura, zona].filter(Boolean).join(' · ');
 
             return '' +
-                '<div class="dmc-card" data-code="' + code + '">' +
+                '<div class="dmc-card" data-code="' + code + '" role="button" tabindex="0" aria-label="Ver detalle de ' + name + '">' +
                     '<div class="dmc-card-main">' +
                         '<div class="dmc-name">' + name + '</div>' +
                         '<div class="dmc-meta">' + meta + '</div>' +
                     '</div>' +
-                    '<button type="button" class="dmc-small-btn dmc-small-btn--go" data-action="summary" data-code="' + code + '" title="Ver detalle">' +
-                        '<i class="fas fa-chevron-right"></i>' +
-                    '</button>' +
                 '</div>';
         }).join('');
     }
@@ -553,11 +550,17 @@
     /* ── Event listeners ── */
 
     function onListClick(event) {
-        var button = event.target.closest('button[data-action]');
-        if (!button) return;
-        var code = button.getAttribute('data-code');
-        var action = button.getAttribute('data-action');
-        if (action === 'summary') loadSummary(code);
+        var card = event.target.closest('.dmc-card');
+        if (!card) return;
+        loadSummary(card.getAttribute('data-code'));
+    }
+
+    function onListKeydown(event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        var card = event.target.closest('.dmc-card');
+        if (!card) return;
+        event.preventDefault();
+        loadSummary(card.getAttribute('data-code'));
     }
 
     function init() {
@@ -565,6 +568,7 @@
         var list = $('dmc-stations-list');
         if (btn) btn.addEventListener('click', searchNearbyStations);
         if (list) list.addEventListener('click', onListClick);
+        if (list) list.addEventListener('keydown', onListKeydown);
     }
 
     if (document.readyState === 'loading') {

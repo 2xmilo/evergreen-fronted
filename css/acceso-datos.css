@@ -1060,12 +1060,12 @@
 
 .cuenca-popup p {
     margin: 4px 0;
-    color: rgba(244, 247, 241, 0.6);
+    color: #1a1a1a !important;
     font-size: 12px;
 }
 
 .cuenca-popup strong {
-    color: rgba(244, 247, 241, 0.85);
+    color: #000 !important;
 }
 
 .cuenca-popup-btn {

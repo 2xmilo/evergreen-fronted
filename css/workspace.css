@@ -613,12 +613,21 @@ body.workspace-mode {
 #tab-clima-content .dmc-card {
   display:flex !important;
   align-items:flex-start !important;
-  justify-content:space-between !important;
+  justify-content:flex-start !important;
   gap:8px !important;
   border:1px solid var(--panel-border) !important;
   border-radius:7px !important;
   background:#fff !important;
   padding:9px !important;
+  cursor:pointer !important;
+  transition:border-color .15s, background .15s, box-shadow .15s !important;
+}
+#tab-clima-content .dmc-card:hover,
+#tab-clima-content .dmc-card:focus-visible {
+  border-color:rgba(106,170,53,.55) !important;
+  background:#fbfdf8 !important;
+  box-shadow:0 2px 8px rgba(47,92,30,.08) !important;
+  outline:none !important;
 }
 #tab-clima-content .dmc-card-main { min-width:0 !important; }
 #tab-clima-content .dmc-name {
@@ -634,24 +643,6 @@ body.workspace-mode {
   line-height:1.35 !important;
   margin-top:3px !important;
 }
-#tab-clima-content .dmc-card-actions {
-  display:flex !important;
-  flex-direction:column !important;
-  gap:5px !important;
-  flex:0 0 auto !important;
-}
-#tab-clima-content .dmc-small-btn {
-  border:1px solid var(--panel-border) !important;
-  border-radius:6px !important;
-  background:#f9faf8 !important;
-  color:var(--text) !important;
-  font-size:10.5px !important;
-  font-weight:700 !important;
-  padding:5px 8px !important;
-  cursor:pointer !important;
-  white-space:nowrap !important;
-}
-#tab-clima-content .dmc-small-btn:hover { border-color:var(--accent) !important; color:var(--accent-dark) !important; }
 #tab-clima-content .dmc-detail {
   border:1px solid rgba(106,170,53,.25) !important;
   border-radius:8px !important;
@@ -718,19 +709,6 @@ body.workspace-mode {
 #tab-clima-content .dmc-ficha-link:hover { opacity:1 !important; }
 
 /* ── Botón "go" en cards de estación ── */
-#tab-clima-content .dmc-small-btn--go {
-  background:transparent !important;
-  border:1px solid var(--panel-border) !important;
-  border-radius:6px !important;
-  color:var(--muted2) !important;
-  font-size:10px !important;
-  padding:4px 8px !important;
-  cursor:pointer !important;
-  flex-shrink:0 !important;
-  transition:border-color .15s, color .15s !important;
-}
-#tab-clima-content .dmc-small-btn--go:hover { border-color:var(--accent) !important; color:var(--accent-dark) !important; }
-
 /* ── Sección variables ── */
 #tab-clima-content .dmc-section-row {
   display:flex !important;
