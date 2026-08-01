@@ -254,6 +254,7 @@ body.workspace-mode {
 @media (max-width: 640px) {
   .map-basemap-control { right:10px; bottom:28px; }
   .map-basemap-menu { min-width:154px; }
+  .mini-panel { right:10px; bottom:68px; }
 }
 
 /* colapso de secciones */
@@ -1035,17 +1036,25 @@ body.workspace-mode {
 
 /* ══ MINI PANEL (bottom-right dark widget) ════════════════ */
 .mini-panel {
-  position:absolute; bottom:32px; right:16px; width:240px;
+  /* Se apila SOBRE el selector de mapa base (bottom:30px + 31px de alto):
+     ambos viven en la esquina inferior derecha y antes se superponían,
+     con el botón "Satélite" tapando la fila de estadísticas. */
+  position:absolute; bottom:72px; right:16px; width:240px;
   background:rgba(16,28,12,0.94);
   border:1px solid rgba(106,170,53,0.2); border-radius:12px;
   box-shadow:0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04);
   z-index:200; overflow:hidden;
-  transition:opacity .25s, transform .25s;
+  transition:opacity .25s, transform .25s, bottom .22s ease;
   backdrop-filter:blur(12px);
   font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
   text-transform:none;
 }
 .mini-panel.hidden { opacity:0; transform:translateY(8px); pointer-events:none; }
+/* Al desplegar el selector de mapa base, el control crece hacia arriba
+   (~154px de menú) e invadiría el mini-panel. Como el control va antes
+   en el DOM y comparten padre, se resuelve con hermano general: el
+   mini-panel se aparta mientras el menú está abierto. */
+.map-basemap-control.open ~ .mini-panel { bottom:226px; }
 .mini-header { display:flex; align-items:center; gap:6px; padding:10px 12px 6px; }
 .mini-header-dot {
   width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0;
