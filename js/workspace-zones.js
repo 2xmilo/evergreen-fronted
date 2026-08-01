@@ -204,8 +204,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnDibujar) btnDibujar.addEventListener('click', startDrawingZone);
     var btnExport = document.getElementById('btn-export-geojson');
     if (btnExport) btnExport.addEventListener('click', exportarGeoJSON);
-    var btnLimpiar = document.getElementById('btn-limpiar-zona');
-    if (btnLimpiar) btnLimpiar.addEventListener('click', clearZone);
+    // btn-limpiar-zona se retiró del HTML: duplicaba clearZone(), que ya
+    // expone "Eliminar zona" en herramientas de dibujo.
 
     // Estado inicial (renderiza indicadores si hay resultados guardados)
     loadWorkspaceState();

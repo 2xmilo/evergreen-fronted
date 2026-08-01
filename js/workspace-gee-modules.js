@@ -1413,6 +1413,8 @@ function clearZoneState() {
 async function clearZone() {
     if (!WorkspaceState.zona) return;
     if (!confirm('¿Eliminar la zona activa y todos sus análisis?\n\nEsta acción no se puede deshacer.')) return;
+    // Salir del modo edición si estaba activo (dejaría vértices huérfanos)
+    if (typeof cancelarEdicionZona === 'function') cancelarEdicionZona();
 
     var deletedId = WorkspaceState.zonaId;
 

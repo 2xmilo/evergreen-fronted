@@ -93,7 +93,116 @@ function initWorkspaceMap() {
     }
 }
 
+// ---------------------------------------------------------
+// EDICIÓN DE LA ZONA (mover vértices)
+// ---------------------------------------------------------
+// El botón antiguo llamaba a activarEdicion() de acceso-datos.js, que
+// opera sobre `drawControl` (el L.Control.Draw del módulo Clima) y su
+// featureGroup `drawnItems`. La zona del workspace vive en otro grupo
+// (`globalDrawnItems`) y su control es un L.Draw.Polygon —un handler sin
+// _toolbars—, así que aquel botón no editaba nada: por eso "no hacía
+// nada". Este editor apunta al grupo correcto.
+var _zonaEditor = null;
+
+function edicionZonaActiva() { return !!_zonaEditor; }
+
+function toggleEdicionZona() {
+    if (_zonaEditor) { _guardarEdicionZona(); return; }
+
+    if (!globalDrawnItems || !globalDrawnItems.getLayers().length) {
+        var avisar = (typeof mostrarNotificacion === 'function') ? mostrarNotificacion : alert;
+        avisar('✏️ Primero dibuja una zona o selecciona una cuenca.');
+        return;
+    }
+    if (!L.EditToolbar || !L.EditToolbar.Edit) {
+        console.warn('Leaflet.Draw sin EditToolbar disponible');
+        return;
+    }
+
+    try {
+        _zonaEditor = new L.EditToolbar.Edit(map, {
+            featureGroup: globalDrawnItems,
+            selectedPathOptions: { maintainColor: true, opacity: 0.8, dashArray: '6,6' }
+        });
+        _zonaEditor.enable();
+    } catch (e) {
+        console.warn('No se pudo iniciar la edición de zona:', e);
+        _zonaEditor = null;
+        return;
+    }
+
+    _setBotonEdicion(true);
+    if (typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion('✏️ Arrastra los vértices y pulsa "Guardar cambios" al terminar.');
+    }
+}
+
+function cancelarEdicionZona() {
+    if (!_zonaEditor) return;
+    try { _zonaEditor.revertLayers(); _zonaEditor.disable(); } catch(e) {}
+    _zonaEditor = null;
+    _setBotonEdicion(false);
+}
+
+function _guardarEdicionZona() {
+    if (!_zonaEditor) return;
+    try { _zonaEditor.save(); _zonaEditor.disable(); } catch(e) {}
+    _zonaEditor = null;
+    _setBotonEdicion(false);
+
+    var layer = globalWorkspaceAOILayer || globalDrawnItems.getLayers()[0];
+    if (!layer) return;
+
+    var ha = 0;
+    if (typeof layer.getLatLngs === 'function') {
+        try { ha = Math.round(L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]) / 10000); } catch(e) {}
+    }
+    if (ha > 50000) {
+        alert('La zona editada supera el límite de 50.000 ha (' + ha.toLocaleString('es-CL') + ' ha).\n' +
+              'Se mantiene la geometría, pero los análisis GEE no podrán ejecutarse.');
+    }
+
+    var geojson = layer.toGeoJSON();
+
+    // La geometría cambió: los análisis previos ya no corresponden a esta
+    // zona. Mismo criterio que al redibujarla.
+    if (typeof clearAnalysisStateForZoneChange === 'function') {
+        var habia = clearAnalysisStateForZoneChange();
+        if (habia && window._sbUserId && WorkspaceState.zonaId &&
+            typeof clearResultsForWorkspace === 'function') {
+            clearResultsForWorkspace(window._sbUserId, WorkspaceState.zonaId);
+        }
+    }
+
+    WorkspaceState.zona   = geojson;
+    WorkspaceState.zonaHa = ha;
+    WorkspaceState.zonaGEE = (typeof simplifyZoneForGee === 'function')
+        ? simplifyZoneForGee(geojson, ha) : geojson;
+
+    updateZoneUI();
+    saveWorkspaceState();
+    if (typeof agregarPoligonoDesdeWorkspace === 'function') {
+        agregarPoligonoDesdeWorkspace(geojson, WorkspaceState.zonaNombre, ha);
+    }
+    enviarZonaABiodiversidad();
+
+    if (typeof mostrarNotificacion === 'function') {
+        mostrarNotificacion('✅ Zona actualizada: ' + ha.toLocaleString('es-CL') + ' ha');
+    }
+}
+
+function _setBotonEdicion(editando) {
+    var btn = document.getElementById('btn-edit');
+    if (!btn) return;
+    btn.classList.toggle('active', editando);
+    btn.innerHTML = editando
+        ? '<i class="fas fa-check"></i> Guardar cambios'
+        : '<i class="fas fa-edit"></i> Editar zona';
+}
+
 function _enableDrawing() {
+    // Si se empieza a dibujar mientras se edita, cancelar la edición
+    if (typeof cancelarEdicionZona === 'function') cancelarEdicionZona();
     if (!globalDrawControl) return;
     globalDrawnItems.clearLayers();
     if (typeof poligonos !== 'undefined') poligonos = [];

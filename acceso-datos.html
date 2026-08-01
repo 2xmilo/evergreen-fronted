@@ -379,10 +379,12 @@
                         <i class="fas fa-bullseye"></i> Delimitar Cuenca
                         <span class="draw-btn-tag">PRO</span>
                     </button>
-                    <button class="draw-btn" id="btn-edit" onclick="activarEdicion()">
-                        <i class="fas fa-edit"></i> Editar / Eliminar
+                    <button class="draw-btn" id="btn-edit" onclick="toggleEdicionZona()"
+                            title="Arrastra los vértices de la zona; vuelve a pulsar para guardar">
+                        <i class="fas fa-edit"></i> Editar zona
                     </button>
-                    <button class="draw-btn" id="btn-clear-all" onclick="clearZone()" style="color:#e57373;">
+                    <button class="draw-btn" id="btn-clear-all" onclick="clearZone()" style="color:#e57373;"
+                            title="Borra la zona y todos sus análisis">
                         <i class="fas fa-trash-alt"></i> Eliminar zona
                     </button>
                     <button class="draw-btn" onclick="resetAnalisis()" style="color:var(--muted2);">
@@ -391,12 +393,12 @@
                 </div>
             </div>
 
+            <!-- "Limpiar zona" se eliminó: llamaba a clearZone(), exactamente
+                 la misma función que "Eliminar zona" en herramientas de dibujo.
+                 Dos nombres distintos para la misma acción destructiva. -->
             <div class="rs-exports" style="margin:8px 0 10px;">
                 <button class="rs-export-link" id="btn-export-geojson">
                     <i class="fas fa-download"></i> GeoJSON
-                </button>
-                <button class="rs-export-link rs-export-danger" id="btn-limpiar-zona">
-                    <i class="fas fa-times-circle"></i> Limpiar zona
                 </button>
             </div>
 
@@ -1998,11 +2000,11 @@
 
 <!-- WORKSPACE LOGIC -->
 <script src="js/workspace-core.js?v=16"></script>
-<script src="js/workspace-map.js?v=6"></script>
+<script src="js/workspace-map.js?v=7"></script>
 <script src="js/workspace-bosque.js?v=9"></script>
 <script src="js/workspace-summary.js?v=15"></script>
-<script src="js/workspace-gee-modules.js?v=17"></script>
-<script src="js/workspace-zones.js?v=11"></script>
+<script src="js/workspace-gee-modules.js?v=18"></script>
+<script src="js/workspace-zones.js?v=12"></script>
 <script src="js/workspace-biodiversidad.js?v=10"></script>
 <script src="js/workspace-dmc.js?v=7"></script>
 <script src="js/workspace-simbio.js?v=1"></script>
