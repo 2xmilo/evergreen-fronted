@@ -808,6 +808,51 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-dnbr-zone-empty { min-height: 264px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--w40); font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
 @media (max-width: 900px) { .cz-dnbr-zones { grid-template-columns: 1fr; } }
 
+/* ── Series estacionales: un panel por zona (mismo patrón que dNBR) ── */
+.cz-series-zones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cz-serie-panel {
+  min-width: 0; background: var(--mat-1); border: 0.5px solid var(--hairline);
+  border-left: 3px solid var(--za); border-radius: var(--r-md); padding: 12px 14px 10px;
+  box-shadow: var(--shadow-1); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.cz-serie-panel.zb { border-left-color: var(--zb); }
+.cz-serie-panel-chart { position: relative; height: 210px; min-width: 0; margin: 8px 0 2px; }
+.cz-serie-panel-empty {
+  min-height: 210px; display: flex; align-items: center; justify-content: center;
+  color: var(--w40); font-family: var(--mono); font-size: 10px;
+  letter-spacing: .04em; text-transform: uppercase; text-align: center; padding: 0 12px;
+}
+@media (max-width: 900px) { .cz-series-zones { grid-template-columns: 1fr; } }
+
+/* Chips de selección (estación / índice) — reemplazan el desplegable mixto */
+.cz-chiprow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cz-chiprow-lbl {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--w40); margin-right: 2px;
+}
+.cz-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 11px; border-radius: 999px;
+  background: rgba(255,255,255,0.055); border: 0.5px solid var(--hairline-soft);
+  color: var(--w70); font-size: 12px; line-height: 1.1;
+  transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+}
+.cz-chip:hover { background: rgba(255,255,255,0.10); color: var(--white); }
+.cz-chip.active {
+  background: linear-gradient(180deg, rgba(200,168,130,0.34), rgba(200,168,130,0.22));
+  border-color: rgba(200,168,130,0.5); color: #fff; font-weight: 500;
+  box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.20);
+}
+.cz-chip-sub { font-family: var(--mono); font-size: 8.5px; letter-spacing: .05em; text-transform: uppercase; opacity: .6; }
+/* Puntos que indican en qué zonas existe esa combinación */
+.cz-chip-dots { display: inline-flex; gap: 3px; }
+.cz-chip-dot { width: 6px; height: 6px; border-radius: 50%; border: 1px solid; }
+.cz-chip-dot--a { border-color: var(--za); }
+.cz-chip-dot--b { border-color: var(--zb); }
+.cz-chip-dot.on--a { background: var(--za); }
+.cz-chip-dot.on--b { background: var(--zb); }
+
 /* Tarjetas de tendencia por zona (lista agrupada tipo Ajustes de iOS) */
 .cz-series-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .cz-series-card {
@@ -941,8 +986,6 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
         {key:'n_vu',       label:'Vulnerables',           fmt:'int', better:'low'},
         {key:'n_rce',      label:'Catálogo RCE Chile',    fmt:'int', better:'high', accent:true},
       ]},
-    { id:'series', label:'Series', icon:'fa-chart-line', type:'series',
-      tableTitle:'Series estacionales · evolución interanual' },
     { id:'riesgos', label:'Riesgos', icon:'fa-triangle-exclamation', type:'arclim',
       tableTitle:'Riesgos climáticos proyectados · ARClim · MMA / CR2 · UC',
       indicadores:[
@@ -2771,7 +2814,339 @@ function czSeriesClassHa(period,key){
   return legacy[key]&&period.classes_ha[legacy[key]]!==undefined?period.classes_ha[legacy[key]]:null;
 }
 
-function SeriesCompare({zoneA,zoneB,dataA,dataB}){
+/* ══ SERIES ESTACIONALES — una sección por módulo (Agua / Vegetación) ══
+   Vive dentro del módulo temático que le corresponde, no en un módulo
+   aparte: así el desplegable deja de mezclar agua con vegetación y el
+   comparador mantiene el mismo modelo mental que el Monitor.
+   Cada zona tiene su propio panel, lado a lado (igual que Severidad):
+   superponer dos zonas con magnitudes distintas era ilegible. */
+function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
+  const seriesA=useMemo(()=>{
+    const o={},s=(dataA&&dataA._series)||{};
+    Object.keys(s).forEach(k=>{if(parseSerieKey(k).tipo===tipo)o[k]=s[k];});
+    return o;
+  },[dataA,tipo]);
+  const seriesB=useMemo(()=>{
+    const o={},s=(dataB&&dataB._series)||{};
+    Object.keys(s).forEach(k=>{if(parseSerieKey(k).tipo===tipo)o[k]=s[k];});
+    return o;
+  },[dataB,tipo]);
+
+  // Combinaciones disponibles (estación × índice) con en qué zona existe cada una
+  const combos=useMemo(()=>{
+    const all=Array.from(new Set([...Object.keys(seriesA),...Object.keys(seriesB)]));
+    return all.map(k=>{
+      const i=parseSerieKey(k);
+      return {key:k,estacion:i.estacion,indice:i.indice,enA:!!seriesA[k],enB:!!seriesB[k]};
+    }).sort((x,y)=>{
+      const bx=(x.enA&&x.enB)?0:1, by=(y.enA&&y.enB)?0:1;
+      return bx-by||x.estacion.localeCompare(y.estacion)||x.indice.localeCompare(y.indice);
+    });
+  },[seriesA,seriesB]);
+
+  const[selKey,setSelKey]=useState(null);
+  const[view,setView]=useState(null);
+  const[escala,setEscala]=useState('compartida');
+  const chipRef=useRef(null),segRef=useRef(null);
+
+  useEffect(()=>{
+    const ks=combos.map(c=>c.key);
+    if(ks.length&&(!selKey||!ks.includes(selKey))) setSelKey(ks[0]);
+    if(!ks.length&&selKey) setSelKey(null);
+  },[combos]);
+
+  const info=selKey?parseSerieKey(selKey):null;
+  const docA=selKey?seriesA[selKey]:null, docB=selKey?seriesB[selKey]:null;
+
+  // Estaciones disponibles, en orden natural del año
+  const ORDEN=['DJF','MAM','JJA','SON'];
+  const estaciones=useMemo(()=>{
+    const set=Array.from(new Set(combos.map(c=>c.estacion)));
+    return set.sort((a,b)=>ORDEN.indexOf(a)-ORDEN.indexOf(b));
+  },[combos]);
+  const estacionSel=info?info.estacion:null;
+  // Índices disponibles dentro de la estación elegida
+  const indices=useMemo(()=>combos.filter(c=>c.estacion===estacionSel),[combos,estacionSel]);
+
+  const defaultView=tipo==='agua'?'superficie':'clases';
+  useEffect(()=>{
+    const validas=tipo==='agua'?['superficie','indice','anomalias']:['clases','indice','anomalias'];
+    if(!view||!validas.includes(view)) setView(defaultView);
+  },[selKey,tipo]);
+  const activeView=view||defaultView;
+
+  const classDefs=useMemo(()=>czSeriesClasses(docA||docB||{}),[docA,docB]);
+  const years=useMemo(()=>{
+    const s=new Set(); [docA,docB].forEach(d=>(d&&d.periods||[]).forEach(p=>s.add(p.year)));
+    return Array.from(s).sort((a,b)=>a-b);
+  },[docA,docB]);
+
+  // Escala común entre paneles: preserva la comparación visual. Se puede
+  // soltar cuando las zonas tienen magnitudes muy distintas.
+  const yMax=useMemo(()=>{
+    if(escala!=='compartida') return null;
+    const vals=[];
+    [docA,docB].forEach(d=>(d&&d.periods||[]).forEach(p=>{
+      if(activeView==='superficie'&&p.water_ha!=null) vals.push(p.water_ha);
+      else if(activeView==='clases'&&p.classes_ha) classDefs.forEach(c=>{
+        const v=czSeriesClassHa(p,c.key); if(v!=null) vals.push(v);
+      });
+    }));
+    return vals.length?Math.max(...vals)*1.12:null;
+  },[docA,docB,activeView,escala,classDefs]);
+
+  useEffect(()=>{
+    if(!segRef.current||!chipRef.current) return;
+    const b=segRef.current.querySelector('.cz-seg-btn.active');
+    if(b){chipRef.current.style.left=b.offsetLeft+'px';chipRef.current.style.width=b.offsetWidth+'px';}
+  },[activeView,selKey]);
+
+  const viewOptions=tipo==='agua'
+    ?[{id:'superficie',label:'Superficie'},{id:'indice',label:'Índice'},{id:'anomalias',label:'Anomalías'}]
+    :[{id:'clases',label:(docA||docB)?.class_family==='humedad'?'Humedad':(docA||docB)?.class_family==='quemado'?'Cobertura':'Vigor'},
+      {id:'indice',label:'Índice'},{id:'anomalias',label:'Anomalías'}];
+
+  if(!combos.length) return null;   // sin series: la sección no aparece
+
+  const avisos=[];
+  if(selKey&&(!docA||!docB)){
+    const falta=!docA?(zoneA?.name||'Zona A'):(zoneB?.name||'Zona B');
+    avisos.push('Esta serie solo existe en una de las zonas. Falta calcularla en «'+falta+'» para poder comparar.');
+  }
+  if(docA&&docB&&docA.threshold!==undefined&&docB.threshold!==undefined&&docA.threshold!==docB.threshold)
+    avisos.push('Las series se calcularon con umbrales distintos ('+docA.threshold+' vs '+docB.threshold+'): las superficies no son comparables.');
+  if(docA&&docB&&docA.composite&&docB.composite&&docA.composite!==docB.composite)
+    avisos.push('Las series usan composiciones distintas ('+docA.composite+' vs '+docB.composite+').');
+
+  return(
+    <div className="cz-series" style={{marginTop:14}}>
+      <div className="cz-series-bar" style={{alignItems:'flex-start',flexDirection:'column',gap:10}}>
+        <div style={{display:'flex',alignItems:'center',gap:12,width:'100%',flexWrap:'wrap'}}>
+          <span className="cz-detail-eyebrow"><i className="fa-solid fa-chart-line"/>Serie estacional</span>
+          <div className="cz-seg" ref={segRef}>
+            <span className="cz-seg-chip" ref={chipRef}/>
+            {viewOptions.map(o=>(
+              <button key={o.id} className={'cz-seg-btn'+(activeView===o.id?' active':'')}
+                      onClick={()=>setView(o.id)}>{o.label}</button>
+            ))}
+          </div>
+          {(activeView==='superficie'||activeView==='clases')&&(
+            <button className="cz-chip" style={{marginLeft:'auto'}}
+                    onClick={()=>setEscala(e=>e==='compartida'?'propia':'compartida')}
+                    title="Con escala compartida ambos paneles usan el mismo eje y son comparables a simple vista; con escala propia cada zona se ajusta a su magnitud.">
+              <i className={'fa-solid '+(escala==='compartida'?'fa-link':'fa-link-slash')} style={{fontSize:10}}/>
+              {escala==='compartida'?'Misma escala':'Escala propia'}
+            </button>
+          )}
+        </div>
+
+        {/* Selección amigable: estación primero, índice después */}
+        <div className="cz-chiprow">
+          <span className="cz-chiprow-lbl">Estación</span>
+          {estaciones.map(es=>{
+            const enEsta=combos.filter(c=>c.estacion===es);
+            const activo=es===estacionSel;
+            return(
+              <button key={es} className={'cz-chip'+(activo?' active':'')}
+                      onClick={()=>{const c=enEsta[0]; if(c) setSelKey(c.key);}}>
+                {SERIE_ESTACION[es]||es}
+                <span className="cz-chip-sub">{SERIE_MESES[es]||''}</span>
+                <span className="cz-chip-dots">
+                  <span className={'cz-chip-dot cz-chip-dot--a'+(enEsta.some(c=>c.enA)?' on--a':'')}/>
+                  <span className={'cz-chip-dot cz-chip-dot--b'+(enEsta.some(c=>c.enB)?' on--b':'')}/>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {indices.length>1&&(
+          <div className="cz-chiprow">
+            <span className="cz-chiprow-lbl">Índice</span>
+            {indices.map(c=>(
+              <button key={c.key} className={'cz-chip'+(c.key===selKey?' active':'')}
+                      onClick={()=>setSelKey(c.key)}>
+                {c.indice}
+                <span className="cz-chip-dots">
+                  <span className={'cz-chip-dot cz-chip-dot--a'+(c.enA?' on--a':'')}/>
+                  <span className={'cz-chip-dot cz-chip-dot--b'+(c.enB?' on--b':'')}/>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {avisos.map((a,i)=>(
+        <div key={i} className="cz-series-note"><i className="fa-solid fa-circle-info"/><span>{a}</span></div>
+      ))}
+
+      {activeView==='clases'&&classDefs.length>0&&(
+        <div className="cz-dnbr-zone-legend" style={{paddingTop:0}}>
+          {classDefs.map(c=>(
+            <span className="cz-series-class-leg" key={c.key}>
+              <span className="cz-series-class-dot" style={{background:c.color}}/>{c.label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="cz-series-zones">
+        <SeriePanel side="a" zone={zoneA} doc={docA} view={activeView} years={years}
+                    classDefs={classDefs} yMax={yMax} info={info} tipo={tipo}/>
+        <SeriePanel side="b" zone={zoneB} doc={docB} view={activeView} years={years}
+                    classDefs={classDefs} yMax={yMax} info={info} tipo={tipo}/>
+      </div>
+    </div>
+  );
+}
+
+/* Panel de una zona: su propio gráfico + sus cifras de tendencia. */
+function SeriePanel({side,zone,doc,view,years,classDefs,yMax,info,tipo}){
+  const canvasRef=useRef(null), chartRef=useRef(null);
+  const color=side==='a'?'#b99a6e':'#6aaa35';
+
+  const valuesFor=(getter)=>{
+    const byYear={}; (doc&&doc.periods||[]).forEach(p=>{byYear[p.year]=p;});
+    return years.map(y=>{const p=byYear[y]; return p?getter(p):null;});
+  };
+
+  useEffect(()=>{
+    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
+    if(!canvasRef.current||!doc||!years.length||typeof Chart==='undefined') return;
+
+    const datasets=[]; let chartType='bar'; let stacked=false; let yTitle='ha';
+
+    if(view==='clases'){
+      stacked=true;
+      classDefs.forEach(c=>datasets.push({
+        label:c.label, data:valuesFor(p=>czSeriesClassHa(p,c.key)),
+        backgroundColor:c.color, borderWidth:0, borderRadius:2, borderSkipped:false,
+      }));
+    }else if(view==='superficie'){
+      datasets.push({type:'bar',label:'Superficie',data:valuesFor(p=>p.water_ha),
+        backgroundColor:valuesFor(p=>p.reliable?color:'rgba(140,155,165,.55)'),
+        borderRadius:3,borderSkipped:false});
+      if(doc.trend&&doc.trend.sen_slope_ha!==undefined)
+        datasets.push({type:'line',label:'Tendencia',
+          data:years.map(y=>doc.trend.sen_slope_ha*y+doc.trend.sen_intercept),
+          borderColor:'#d98a3a',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false});
+    }else if(view==='indice'){
+      chartType='line'; yTitle='Índice';
+      datasets.push({label:'p75',data:valuesFor(p=>p.p75),borderColor:'rgba(0,0,0,0)',pointRadius:0,fill:false,spanGaps:true,order:3});
+      datasets.push({label:'p25–p75',data:valuesFor(p=>p.p25),borderColor:'rgba(0,0,0,0)',pointRadius:0,
+        fill:'-1',backgroundColor:czSeriesRgba(color,.16),spanGaps:true,order:2});
+      datasets.push({label:'Media '+((info&&info.indice)||''),data:valuesFor(p=>p.mean),
+        borderColor:color,borderWidth:2,pointRadius:3,pointBackgroundColor:color,
+        pointBorderColor:'#fff',pointBorderWidth:1,fill:false,spanGaps:true,order:1});
+    }else{
+      yTitle='';
+      const vals=valuesFor(p=>p.mean).filter(v=>v!=null);
+      const avg=vals.length?vals.reduce((a,v)=>a+v,0)/vals.length:0;
+      const raw=valuesFor(p=>p.mean);
+      datasets.push({type:'bar',label:'Anomalía',data:raw.map(v=>v==null?null:v-avg),
+        backgroundColor:raw.map(v=>v==null?'rgba(0,0,0,0)':(v-avg>=0?'#2c7bb6':'#d98a3a')),
+        borderRadius:3,borderSkipped:false});
+    }
+
+    chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
+      type:chartType,
+      data:{labels:years,datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{backgroundColor:'rgba(8,16,8,.94)',padding:9,cornerRadius:6,
+            filter:it=>!String(it.dataset.label).startsWith('p75')&&!String(it.dataset.label).startsWith('p25'),
+            callbacks:{
+              label:it=>it.parsed.y==null?null:' '+it.dataset.label+': '+
+                Number(it.parsed.y).toFixed(view==='indice'||view==='anomalias'?3:1)+(yTitle==='ha'?' ha':''),
+              afterBody:items=>{
+                if(!items.length) return null;
+                const p=(doc.periods||[]).find(x=>x.year===years[items[0].dataIndex]);
+                if(!p) return null;
+                const out=['','Imágenes: '+p.n_images];
+                if(p.coverage_pct!=null) out.push('Cobertura: '+Number(p.coverage_pct).toFixed(0)+'%');
+                if(!p.reliable) out.push('⚠ Período poco confiable');
+                return out;
+              },
+            }},
+        },
+        scales:{
+          x:{stacked,ticks:{color:'rgba(29,43,29,.60)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(31,61,28,.08)'}},
+          y:{stacked,beginAtZero:view!=='indice',
+             suggestedMax:(yMax&&(view==='superficie'||view==='clases'))?yMax:undefined,
+             ticks:{color:'rgba(29,43,29,.60)',font:{family:'DM Mono',size:10}},
+             grid:{color:'rgba(31,61,28,.08)'},
+             title:{display:Boolean(yTitle),text:yTitle,color:'rgba(29,43,29,.48)',font:{family:'DM Mono',size:10}}},
+        },
+        animation:{duration:320},
+      },
+    });
+    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
+  },[doc,view,years,classDefs,yMax,color,info,tipo]);
+
+  // Cifras: última medición, delta y tendencia
+  const metricas=tipo?SERIE_METRICAS[tipo]||[]:[];
+  const metricId=tipo==='agua'?(view==='superficie'?'water_ha':'mean'):(view==='clases'?'clase_alta':'mean');
+  const metric=metricas.find(m=>m.id===metricId)||metricas[0]||null;
+
+  let ultimo=null,delta=null,slope=null,sig=false,conf=null;
+  if(doc&&metric){
+    const vals=(doc.periods||[]).map(p=>metric.get(p)).filter(v=>v!=null);
+    if(vals.length){ultimo=vals[vals.length-1]; if(vals.length>=2) delta=vals[vals.length-1]-vals[0];}
+    const principal=tipo==='agua'?'water_ha':'mean';
+    if(doc.trend&&metric.id===principal){
+      slope=doc.trend.sen_slope!==undefined?doc.trend.sen_slope:doc.trend.sen_slope_ha;
+      sig=!!doc.trend.significant;
+    }
+    conf=(doc.periods||[]).filter(p=>p.reliable).length+' / '+(doc.periods||[]).length;
+  }
+  const u=metric&&metric.unit?' '+metric.unit:'';
+
+  return(
+    <div className={'cz-serie-panel'+(side==='b'?' zb':'')}>
+      <div className="cz-dnbr-zone-head">
+        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+        <span className="cz-dnbr-zone-name">{zone?.name||'Sin zona'}</span>
+        {doc&&slope!=null&&(
+          <span className={'cz-series-card-tag'+(sig?' sig':'')}>{sig?'Significativa':'No signif.'}</span>
+        )}
+      </div>
+
+      {doc
+        ?<>
+           <div className="cz-serie-panel-chart"><canvas ref={canvasRef}/></div>
+           <div className="cz-series-rows">
+             <div className="cz-series-row">
+               <span className="cz-series-row-lbl">{metric?metric.label:'Valor'} · último año</span>
+               <span className="cz-series-row-val">{ultimo!=null?ultimo.toFixed(metric.dec)+u:'—'}</span>
+             </div>
+             <div className="cz-series-row">
+               <span className="cz-series-row-lbl">Δ del período</span>
+               <span className={'cz-series-row-val'+(delta==null?'':(delta<0?' neg':(delta>0?' pos':'')))}>
+                 {delta!=null?(delta>0?'+':'')+delta.toFixed(metric.dec)+u:'—'}
+               </span>
+             </div>
+             <div className="cz-series-row">
+               <span className="cz-series-row-lbl">Tendencia (Sen)</span>
+               {slope!=null
+                 ?<span className={'cz-series-row-val'+(slope<0?' neg':(slope>0?' pos':''))}>
+                    {(slope>0?'+':'')+slope.toFixed(metric.dec===3?4:2)+u+'/año'}
+                  </span>
+                 :<span className="cz-series-row-val na">—</span>}
+             </div>
+             <div className="cz-series-row">
+               <span className="cz-series-row-lbl">Períodos confiables</span>
+               <span className="cz-series-row-val">{conf||'—'}</span>
+             </div>
+           </div>
+         </>
+        :<div className="cz-serie-panel-empty">Serie no calculada en esta zona</div>}
+    </div>
+  );
+}
+
+function SeriesCompareUnused({zoneA,zoneB,dataA,dataB}){
   const seriesA=(dataA&&dataA._series)||{};
   const seriesB=(dataB&&dataB._series)||{};
   const keys=useMemo(()=>{
@@ -3365,7 +3740,6 @@ function App({session,plan,zones}){
   const isMapMode=mod&&mod.type==='map';
   const isBio=mod&&mod.type==='bio';
   const isArclim=mod&&mod.type==='arclim';
-  const isSeries=mod&&mod.type==='series';
 
   const goReanalyze=useCallback(()=>{window.open('acceso-datos.html','_self');},[]);
 
@@ -3436,16 +3810,6 @@ function App({session,plan,zones}){
             <div className="cz-detail">
               {isArclim
                 ?<ArclimDashboard mod={mod} zoneA={zoneA} zoneB={zoneB}/>
-                :isSeries
-                ?<>
-                   <div className="cz-detail-head">
-                     <span className="cz-detail-eyebrow">
-                       <i className="fa-solid fa-chart-line"/>Series estacionales
-                     </span>
-                     <span className="cz-detail-note">Misma estación · año a año</span>
-                   </div>
-                   <SeriesCompare zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>
-                 </>
                 :isBio
                   ?<BioCompare mod={mod} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} onReanalyze={goReanalyze}/>
                   :(
@@ -3459,6 +3823,10 @@ function App({session,plan,zones}){
                       <MetricsCompareSection mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
                       {mod.id==='vegetacion'&&<PisoStrip dataA={dataA} dataB={dataB}/>}
                       {mod.id==='dnbr'&&<DnbrCompare zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>}
+                      {/* La serie estacional vive dentro de su módulo temático */}
+                      {(mod.id==='vegetacion'||mod.id==='agua')&&(
+                        <SeriesSection tipo={mod.id} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>
+                      )}
                     </>
                   )
               }
