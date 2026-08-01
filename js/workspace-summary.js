@@ -545,6 +545,9 @@ var _GEE_LAYER_LABELS = {
     'dem_Pendiente':    'Pendiente · DEM',
     'bosque':           'Pérdida de Bosque',
     'dnbr_Severidad':   'Severidad dNBR',
+    // Red y cauce principal comparten una sola capa. Se dejan las claves
+    // antiguas para que sesiones ya guardadas sigan mostrando su nombre.
+    'hidromorfologia_red_hidrica':     'Red hídrica - Cuenca',
     'hidromorfologia_streams':         'Red de cauces - Cuenca',
     'hidromorfologia_cauce_principal': 'Cauce principal - Cuenca'
 };

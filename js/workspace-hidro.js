@@ -20,6 +20,7 @@
     var _lastResult     = null;
     var _streamsLayer   = null;
     var _cauceLayer     = null;
+    var _redLayer       = null;   // grupo: red + cauce principal (1 capa en el panel)
     var _cuencaLayer    = null;
     var _outletMarker   = null;
     var _rectLayer      = null;   // rectángulo tentativo
@@ -490,13 +491,18 @@
     /* ── Capas en el mapa ──────────────────────────────────── */
 
     function _clearResultLayers() {
+        // Quitar el grupo y también sus partes: si el usuario sacó el grupo
+        // del mapa desde el panel, las sub-capas pueden seguir agregadas.
+        try { if (_redLayer) map.removeLayer(_redLayer); } catch (e) {}
         try { if (_streamsLayer) map.removeLayer(_streamsLayer); } catch (e) {}
         try { if (_cauceLayer) map.removeLayer(_cauceLayer); } catch (e) {}
         try { if (_cuencaLayer) map.removeLayer(_cuencaLayer); } catch (e) {}
-        _streamsLayer = _cauceLayer = _cuencaLayer = null;
+        _streamsLayer = _cauceLayer = _cuencaLayer = _redLayer = null;
 
         // Evitar que el panel conserve referencias a capas ya retiradas.
+        // Se incluyen las claves antiguas para limpiar sesiones previas.
         if (typeof _layerRegistry !== 'undefined') {
+            delete _layerRegistry.hidromorfologia_red_hidrica;
             delete _layerRegistry.hidromorfologia_streams;
             delete _layerRegistry.hidromorfologia_cauce_principal;
             if (typeof _refreshGeeLayersPanel === 'function') _refreshGeeLayersPanel();
@@ -516,19 +522,23 @@
     }
 
     // Los cauces son overlays complementarios de la zona, separados del perimetro.
+    // Red y cauce principal van en UNA sola capa del panel: son el mismo
+    // resultado y separarlos obligaba a apagar dos casillas para ocultar el
+    // drenaje. Se conservan las referencias internas para poder limpiarlas.
     function _dibujarStreamsEnMapa(data) {
         if (typeof map === 'undefined' || typeof L === 'undefined') return;
 
-        try { if (_streamsLayer) map.removeLayer(_streamsLayer); } catch (e) {}
-        try { if (_cauceLayer) map.removeLayer(_cauceLayer); } catch (e) {}
-        _streamsLayer = _cauceLayer = null;
+        try { if (_redLayer) map.removeLayer(_redLayer); } catch (e) {}
+        _streamsLayer = _cauceLayer = _redLayer = null;
+
+        var partes = [];
 
         if (data && data.streams && data.streams.features && data.streams.features.length) {
             try {
                 _streamsLayer = L.geoJSON(data.streams, {
                     style: { color: '#29b6f6', weight: 2.5, opacity: 0.95 },
-                }).addTo(map);
-                _registrarCapaHidro('hidromorfologia_streams', _streamsLayer);
+                });
+                partes.push(_streamsLayer);
             } catch (e) { console.warn('[Hidro] streams:', e); }
         }
 
@@ -536,10 +546,16 @@
             try {
                 _cauceLayer = L.geoJSON(data.cauce_principal, {
                     style: { color: '#0d47a1', weight: 4, opacity: 1.0 },
-                }).addTo(map);
-                _registrarCapaHidro('hidromorfologia_cauce_principal', _cauceLayer);
+                });
+                partes.push(_cauceLayer);   // último = se dibuja sobre la red
             } catch (e) { console.warn('[Hidro] cauce:', e); }
         }
+
+        if (!partes.length) return;
+        try {
+            _redLayer = L.layerGroup(partes).addTo(map);
+            _registrarCapaHidro('hidromorfologia_red_hidrica', _redLayer);
+        } catch (e) { console.warn('[Hidro] red hídrica:', e); }
     }
 
     function _dibujarEnMapa(data) {
@@ -737,6 +753,39 @@
             onNew: function () { if (!_cuotaLlena(plan)) _agregarNueva(); },
             onReplace: _reemplazar,
         });
+    };
+
+    /**
+     * Reinicia el análisis del tab: saca del mapa cuenca, red hídrica,
+     * outlet y rectángulo, y vuelve el flujo al paso 1. Antes no existía
+     * salida desde este tab y la red hídrica quedaba pegada en el mapa
+     * aunque se borrara la cuenca.
+     */
+    window.hidroReiniciar = function () {
+        if (_lastResult && !confirm('¿Reiniciar el análisis de cuenca?\n\nSe quitarán del mapa la cuenca, la red hídrica y el outlet.')) return;
+
+        _clearMapLayers();          // cuenca + red + outlet + rectángulo
+        _lastResult = null;
+        _rectBounds = null;
+        _outletLatLng = null;
+
+        // Cancelar cualquier interacción pendiente (click de outlet / dibujo)
+        try { if (_waitingOutlet) _cancelarOutlet(); } catch (e) {}
+
+        // Destruir gráficos para que no queden con datos viejos
+        try { if (_hipsoChart) { _hipsoChart.destroy(); _hipsoChart = null; } } catch (e) {}
+        try { if (_perfilChart) { _perfilChart.destroy(); _perfilChart = null; } } catch (e) {}
+
+        // Volver la UI al estado inicial
+        ['hidro-rect-info', 'hidro-outlet-info', 'hidro-limit-warn'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        var body = document.getElementById('hidro-body');
+        if (body) body.style.display = 'none';
+
+        if (typeof _updateEjecutarBtn === 'function') _updateEjecutarBtn();
+        _toast('Análisis reiniciado. Dibuja el área y marca un nuevo outlet.');
     };
 
     window.hidroExportCSV = function () {
