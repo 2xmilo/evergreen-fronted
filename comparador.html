@@ -85,14 +85,32 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-root { display: flex; flex-direction: column; height: 100vh; }
 
 /* ── TOPBAR ── */
+/* Mismo chrome que la topbar de acceso-datos (--topbar-bg #192f0b, 48px)
+   para que el usuario no perciba un cambio de aplicación al entrar aquí. */
 .cz-topbar {
-  height: 56px; flex-shrink: 0; display: flex; align-items: center;
-  justify-content: space-between; padding: 0 20px;
-  background: var(--mat-chrome);
-  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
-  border-bottom: 0.5px solid var(--hairline);
+  height: 48px; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 16px 0 12px;
+  background: #192f0b;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   position: relative; z-index: 60;
 }
+.cz-topbar .cz-back { color: rgba(255,255,255,0.7); }
+.cz-topbar .cz-back:hover { color: #fff; }
+.cz-topbar .cz-logo { height: 22px; }
+.cz-topbar .cz-title-main { color: rgba(255,255,255,0.92); font-size: 13px; }
+.cz-topbar .cz-title-eyebrow { color: #8ec63f; }
+.cz-topbar .cz-plan-tag {
+  color: rgba(255,255,255,0.75);
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+}
+.cz-topbar .cz-sync-toggle { color: rgba(255,255,255,0.7); }
+.cz-topbar .cz-sync-track { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.18); }
+.cz-topbar .cz-sync-dot { background: rgba(255,255,255,0.55); }
+.cz-topbar .cz-sync-toggle input:checked + .cz-sync-track {
+  background: rgba(106,170,53,0.35); border-color: rgba(106,170,53,0.6);
+}
+.cz-topbar .cz-sync-toggle input:checked + .cz-sync-track .cz-sync-dot { background: #8ec63f; }
 .cz-back { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--w55); transition: color .2s; }
 .cz-back:hover { color: var(--white); }
 .cz-back i { font-size: 13px; }
@@ -226,9 +244,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-kpis { flex-shrink: 0; display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
 
 /* Overview = ficha técnica morfológica + mini-mapa de forma (compacto) */
+/* Fila de contexto: altura FIJA. Al ser un grid con align-items:stretch,
+   basta que una tarjeta crezca (p. ej. el mini-mapa con un polígono
+   alargado) para que las tres se estiren y dejen medio panel vacío.
+   Con la fila fijada, la primera franja siempre ocupa lo mismo y lo que
+   no quepa hace scroll dentro de su tarjeta. */
 .cz-overview {
   flex-shrink: 0;
   display: grid; grid-template-columns: minmax(0,1.35fr) minmax(220px,.85fr) minmax(220px,.78fr);
+  grid-auto-rows: 196px;
   gap: 12px;
 }
 .cz-tech-sheet, .cz-shape-mini {
@@ -236,8 +260,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   -webkit-backdrop-filter: var(--blur-sm); backdrop-filter: var(--blur-sm);
   box-shadow: var(--shadow-1);
   border-radius: var(--r-md); padding: 12px 14px 10px;
-  display: flex; flex-direction: column; min-height: 0;
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
 }
+.cz-tech-sheet { overflow-y: auto; }
 .cz-tech-sheet .cz-table-head,
 .cz-shape-mini .cz-table-head {
   padding: 0 2px 8px; margin-bottom: 0; font-size: 10px;
@@ -252,6 +277,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: var(--mat-1); border: 0.5px solid var(--hairline);
   -webkit-backdrop-filter: var(--blur-sm); backdrop-filter: var(--blur-sm);
   box-shadow: var(--shadow-1); border-radius: var(--r-md); padding: 12px 14px 11px;
+  min-height: 0; overflow: hidden;
 }
 .cz-basemap-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .cz-basemap-option {
@@ -269,7 +295,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* Mini-mapa schematic de diferencia de polígonos */
 .cz-shape-mini-canvas {
-  position: relative; flex: 1; min-height: 150px;
+  position: relative; flex: 1; min-height: 0;
 }
 .cz-shape-mini-canvas canvas {
   width: 100% !important; height: 100% !important;
@@ -277,9 +303,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 @media (max-width: 1100px) {
-  .cz-overview { grid-template-columns: 1.2fr .8fr; }
+  .cz-overview { grid-template-columns: 1.2fr .8fr; grid-auto-rows: 186px; }
   .cz-basemap-card { grid-column: 1 / -1; }
-  .cz-shape-mini-canvas { min-height: 180px; }
 }
 .cz-kpi {
   background: var(--mat-1); border: 0.5px solid var(--hairline);
@@ -2567,219 +2592,8 @@ function parseSerieKey(key){
   };
 }
 
-function SeriesCompareLegacy({zoneA,zoneB,dataA,dataB}){
-  const seriesA=(dataA&&dataA._series)||{};
-  const seriesB=(dataB&&dataB._series)||{};
-
-  // Unión de claves; primero las que existen en ambas zonas
-  const keys=useMemo(()=>{
-    const all=Array.from(new Set([...Object.keys(seriesA),...Object.keys(seriesB)]));
-    return all.sort((x,y)=>{
-      const bx=(seriesA[x]&&seriesB[x])?0:1, by=(seriesA[y]&&seriesB[y])?0:1;
-      return bx-by||x.localeCompare(y);
-    });
-  },[dataA,dataB]);
-
-  const[selKey,setSelKey]=useState(null);
-  const[metricId,setMetricId]=useState(null);
-  const[open,setOpen]=useState(false);
-  const pickRef=useRef(null);
-  const chartRef=useRef(null);
-  const canvasRef=useRef(null);
-  const chipRef=useRef(null);
-  const segRef=useRef(null);
-
-  // Selección por defecto: primera clave disponible (prioriza las compartidas)
-  useEffect(()=>{
-    if(keys.length&&(!selKey||keys.indexOf(selKey)<0)) setSelKey(keys[0]);
-    if(!keys.length&&selKey) setSelKey(null);
-  },[keys]);
-
-  useEffect(()=>{
-    const h=e=>{if(pickRef.current&&!pickRef.current.contains(e.target)) setOpen(false);};
-    document.addEventListener('mousedown',h);
-    return()=>document.removeEventListener('mousedown',h);
-  },[]);
-
-  const info=selKey?parseSerieKey(selKey):null;
-  const metricas=info?SERIE_METRICAS[info.tipo]:[];
-  const metric=useMemo(()=>{
-    if(!metricas.length) return null;
-    return metricas.find(m=>m.id===metricId)||metricas[0];
-  },[metricId,selKey]);
-
-  const docA=selKey?seriesA[selKey]:null;
-  const docB=selKey?seriesB[selKey]:null;
-
-  // Eje X = unión de años de ambas series (pueden cubrir rangos distintos)
-  const years=useMemo(()=>{
-    const s=new Set();
-    [docA,docB].forEach(d=>{if(d&&d.periods) d.periods.forEach(p=>s.add(p.year));});
-    return Array.from(s).sort((a,b)=>a-b);
-  },[docA,docB]);
-
-  const serieValores=useCallback((doc)=>{
-    if(!doc||!metric) return null;
-    const byYear={};
-    doc.periods.forEach(p=>{byYear[p.year]=p;});
-    return years.map(y=>{
-      const p=byYear[y];
-      if(!p) return null;
-      const v=metric.get(p);
-      return (v===undefined||v===null)?null:v;
-    });
-  },[years,metric]);
-
-  // Mover el chip del segmented control bajo el botón activo
-  useEffect(()=>{
-    if(!segRef.current||!chipRef.current||!metric) return;
-    const btn=segRef.current.querySelector('.cz-seg-btn.active');
-    if(!btn) return;
-    chipRef.current.style.left=btn.offsetLeft+'px';
-    chipRef.current.style.width=btn.offsetWidth+'px';
-  },[metric,selKey,keys.length]);
-
-  // Chart: una línea por zona sobre el mismo eje
-  useEffect(()=>{
-    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
-    if(!canvasRef.current||!metric||!years.length) return;
-    const vA=serieValores(docA), vB=serieValores(docB);
-    const ds=[];
-    const mk=(vals,color,label)=>({
-      label, data:vals, borderColor:color, backgroundColor:color,
-      borderWidth:2.5, tension:.28, spanGaps:true,
-      pointRadius:4, pointHoverRadius:6, pointBackgroundColor:color, pointBorderColor:'rgba(0,0,0,.4)', pointBorderWidth:1,
-    });
-    if(vA&&vA.some(v=>v!==null)) ds.push(mk(vA,'#C8A882',zoneA?.name||'Zona A'));
-    if(vB&&vB.some(v=>v!==null)) ds.push(mk(vB,'#6AAA35',zoneB?.name||'Zona B'));
-    if(!ds.length) return;
-
-    chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
-      type:'line',
-      data:{labels:years,datasets:ds},
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        interaction:{mode:'index',intersect:false},
-        plugins:{
-          legend:{display:false},
-          tooltip:{
-            backgroundColor:'rgba(8,16,8,0.94)',padding:11,cornerRadius:10,
-            titleFont:{family:"'DM Mono',monospace",size:11},
-            bodyFont:{family:"'DM Sans',sans-serif",size:12},
-            borderColor:'rgba(31,61,28,0.14)',borderWidth:1,
-            callbacks:{
-              title:items=>(info?SERIE_ESTACION[info.estacion]||info.estacion:'')+' '+items[0].label,
-              label:it=>{
-                if(it.parsed.y===null) return null;
-                return ' '+it.dataset.label+': '+it.parsed.y.toFixed(metric.dec)+(metric.unit?' '+metric.unit:'');
-              },
-            },
-          },
-        },
-        scales:{
-          x:{ticks:{color:'rgba(29,43,29,0.48)',font:{family:"'DM Mono',monospace",size:10}},grid:{color:'rgba(31,61,28,0.08)'}},
-          y:{ticks:{color:'rgba(29,43,29,0.48)',font:{family:"'DM Mono',monospace",size:10}},grid:{color:'rgba(31,61,28,0.08)'},
-             title:metric.unit?{display:true,text:metric.unit,color:'rgba(29,43,29,0.38)',font:{family:"'DM Mono',monospace",size:10}}:undefined},
-        },
-        animation:{duration:420},
-      },
-    });
-    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
-  },[docA,docB,metric,years,zoneA,zoneB]);
-
-  if(!keys.length){
-    return(
-      <div className="cz-series-empty">
-        <i className="fa-solid fa-chart-line"/>
-        <div className="cz-series-empty-t">Ninguna de las zonas tiene series estacionales</div>
-        <div className="cz-series-empty-s">
-          Genera una serie desde el Monitor, en la pestaña «Serie estacional» de los tabs
-          Agua o Vegetación. Al calcularla queda guardada en la zona y aparece aquí.
-        </div>
-      </div>
-    );
-  }
-
-  // Avisos: serie presente en una sola zona, o umbrales distintos (agua)
-  const avisos=[];
-  if(selKey&&(!docA||!docB)){
-    const falta=!docA?(zoneA?.name||'Zona A'):(zoneB?.name||'Zona B');
-    avisos.push('Esta serie solo existe en una de las zonas. Falta calcularla en «'+falta+'» para poder comparar.');
-  }
-  if(docA&&docB&&docA.threshold!==undefined&&docB.threshold!==undefined&&docA.threshold!==docB.threshold){
-    avisos.push('Las series se calcularon con umbrales distintos ('+docA.threshold+' vs '+docB.threshold+'). '+
-                'Las superficies no son comparables entre sí: vuelve a calcular una de las dos con el mismo umbral.');
-  }
-  if(docA&&docB&&docA.composite&&docB.composite&&docA.composite!==docB.composite){
-    avisos.push('Las series usan composiciones distintas ('+docA.composite+' vs '+docB.composite+').');
-  }
-
-  return(
-    <div className="cz-series">
-      {/* Barra de control */}
-      <div className="cz-series-bar">
-        <div className="cz-series-pick" ref={pickRef}>
-          <button className="cz-series-pick-btn" onClick={()=>setOpen(o=>!o)}>
-            <div className="cz-series-pick-label">
-              <span className="cz-series-pick-title">{info?info.label:'Selecciona una serie'}</span>
-              <span className="cz-series-pick-meta">{info?info.sub:''}</span>
-            </div>
-            <i className="fa-solid fa-chevron-down cz-zsel-caret" style={{transform:open?'rotate(180deg)':''}}/>
-          </button>
-          {open&&(
-            <div className="cz-series-pick-menu">
-              {keys.map(k=>{
-                const i2=parseSerieKey(k);
-                return(
-                  <button key={k} className={'cz-series-opt'+(k===selKey?' sel':'')}
-                          onClick={()=>{setSelKey(k);setMetricId(null);setOpen(false);}}>
-                    <div className="cz-series-opt-txt">
-                      <span className="cz-series-opt-name">{i2.label}</span>
-                      <span className="cz-series-opt-meta">{i2.sub}</span>
-                    </div>
-                    <div className="cz-series-dots" title="Zonas con esta serie">
-                      <span className={'cz-series-dot cz-series-dot--a'+(seriesA[k]?' on--a':'')}/>
-                      <span className={'cz-series-dot cz-series-dot--b'+(seriesB[k]?' on--b':'')}/>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {metricas.length>1&&(
-          <div className="cz-seg" ref={segRef}>
-            <span className="cz-seg-chip" ref={chipRef}/>
-            {metricas.map(m=>(
-              <button key={m.id}
-                      className={'cz-seg-btn'+(metric&&m.id===metric.id?' active':'')}
-                      onClick={()=>setMetricId(m.id)}>{m.label}</button>
-            ))}
-          </div>
-        )}
-
-        <div className="cz-series-legend" style={{marginLeft:'auto'}}>
-          {docA&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#C8A882'}}/>{zoneA?.name||'Zona A'}</span>}
-          {docB&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#6AAA35'}}/>{zoneB?.name||'Zona B'}</span>}
-        </div>
-      </div>
-
-      {avisos.map((a,i)=>(
-        <div key={i} className="cz-series-note"><i className="fa-solid fa-circle-info"/><span>{a}</span></div>
-      ))}
-
-      <div className="cz-series-chart"><canvas ref={canvasRef}/></div>
-
-      <div className="cz-series-cards">
-        <SerieCard side="a" zone={zoneA} doc={docA} metric={metric}/>
-        <SerieCard side="b" zone={zoneB} doc={docB} metric={metric}/>
-      </div>
-    </div>
-  );
-}
-
-/** Ficha de una zona: tendencia de Sen, delta del período y calidad del dato. */
+/* Paleta por familia de clases (orden c0→c3, de menor a mayor valor del
+   índice). Debe coincidir con VEG_CLASS_COLORS del Monitor. */
 const CZ_SERIES_CLASS_COLORS={
   vigor:['#d9a679','#fee08b','#66bd63','#1a6b32'],
   humedad:['#8c510a','#dfc27d','#80cdc1','#01665e'],
@@ -3146,347 +2960,11 @@ function SeriePanel({side,zone,doc,view,years,classDefs,yMax,info,tipo}){
   );
 }
 
-function SeriesCompareUnused({zoneA,zoneB,dataA,dataB}){
-  const seriesA=(dataA&&dataA._series)||{};
-  const seriesB=(dataB&&dataB._series)||{};
-  const keys=useMemo(()=>{
-    const all=Array.from(new Set([...Object.keys(seriesA),...Object.keys(seriesB)]));
-    return all.sort((x,y)=>{
-      const bx=seriesA[x]&&seriesB[x]?0:1, by=seriesA[y]&&seriesB[y]?0:1;
-      return bx-by||x.localeCompare(y);
-    });
-  },[dataA,dataB]);
-  const[selKey,setSelKey]=useState(null);
-  const[view,setView]=useState(null);
-  const[open,setOpen]=useState(false);
-  const pickRef=useRef(null),chartRef=useRef(null),canvasRef=useRef(null),chipRef=useRef(null),segRef=useRef(null);
-
-  useEffect(()=>{
-    if(keys.length&&(!selKey||!keys.includes(selKey))) setSelKey(keys[0]);
-    if(!keys.length) setSelKey(null);
-  },[keys]);
-  useEffect(()=>{
-    const h=e=>{if(pickRef.current&&!pickRef.current.contains(e.target))setOpen(false);};
-    document.addEventListener('mousedown',h); return()=>document.removeEventListener('mousedown',h);
-  },[]);
-
-  const info=selKey?parseSerieKey(selKey):null;
-  const tipo=info?.tipo;
-  const docA=selKey?seriesA[selKey]:null, docB=selKey?seriesB[selKey]:null;
-  const defaultView=tipo==='agua'?'superficie':'clases';
-  useEffect(()=>{if(!view||((tipo==='agua'&&!['superficie','indice','anomalias'].includes(view))||(tipo==='vegetacion'&&!['clases','indice','anomalias'].includes(view))))setView(defaultView);},[selKey,tipo,defaultView,view]);
-  const activeView=view||defaultView;
-  const classDefs=useMemo(()=>czSeriesClasses(docA||docB||{}),[docA,docB]);
-  const years=useMemo(()=>{
-    const s=new Set(); [docA,docB].forEach(d=>(d&&d.periods||[]).forEach(p=>s.add(p.year)));
-    return Array.from(s).sort((a,b)=>a-b);
-  },[docA,docB]);
-  const metricId=tipo==='agua'?(activeView==='superficie'?'water_ha':'mean'):(activeView==='clases'?'clase_alta':'mean');
-  const metricas=tipo?SERIE_METRICAS[tipo]||[]:[];
-  const metric=metricas.find(m=>m.id===metricId)||metricas[0]||null;
-  const viewOptions=tipo==='agua'
-    ?[{id:'superficie',label:'Superficie'},{id:'indice',label:'Índice'},{id:'anomalias',label:'Anomalías'}]
-    :[{id:'clases',label:(docA||docB)?.class_family==='humedad'?'Humedad':(docA||docB)?.class_family==='quemado'?'Cobertura':'Vigor'},{id:'indice',label:'Índice'},{id:'anomalias',label:'Anomalías'}];
-
-  const valuesFor=(doc,getter)=>{
-    const byYear={}; (doc&&doc.periods||[]).forEach(p=>{byYear[p.year]=p;});
-    return years.map(y=>{const p=byYear[y]; return p?getter(p):null;});
-  };
-  useEffect(()=>{
-    if(!segRef.current||!chipRef.current) return;
-    const b=segRef.current.querySelector('.cz-seg-btn.active');
-    if(b){chipRef.current.style.left=b.offsetLeft+'px';chipRef.current.style.width=b.offsetWidth+'px';}
-  },[activeView,selKey]);
-
-  useEffect(()=>{
-    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
-    if(!canvasRef.current||!years.length||!tipo) return;
-    const dA=docA,dB=docB, unit=activeView==='indice'?'':activeView==='anomalias'?'': 'ha';
-    const datasets=[];
-    const addZone=(doc,zone,side)=>{
-      if(!doc) return;
-      const zoneColor=side==='a'?'#b99a6e':'#6aaa35';
-      if(activeView==='clases'){
-        classDefs.forEach(c=>datasets.push({label:zone?.name+' · '+c.label,data:valuesFor(doc,p=>czSeriesClassHa(p,c.key)),backgroundColor:c.color,borderColor:zoneColor,borderWidth:1,stack:side,borderRadius:2,borderSkipped:false}));
-      }else if(activeView==='superficie'){
-        datasets.push({type:'bar',label:zone?.name||('Zona '+side.toUpperCase()),data:valuesFor(doc,p=>p.water_ha),backgroundColor:valuesFor(doc,p=>p.water_ha).map((v,i)=>v==null?'rgba(0,0,0,0)':((doc.periods.find(x=>x.year===years[i])||{}).reliable?zoneColor:'rgba(140,155,165,.55)')),borderColor:zoneColor,borderWidth:1,borderRadius:3,borderSkipped:false});
-        if(doc.trend&&doc.trend.sen_slope_ha!==undefined) datasets.push({type:'line',label:'Tendencia · '+zone?.name,data:years.map(y=>doc.trend.sen_slope_ha*y+doc.trend.sen_intercept),borderColor:zoneColor,borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false});
-      }else if(activeView==='indice'){
-        const vals=valuesFor(doc,p=>p.mean), low=valuesFor(doc,p=>p.p25), high=valuesFor(doc,p=>p.p75);
-        datasets.push({label:'p75 · '+zone?.name,data:high,borderColor:'rgba(0,0,0,0)',pointRadius:0,fill:false,spanGaps:true,order:3});
-        datasets.push({label:'p25–p75 · '+zone?.name,data:low,borderColor:'rgba(0,0,0,0)',pointRadius:0,fill:'-1',backgroundColor:czSeriesRgba(zoneColor,.16),spanGaps:true,order:2});
-        datasets.push({label:'Media '+(info?.indice||'Índice')+' · '+zone?.name,data:vals,borderColor:zoneColor,borderWidth:2,pointRadius:3,pointBackgroundColor:zoneColor,pointBorderColor:'#fff',pointBorderWidth:1,fill:false,spanGaps:true,order:1});
-        if(doc.trend&&doc.trend.sen_slope!==undefined) datasets.push({label:'Tendencia · '+zone?.name,data:years.map(y=>doc.trend.sen_slope*y+doc.trend.sen_intercept),borderColor:zoneColor,borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,order:4});
-      }else{
-        const vals=valuesFor(doc,p=>tipo==='agua'?p.mean:p.mean).filter(v=>v!=null), avg=vals.length?vals.reduce((a,v)=>a+v,0)/vals.length:0;
-        const raw=valuesFor(doc,p=>p.mean);
-        datasets.push({type:'bar',label:'Anomalía · '+zone?.name,data:raw.map(v=>v==null?null:v-avg),backgroundColor:raw.map(v=>v==null?'rgba(0,0,0,0)':(v-avg>=0?'#2c7bb6':'#d98a3a')),borderColor:zoneColor,borderWidth:1,borderRadius:3,borderSkipped:false});
-      }
-    };
-    addZone(dA,zoneA,'a'); addZone(dB,zoneB,'b');
-    if(!datasets.length) return;
-    const isLine=activeView==='indice';
-    const chartType=isLine?'line':'bar';
-    const yTitle=activeView==='indice'?'Índice':unit;
-    chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
-      type:chartType,
-      data:{labels:years,datasets},
-      options:{
-        responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{
-          legend:{display:false},
-          tooltip:{backgroundColor:'rgba(8,16,8,.94)',padding:9,cornerRadius:6,
-            filter:item=>!String(item.dataset.label).startsWith('p75')&&!String(item.dataset.label).startsWith('p25'),
-            callbacks:{label:item=>item.parsed.y==null?null:' '+item.dataset.label+': '+Number(item.parsed.y).toFixed(activeView==='indice'?3:1)+(yTitle?' '+yTitle:'')}}
-        },
-        scales:{
-          x:{stacked:activeView==='clases',ticks:{color:'rgba(29,43,29,.60)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(31,61,28,.08)'}},
-          y:{stacked:activeView==='clases',beginAtZero:activeView!=='indice',ticks:{color:'rgba(29,43,29,.60)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(31,61,28,.08)'},title:{display:Boolean(yTitle),text:yTitle,color:'rgba(29,43,29,.48)',font:{family:'DM Mono',size:10}}}
-        },
-        animation:{duration:320}
-      }
-    });
-    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
-  },[docA,docB,years,activeView,tipo,classDefs,zoneA,zoneB,info]);
-
-  if(!keys.length) return <div className="cz-series-empty"><i className="fa-solid fa-chart-line"/><div className="cz-series-empty-t">Ninguna de las zonas tiene series estacionales</div><div className="cz-series-empty-s">Genera una serie desde el Monitor, en la pestaña «Serie estacional» de Agua o Vegetación.</div></div>;
-  const avisos=[];
-  if(selKey&&(!docA||!docB)){const falta=!docA?(zoneA?.name||'Zona A'):(zoneB?.name||'Zona B');avisos.push('Esta serie solo existe en una de las zonas. Falta calcularla en «'+falta+'» para poder comparar.');}
-  if(docA&&docB&&docA.threshold!==undefined&&docB.threshold!==undefined&&docA.threshold!==docB.threshold) avisos.push('Las series se calcularon con umbrales distintos ('+docA.threshold+' vs '+docB.threshold+').');
-  if(docA&&docB&&docA.composite&&docB.composite&&docA.composite!==docB.composite) avisos.push('Las series usan composiciones distintas ('+docA.composite+' vs '+docB.composite+').');
-  return <div className="cz-series">
-    <div className="cz-series-bar">
-      <div className="cz-series-pick" ref={pickRef}><button className="cz-series-pick-btn" onClick={()=>setOpen(o=>!o)}><div className="cz-series-pick-label"><span className="cz-series-pick-title">{info?info.label:'Selecciona una serie'}</span><span className="cz-series-pick-meta">{info?info.sub:''}</span></div><i className="fa-solid fa-chevron-down cz-zsel-caret" style={{transform:open?'rotate(180deg)':''}}/></button>
-        {open&&<div className="cz-series-pick-menu">{keys.map(k=>{const i2=parseSerieKey(k);return <button key={k} className={'cz-series-opt'+(k===selKey?' sel':'')} onClick={()=>{setSelKey(k);setView(null);setOpen(false);}}><div className="cz-series-opt-txt"><span className="cz-series-opt-name">{i2.label}</span><span className="cz-series-opt-meta">{i2.sub}</span></div><div className="cz-series-dots" title="Zonas con esta serie"><span className={'cz-series-dot cz-series-dot--a'+(seriesA[k]?' on--a':'')}/><span className={'cz-series-dot cz-series-dot--b'+(seriesB[k]?' on--b':'')}/></div></button>;})}</div>}
-      </div>
-      <div className="cz-seg" ref={segRef}><span className="cz-seg-chip" ref={chipRef}/>{viewOptions.map(o=><button key={o.id} className={'cz-seg-btn'+(activeView===o.id?' active':'')} onClick={()=>setView(o.id)}>{o.label}</button>)}</div>
-      <div className="cz-series-legend" style={{marginLeft:'auto'}}>{activeView==='clases'&&classDefs.map(c=><span className="cz-series-class-leg" key={c.key}><span className="cz-series-class-dot" style={{background:c.color}}/>{c.label}</span>)}{docA&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#b99a6e'}}/>{zoneA?.name||'Zona A'}</span>}{docB&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#6aaa35'}}/>{zoneB?.name||'Zona B'}</span>}</div>
-    </div>
-    {avisos.map((a,i)=><div key={i} className="cz-series-note"><i className="fa-solid fa-circle-info"/><span>{a}</span></div>)}
-    <div className="cz-series-chart"><canvas ref={canvasRef}/></div>
-    <div className="cz-series-cards"><SerieCard side="a" zone={zoneA} doc={docA} metric={metric}/><SerieCard side="b" zone={zoneB} doc={docB} metric={metric}/></div>
-  </div>;
-}
-
-function SerieCard({side,zone,doc,metric}){
-  const cls=side==='a'?'za':'zb';
-  if(!doc||!metric){
-    return(
-      <div className={'cz-series-card '+cls}>
-        <div className="cz-series-card-head">
-          <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
-          <span className="cz-series-card-name">{zone?.name||'Sin zona'}</span>
-        </div>
-        <div className="cz-series-rows">
-          <div className="cz-series-row"><span className="cz-series-row-lbl">Serie</span><span className="cz-series-row-val na">no calculada</span></div>
-        </div>
-      </div>
-    );
-  }
-
-  const vals=doc.periods.map(p=>metric.get(p)).filter(v=>v!==null&&v!==undefined);
-  const primero=vals.length?vals[0]:null;
-  const ultimo=vals.length?vals[vals.length-1]:null;
-  const delta=(primero!==null&&ultimo!==null&&vals.length>=2)?(ultimo-primero):null;
-  const u=metric.unit?' '+metric.unit:'';
-
-  // La tendencia del backend se calculó sobre la métrica principal de cada
-  // serie (superficie en agua, media en vegetación); solo aplica a esa.
-  const metricaPrincipal=(doc.tipo==='vegetacion'||doc.indice&&SERIE_METRICAS.vegetacion&&doc.composite==='p90')
-    ?'mean':'water_ha';
-  const trendAplica=doc.trend&&metric.id===metricaPrincipal;
-  const slope=doc.trend?(doc.trend.sen_slope!==undefined?doc.trend.sen_slope:doc.trend.sen_slope_ha):null;
-
-  const pocosDatos=doc.periods.filter(p=>p.reliable).length;
-  const total=doc.periods.length;
-
-  return(
-    <div className={'cz-series-card '+cls}>
-      <div className="cz-series-card-head">
-        <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
-        <span className="cz-series-card-name">{zone?.name||'Sin zona'}</span>
-        {trendAplica&&(
-          <span className={'cz-series-card-tag'+(doc.trend.significant?' sig':'')}>
-            {doc.trend.significant?'Significativa':'No significativa'}
-          </span>
-        )}
-      </div>
-      <div className="cz-series-rows">
-        <div className="cz-series-row">
-          <span className="cz-series-row-lbl">{metric.label} · último año</span>
-          <span className="cz-series-row-val">{ultimo!==null?ultimo.toFixed(metric.dec)+u:'—'}</span>
-        </div>
-        <div className="cz-series-row">
-          <span className="cz-series-row-lbl">Δ del período</span>
-          <span className={'cz-series-row-val'+(delta===null?'':(delta<0?' neg':(delta>0?' pos':'')))}>
-            {delta!==null?(delta>0?'+':'')+delta.toFixed(metric.dec)+u:'—'}
-          </span>
-        </div>
-        <div className="cz-series-row">
-          <span className="cz-series-row-lbl">Tendencia (Sen)</span>
-          {trendAplica
-            ?<span className={'cz-series-row-val'+(slope<0?' neg':(slope>0?' pos':''))}>
-               {(slope>0?'+':'')+slope.toFixed(metric.dec===3?4:2)+u+'/año'}
-             </span>
-            :<span className="cz-series-row-val na">{doc.trend?'—':'mín. 4 años'}</span>}
-        </div>
-        <div className="cz-series-row">
-          <span className="cz-series-row-lbl">Períodos confiables</span>
-          <span className={'cz-series-row-val'+(pocosDatos<total?' na':'')}>{pocosDatos} / {total}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ══ SEVERIDAD dNBR — composición por clase, A vs B ══
    Redibuja aquí el mismo gráfico del Monitor a partir de figuras.clases.
    Barras agrupadas (no apiladas): lo que interesa es cuánta superficie
    cayó en cada clase en una zona frente a la otra. */
-function DnbrCompareLegacy({zoneA,zoneB,dataA,dataB}){
-  // dataA/dataB son el objeto completo de la zona: las figuras del módulo
-  // viven bajo su id (dataA.dnbr), no en la raíz.
-  const figA=dataA&&dataA.dnbr&&dataA.dnbr.figuras;
-  const figB=dataB&&dataB.dnbr&&dataB.dnbr.figuras;
-  const clasesA=figA&&figA.clases;
-  const clasesB=figB&&figB.clases;
-  const canvasRef=useRef(null);
-  const chartRef=useRef(null);
-  const[modo,setModo]=useState('ha');   // 'ha' | 'pct'
-  const chipRef=useRef(null);
-  const segRef=useRef(null);
-
-  useEffect(()=>{
-    if(!segRef.current||!chipRef.current) return;
-    const b=segRef.current.querySelector('.cz-seg-btn.active');
-    if(b){chipRef.current.style.left=b.offsetLeft+'px';chipRef.current.style.width=b.offsetWidth+'px';}
-  },[modo,clasesA,clasesB]);
-
-  useEffect(()=>{
-    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}
-    const base=clasesA||clasesB;
-    if(!canvasRef.current||!base) return;
-
-    const labels=base.map(c=>c.label);
-    const val=(cs,i)=>{
-      if(!cs||!cs[i]) return null;
-      return modo==='pct'?cs[i].pct:cs[i].ha;
-    };
-    const ds=[];
-    if(clasesA) ds.push({label:zoneA?.name||'Zona A',data:labels.map((_,i)=>val(clasesA,i)),
-      backgroundColor:'#C8A882',borderRadius:4,borderSkipped:false});
-    if(clasesB) ds.push({label:zoneB?.name||'Zona B',data:labels.map((_,i)=>val(clasesB,i)),
-      backgroundColor:'#6AAA35',borderRadius:4,borderSkipped:false});
-    if(!ds.length) return;
-
-    const unidad=modo==='pct'?'%':'ha';
-    chartRef.current=new Chart(canvasRef.current.getContext('2d'),{
-      type:'bar',
-      data:{labels,datasets:ds},
-      options:{
-        indexAxis:'y',
-        responsive:true,maintainAspectRatio:false,
-        interaction:{mode:'index',intersect:false},
-        plugins:{
-          legend:{display:false},
-          tooltip:{
-            backgroundColor:'rgba(8,16,8,0.94)',padding:11,cornerRadius:10,
-            borderColor:'rgba(31,61,28,0.14)',borderWidth:1,
-            titleFont:{family:"'DM Mono',monospace",size:11},
-            bodyFont:{family:"'DM Sans',sans-serif",size:12},
-            callbacks:{
-              label:it=>it.parsed.x===null?null:
-                ' '+it.dataset.label+': '+it.parsed.x.toFixed(1)+' '+unidad,
-              afterBody:items=>{
-                if(!items.length) return null;
-                const i=items[0].dataIndex, c=base[i];
-                return ['','dNBR '+c.min.toFixed(2)+' a '+c.max.toFixed(2)];
-              },
-            },
-          },
-        },
-        scales:{
-          x:{beginAtZero:true,
-             ticks:{color:'rgba(29,43,29,0.48)',font:{family:"'DM Mono',monospace",size:10}},
-             grid:{color:'rgba(31,61,28,0.08)'},
-             title:{display:true,text:unidad,color:'rgba(29,43,29,0.38)',font:{family:"'DM Mono',monospace",size:10}}},
-          y:{ticks:{color:'rgba(29,43,29,0.58)',font:{family:"'DM Sans',sans-serif",size:11}},
-             grid:{display:false}},
-        },
-        animation:{duration:420},
-      },
-    });
-    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
-  },[clasesA,clasesB,modo,zoneA,zoneB]);
-
-  if(!clasesA&&!clasesB) return null;
-
-  const avisos=[];
-  if(!clasesA||!clasesB){
-    const falta=!clasesA?(zoneA?.name||'Zona A'):(zoneB?.name||'Zona B');
-    avisos.push('Solo una de las zonas tiene análisis de severidad. Calcula el dNBR en «'+falta+'» para comparar.');
-  }
-  const perA=figA&&figA.periodos;
-  const perB=figB&&figB.periodos;
-  if(perA&&perB&&(perA.pre_inicio!==perB.pre_inicio||perA.post_inicio!==perB.post_inicio)){
-    avisos.push('Las zonas se analizaron con ventanas de fecha distintas. La severidad solo es comparable si ambas cubren el mismo evento.');
-  }
-
-  return(
-    <div className="cz-series" style={{marginTop:14}}>
-      <div className="cz-series-bar">
-        <span className="cz-detail-eyebrow"><i className="fa-solid fa-fire"/>Composición por severidad</span>
-        <div className="cz-seg" ref={segRef}>
-          <span className="cz-seg-chip" ref={chipRef}/>
-          <button className={'cz-seg-btn'+(modo==='ha'?' active':'')} onClick={()=>setModo('ha')}>Hectáreas</button>
-          <button className={'cz-seg-btn'+(modo==='pct'?' active':'')} onClick={()=>setModo('pct')}>% del área</button>
-        </div>
-        <div className="cz-series-legend" style={{marginLeft:'auto'}}>
-          {clasesA&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#C8A882'}}/>{zoneA?.name||'Zona A'}</span>}
-          {clasesB&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#6AAA35'}}/>{zoneB?.name||'Zona B'}</span>}
-        </div>
-      </div>
-      {avisos.map((a,i)=>(
-        <div key={i} className="cz-series-note"><i className="fa-solid fa-circle-info"/><span>{a}</span></div>
-      ))}
-      <div className="cz-series-chart" style={{height:260}}><canvas ref={canvasRef}/></div>
-    </div>
-  );
-}
-
 /* ══ MAP TILE (imperative Leaflet, managed with refs) ══ */
-function DnbrCompareCombinedLegacy({zoneA,zoneB,dataA,dataB}){
-  const figA=dataA&&dataA.dnbr&&dataA.dnbr.figuras, figB=dataB&&dataB.dnbr&&dataB.dnbr.figuras;
-  const clasesA=figA&&figA.clases, clasesB=figB&&figB.clases;
-  const[modo,setModo]=useState('ha'),canvasRef=useRef(null),chartRef=useRef(null),chipRef=useRef(null),segRef=useRef(null);
-  const fallback=['#1a9850','#a6d96a','#dddddd','#ffffbf','#fdae61','#f46d43','#a50026'];
-  const rows=useMemo(()=>{const src=clasesA||clasesB||[];return src.map((c,i)=>({c,idx:i,color:c.color||fallback[i%fallback.length]})).reverse();},[clasesA,clasesB]);
-  useEffect(()=>{if(!segRef.current||!chipRef.current)return;const b=segRef.current.querySelector('.cz-seg-btn.active');if(b){chipRef.current.style.left=b.offsetLeft+'px';chipRef.current.style.width=b.offsetWidth+'px';}},[modo,rows]);
-  useEffect(()=>{
-    if(chartRef.current){chartRef.current.destroy();chartRef.current=null;} if(!canvasRef.current||!rows.length)return;
-    const value=(cs,r)=>cs&&cs[r.idx]?(modo==='pct'?cs[r.idx].pct:cs[r.idx].ha):null;
-    const datasets=[];
-    if(clasesA)datasets.push({label:zoneA?.name||'Zona A',data:rows.map(r=>value(clasesA,r)),backgroundColor:rows.map(r=>r.color),borderColor:'#b99a6e',borderWidth:2,borderRadius:3,borderSkipped:false});
-    if(clasesB)datasets.push({label:zoneB?.name||'Zona B',data:rows.map(r=>value(clasesB,r)),backgroundColor:rows.map(r=>r.color),borderColor:'#6aaa35',borderWidth:2,borderRadius:3,borderSkipped:false});
-    const unit=modo==='pct'?'%':'ha';
-    chartRef.current=new Chart(canvasRef.current.getContext('2d'),{type:'bar',data:{labels:rows.map(r=>r.c.label),datasets},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(8,16,8,.94)',padding:9,cornerRadius:6,callbacks:{label:item=>item.parsed.x==null?null:' '+item.dataset.label+': '+Number(item.parsed.x).toFixed(1)+' '+unit,afterBody:items=>{const r=rows[items[0]?.dataIndex];return r?['','dNBR '+Number(r.c.min).toFixed(2)+' a '+Number(r.c.max).toFixed(2)]:null;}}}},scales:{x:{beginAtZero:true,ticks:{color:'rgba(29,43,29,.60)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(31,61,28,.08)'},title:{display:true,text:unit,color:'rgba(29,43,29,.48)',font:{family:'DM Mono',size:10}}},y:{ticks:{color:'rgba(29,43,29,.68)',font:{family:'DM Sans',size:11}},grid:{display:false}}},animation:{duration:320}}});
-    return()=>{if(chartRef.current){chartRef.current.destroy();chartRef.current=null;}};
-  },[clasesA,clasesB,rows,modo,zoneA,zoneB]);
-  if(!clasesA&&!clasesB)return null;
-  const avisos=[];
-  if(!clasesA||!clasesB){const falta=!clasesA?(zoneA?.name||'Zona A'):(zoneB?.name||'Zona B');avisos.push('Solo una de las zonas tiene análisis de severidad. Calcula el dNBR en «'+falta+'» para comparar.');}
-  const perA=figA&&figA.periodos,perB=figB&&figB.periodos;
-  if(perA&&perB&&(perA.pre_inicio!==perB.pre_inicio||perA.post_inicio!==perB.post_inicio))avisos.push('Las zonas se analizaron con ventanas de fecha distintas. La severidad solo es comparable si ambas cubren el mismo evento.');
-  const value=(cs,r)=>cs&&cs[r.idx]?cs[r.idx]:null;
-  return <div className="cz-series cz-dnbr" style={{marginTop:14}}>
-    <div className="cz-series-bar"><span className="cz-detail-eyebrow"><i className="fa-solid fa-fire"/>Severidad por clase</span><div className="cz-seg" ref={segRef}><span className="cz-seg-chip" ref={chipRef}/><button className={'cz-seg-btn'+(modo==='ha'?' active':'')} onClick={()=>setModo('ha')}>Hectáreas</button><button className={'cz-seg-btn'+(modo==='pct'?' active':'')} onClick={()=>setModo('pct')}>% del área</button></div></div>
-    <div className="cz-dnbr-legend">{rows.map(r=><span className="cz-series-class-leg" key={r.idx}><span className="cz-series-class-dot" style={{background:r.color}}/>{r.c.label}</span>)}{clasesA&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#b99a6e'}}/>{zoneA?.name||'Zona A'}</span>}{clasesB&&<span className="cz-series-leg"><span className="cz-series-leg-line" style={{background:'#6aaa35'}}/>{zoneB?.name||'Zona B'}</span>}</div>
-    {avisos.map((a,i)=><div key={i} className="cz-series-note"><i className="fa-solid fa-circle-info"/><span>{a}</span></div>)}
-    <div className="cz-series-chart cz-dnbr-chart"><canvas ref={canvasRef}/></div>
-    <div className="cz-dnbr-table-wrap"><table className="cz-table cz-table--compact"><thead><tr><th>Clase</th><th className="ht-num">{zoneA?.name||'A'} · ha</th><th className="ht-num">{zoneB?.name||'B'} · ha</th><th className="ht-num">Rango dNBR</th></tr></thead><tbody>{rows.map(r=>{const a=value(clasesA,r),b=value(clasesB,r);return <tr key={r.idx}><td className="cz-td-label"><span className="cz-dnbr-class-dot" style={{background:r.color}}/>{r.c.label}</td><td className="cz-td-num">{a?Number(a.ha).toFixed(1)+' ha ('+Number(a.pct).toFixed(1)+'%)':'—'}</td><td className="cz-td-num">{b?Number(b.ha).toFixed(1)+' ha ('+Number(b.pct).toFixed(1)+'%)':'—'}</td><td className="cz-td-label">{Number(r.c.min).toFixed(2)} – {Number(r.c.max).toFixed(2)}</td></tr>;})}</tbody></table></div>
-  </div>;
-}
-
 function DnbrZonePanel({side,zone,clases,fig,rows,modo,maxValue}){
   const canvasRef=useRef(null), chartRef=useRef(null);
   const unit=modo==='pct'?'%':'ha';
