@@ -1430,10 +1430,15 @@ async function clearZone() {
     WorkspaceState.resultados = {};
     clearZoneState();
 
-    // Si queda otra zona en la lista, cambiar a ella automáticamente
+    // Si queda otra zona en la lista, cambiar a ella automáticamente.
+    // Avisar SIEMPRE: al cargarse otra zona de inmediato, sin mensaje
+    // parecía que el botón no había hecho nada.
     var remaining = window._sbUserZones; // ya filtrada arriba
     if (remaining.length > 0 && window._sbUserId) {
         switchToZone(remaining[0].id);
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('🗑️ Zona eliminada. Ahora estás en «' + (remaining[0].zone_name || 'otra zona') + '»');
+        }
         return;
     }
 

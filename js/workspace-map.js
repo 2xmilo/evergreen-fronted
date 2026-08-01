@@ -90,7 +90,26 @@ function initWorkspaceMap() {
 
             enviarZonaABiodiversidad();
         });
+
+        // DRAWSTOP se dispara tanto al cerrar el polígono como al cancelar:
+        // punto único para devolver el botón y el hint a su estado normal.
+        map.on(L.Draw.Event.DRAWSTOP, function () {
+            _setBotonDibujo(false);
+            _quitarHintDibujo();
+            if (WorkspaceState.zona && globalDrawnItems && !globalDrawnItems.getLayers().length
+                && typeof restoreZoneOnMap === 'function') {
+                try { restoreZoneOnMap(); } catch(e) {}
+            }
+        });
     }
+
+    // Esc cancela el dibujo o la edición en curso — la salida que la gente
+    // busca por instinto cuando se arrepiente a medio camino.
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (typeof _dibujandoZona !== 'undefined' && _dibujandoZona) { cancelarDibujoZona(); return; }
+        if (typeof edicionZonaActiva === 'function' && edicionZonaActiva()) cancelarEdicionZona();
+    });
 }
 
 // ---------------------------------------------------------
@@ -204,7 +223,9 @@ function _enableDrawing() {
     // Si se empieza a dibujar mientras se edita, cancelar la edición
     if (typeof cancelarEdicionZona === 'function') cancelarEdicionZona();
     if (!globalDrawControl) return;
-    globalDrawnItems.clearLayers();
+    // NO se limpia globalDrawnItems aquí: si el usuario se arrepiente a
+    // medio dibujar, la zona anterior debe seguir en el mapa. El handler
+    // de CREATED ya hace clearLayers() antes de agregar la nueva.
     if (typeof poligonos !== 'undefined') poligonos = [];
     if (typeof puntos !== 'undefined') {
         puntos.forEach(function(p) { if (p.marker) try { map.removeLayer(p.marker); } catch(e){} });
@@ -213,10 +234,101 @@ function _enableDrawing() {
     globalDrawControl.enable();
 }
 
+// ---------------------------------------------------------
+// DIBUJO DE ZONA — con salida y aviso previo
+// ---------------------------------------------------------
+var _dibujandoZona = false;
+
+/** Cuenta análisis guardados de la zona activa (para advertir antes de perderlos). */
+function _nAnalisisZona() {
+    var res = (WorkspaceState && WorkspaceState.resultados) || {};
+    return Object.keys(res).reduce(function(n, k) {
+        var v = res[k];
+        return n + (Array.isArray(v) ? v.length : (v ? 1 : 0));
+    }, 0);
+}
+
+function _setBotonDibujo(dibujando) {
+    _dibujandoZona = dibujando;
+    var btn = document.getElementById('btn-draw-polygon');
+    if (!btn) return;
+    btn.classList.toggle('active', dibujando);
+    btn.innerHTML = dibujando
+        ? '<i class="fas fa-times"></i> Cancelar dibujo'
+        : '<i class="fas fa-pen-alt"></i> Dibujar zona';
+}
+
+function _mostrarHintDibujo() {
+    if (document.getElementById('draw-hint')) return;
+    var d = document.createElement('div');
+    d.id = 'draw-hint';
+    d.className = 'draw-hint';
+    d.innerHTML = '<i class="fas fa-pen-alt"></i>' +
+        '<span>Haz clic para marcar vértices · <b>doble clic</b> para cerrar la zona</span>' +
+        '<button type="button" onclick="cancelarDibujoZona()">Cancelar (Esc)</button>';
+    document.body.appendChild(d);
+    _centrarHintSobreMapa();
+}
+
+/** Centra el hint sobre el área visible del mapa, no sobre la ventana:
+    si no, queda montado a medias sobre el panel izquierdo. */
+function _centrarHintSobreMapa() {
+    var d = document.getElementById('draw-hint');
+    if (!d) return;
+    var panel = document.getElementById('ws-left-panel');
+    var desde = 0;
+    if (panel && !panel.classList.contains('hidden')) {
+        var r = panel.getBoundingClientRect();
+        if (r.width > 0) desde = r.right;
+    }
+    var ancho = d.offsetWidth || 440;
+    if (window.innerWidth - desde < ancho + 24) { desde = 0; }  // no cabe al lado: centrar en la ventana
+    var centro = desde + (window.innerWidth - desde) / 2;
+    // Mantenerlo entero dentro de la ventana (con translateX(-50%) el borde
+    // queda a ±ancho/2 del centro).
+    var min = ancho / 2 + 12, max = window.innerWidth - ancho / 2 - 12;
+    if (max < min) { centro = window.innerWidth / 2; }
+    else { centro = Math.max(min, Math.min(max, centro)); }
+    d.style.left = Math.round(centro) + 'px';
+}
+function _quitarHintDibujo() {
+    var d = document.getElementById('draw-hint');
+    if (d) d.remove();
+}
+
+/** Sale del modo dibujo y devuelve el mapa a como estaba. */
+function cancelarDibujoZona() {
+    if (globalDrawControl) { try { globalDrawControl.disable(); } catch(e) {} }
+    _setBotonDibujo(false);
+    _quitarHintDibujo();
+    // Si se abandonó a medio dibujar, la zona previa sigue en el estado:
+    // volver a pintarla para que el mapa no quede vacío.
+    if (WorkspaceState.zona && globalDrawnItems && !globalDrawnItems.getLayers().length
+        && typeof restoreZoneOnMap === 'function') {
+        try { restoreZoneOnMap(); } catch(e) {}
+    }
+}
+
+function _iniciarDibujo() {
+    _enableDrawing();
+    _setBotonDibujo(true);
+    _mostrarHintDibujo();
+}
+
 function startDrawingZone() {
-    // Si ya tiene zona activa → solo redibuja en el mismo workspace (sin chequeo de cuota)
+    // Segundo clic en el botón = salir del modo dibujo
+    if (_dibujandoZona) { cancelarDibujoZona(); return; }
+
+    // Si ya tiene zona activa → redibuja en el mismo workspace (sin chequeo
+    // de cuota), pero avisando: reemplaza la forma y descarta los análisis.
     if (WorkspaceState.zona) {
-        _enableDrawing();
+        var n = _nAnalisisZona();
+        var msg = 'Ya tienes «' + (WorkspaceState.zonaNombre || 'una zona') + '» como zona de estudio.\n\n' +
+                  'Dibujar una nueva reemplazará su forma' +
+                  (n ? ' y se perderán sus ' + n + ' análisis guardados' : '') + '.\n\n' +
+                  '¿Continuar?';
+        if (!confirm(msg)) return;
+        _iniciarDibujo();
         return;
     }
     // Primera zona: verificar cuota usando _sbUserZones local (evita race condition
@@ -234,7 +346,7 @@ function startDrawingZone() {
             return;
         }
     }
-    _enableDrawing();
+    _iniciarDibujo();
 }
 
 // Crear una zona NUEVA (workspace adicional) — llamada desde el selector de zonas.
