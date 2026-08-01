@@ -162,22 +162,6 @@
             <div id="gee-layers-dynamic" style="display:none;"></div>
 
             <!-- ── CONTEXTO TERRITORIAL ── -->
-            <div class="layers-section-hdr">
-                <span>Referencias territoriales</span>
-                <span class="layers-section-source">IDE Chile</span>
-            </div>
-            <div class="map-layer-row off" id="layer-dpa-ide"
-                 onclick="toggleDpaIde(this.classList.toggle('on')); this.classList.toggle('off');">
-                <div class="map-layer-check"><i class="fas fa-check"></i></div>
-                <span class="map-layer-label">Limites administrativos</span>
-                <span class="map-gee-badge map-ide-badge">IDE Chile</span>
-            </div>
-            <div class="map-layer-opacity">
-                <input type="range" min="0" max="100" value="85" class="opacity-slider"
-                    oninput="if (dpaIdeLayer) dpaIdeLayer.setOpacity(this.value/100); document.getElementById('oval-dpa-ide').textContent=this.value+'%'">
-                <span class="opacity-val" id="oval-dpa-ide">85%</span>
-            </div>
-
             <div class="layers-section-hdr layers-section-hdr--clickable" onclick="toggleSimbioSection()">
                 <span>Contexto territorial</span>
                 <span class="layers-section-source">MMA · SIMBIO&nbsp;<i class="fas fa-chevron-down" id="simbio-section-chev" style="font-size:7px;transition:transform .2s;"></i></span>
@@ -1987,7 +1971,6 @@
 
 <!-- JS EXTERNAL LIBS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/esri-leaflet@3.0.16/dist/esri-leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
 <script src="js/supabase-client.js"></script>

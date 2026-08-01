@@ -26,8 +26,6 @@ let map;
 let drawnItems;
 let drawControl;
 let mapaCalles, satelite, topografico, mapaClaro;
-let dpaIdeLayer = null;
-let dpaIdeErrorShown = false;
 let cuencasLayer = null;
 let cuencaSeleccionada = null;
 let puntos = [];
@@ -165,29 +163,6 @@ function toggleMapBaseMenu(force) {
     control.classList.toggle('open', open);
     trigger.setAttribute('aria-expanded', String(open));
     menu.setAttribute('aria-hidden', String(!open));
-}
-
-function toggleDpaIde(visible) {
-    if (!map) return;
-    if (!dpaIdeLayer) {
-        if (!window.L.esri || typeof L.esri.dynamicMapLayer !== 'function') {
-            console.warn('[Mapa] No se cargo el conector de mapas de IDE Chile.');
-            return;
-        }
-        dpaIdeLayer = L.esri.dynamicMapLayer({
-            url: 'https://rest-sit.mop.gob.cl/arcgis/rest/services/MAPA_BASE/LIMITES/MapServer',
-            layers: [0, 1, 2],
-            opacity: 0.85,
-            attribution: '&copy; IDE MOP / MOP'
-        });
-        dpaIdeLayer.on('requesterror', function () {
-            if (dpaIdeErrorShown) return;
-            dpaIdeErrorShown = true;
-            console.warn('[Mapa] No fue posible cargar la DPA de IDE Chile.');
-        });
-    }
-    if (visible) dpaIdeLayer.addTo(map);
-    else if (map.hasLayer(dpaIdeLayer)) map.removeLayer(dpaIdeLayer);
 }
 
 function toggleOverlay(nombre, visible) {
