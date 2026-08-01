@@ -33,6 +33,8 @@ function initWorkspaceMap() {
 
         map.on(L.Draw.Event.CREATED, function (e) {
             var layer = e.layer;
+            // La zona nueva se concretó: ya no hay a dónde "volver".
+            _zonaPreviaId = null;
             globalDrawnItems.clearLayers();
             globalDrawnItems.addLayer(layer);
             globalWorkspaceAOILayer = layer;
@@ -96,6 +98,15 @@ function initWorkspaceMap() {
         map.on(L.Draw.Event.DRAWSTOP, function () {
             _setBotonDibujo(false);
             _quitarHintDibujo();
+            // Cerró el modo dibujo sin crear nada y venía de preparar una
+            // zona nueva: recuperar la anterior desde la nube.
+            if (_zonaPreviaId && !WorkspaceState.zona) {
+                var volverA = _zonaPreviaId;
+                _zonaPreviaId = null;
+                if (typeof switchToZone === 'function' && window._sbUserId) {
+                    try { switchToZone(volverA); return; } catch(e) {}
+                }
+            }
             if (WorkspaceState.zona && globalDrawnItems && !globalDrawnItems.getLayers().length
                 && typeof restoreZoneOnMap === 'function') {
                 try { restoreZoneOnMap(); } catch(e) {}
@@ -238,6 +249,10 @@ function _enableDrawing() {
 // DIBUJO DE ZONA — con salida y aviso previo
 // ---------------------------------------------------------
 var _dibujandoZona = false;
+// Zona a la que volver si se cancela un dibujo que iba a crear una nueva
+// (el estado ya se limpió para permitir el INSERT, pero la zona anterior
+// sigue intacta en Supabase).
+var _zonaPreviaId = null;
 
 /** Cuenta análisis guardados de la zona activa (para advertir antes de perderlos). */
 function _nAnalisisZona() {
@@ -301,6 +316,18 @@ function cancelarDibujoZona() {
     if (globalDrawControl) { try { globalDrawControl.disable(); } catch(e) {} }
     _setBotonDibujo(false);
     _quitarHintDibujo();
+
+    // Iba a crear una zona nueva y se arrepintió: el estado local ya estaba
+    // vacío, así que hay que recuperar la zona anterior desde la nube.
+    if (_zonaPreviaId && !WorkspaceState.zona) {
+        var volverA = _zonaPreviaId;
+        _zonaPreviaId = null;
+        if (typeof switchToZone === 'function' && window._sbUserId) {
+            try { switchToZone(volverA); return; } catch(e) {}
+        }
+    }
+    _zonaPreviaId = null;
+
     // Si se abandonó a medio dibujar, la zona previa sigue en el estado:
     // volver a pintarla para que el mapa no quede vacío.
     if (WorkspaceState.zona && globalDrawnItems && !globalDrawnItems.getLayers().length
@@ -315,60 +342,108 @@ function _iniciarDibujo() {
     _mostrarHintDibujo();
 }
 
+/**
+ * Cuota de zonas evaluada con la lista local (_sbUserZones), no con
+ * Supabase: evita la race condition cuando un delete async todavía no
+ * confirmó, y permite decidir de forma síncrona dentro del click.
+ */
+function _cuotaZonas() {
+    var LIMITS = { 'free': 1, 'pro': 3, 'enterprise': 10, 'admin': Infinity };
+    var plan   = window._sbUserPlan || 'free';
+    var max    = LIMITS[plan] !== undefined ? LIMITS[plan] : 1;
+    var zonas  = (typeof getValidStoredZones === 'function')
+        ? getValidStoredZones(window._sbUserZones)
+        : (window._sbUserZones || []).filter(function(z) { return z && z.polygon_geojson; });
+    var usadas = zonas.length;
+    return {
+        plan: plan, max: max, usadas: usadas,
+        // Sin sesión no hay cuota que aplicar (modo local)
+        hayEspacio: !window._sbUserId || max === Infinity || usadas < max
+    };
+}
+
 function startDrawingZone() {
     // Segundo clic en el botón = salir del modo dibujo
     if (_dibujandoZona) { cancelarDibujoZona(); return; }
 
-    // Si ya tiene zona activa → redibuja en el mismo workspace (sin chequeo
-    // de cuota), pero avisando: reemplaza la forma y descarta los análisis.
-    if (WorkspaceState.zona) {
-        var n = _nAnalisisZona();
-        var msg = 'Ya tienes «' + (WorkspaceState.zonaNombre || 'una zona') + '» como zona de estudio.\n\n' +
-                  'Dibujar una nueva reemplazará su forma' +
-                  (n ? ' y se perderán sus ' + n + ' análisis guardados' : '') + '.\n\n' +
-                  '¿Continuar?';
-        if (!confirm(msg)) return;
+    var cuota = _cuotaZonas();
+
+    // ── Sin zona activa: dibujar directo (respetando la cuota) ──
+    if (!WorkspaceState.zona) {
+        if (!cuota.hayEspacio) {
+            mostrarModalLimite({ ok: false, reason: 'LIMIT_REACHED',
+                plan: cuota.plan, used: cuota.usadas, max: cuota.max });
+            return;
+        }
         _iniciarDibujo();
         return;
     }
-    // Primera zona: verificar cuota usando _sbUserZones local (evita race condition
-    // cuando el delete async aún no confirmó en Supabase)
-    if (window._sbUserId) {
-        var _LIMITS  = { 'free': 1, 'pro': 3, 'enterprise': 10, 'admin': Infinity };
-        var plan     = window._sbUserPlan || 'free';
-        var maxZones = _LIMITS[plan] !== undefined ? _LIMITS[plan] : 1;
-        var zones    = (typeof getValidStoredZones === 'function')
-            ? getValidStoredZones(window._sbUserZones)
-            : (window._sbUserZones || []).filter(function(z) { return z && z.polygon_geojson; });
-        var count    = zones.length;
-        if (maxZones !== Infinity && count >= maxZones) {
-            mostrarModalLimite({ ok: false, reason: 'LIMIT_REACHED', plan: plan, used: count, max: maxZones });
-            return;
+
+    // ── Con zona activa y cupo disponible: se crea una zona NUEVA ──
+    // Es lo que la gente espera al dibujar otro polígono; la anterior
+    // queda guardada y accesible desde el selector de zonas.
+    // Requiere sesión: sin ella no hay multi-zona que persistir.
+    if (cuota.hayEspacio && window._sbUserId) {
+        var anterior = WorkspaceState.zonaNombre || 'la zona anterior';
+        _zonaPreviaId = WorkspaceState.zonaId;   // para volver si cancela
+        _resetParaZonaNueva();
+        _iniciarDibujo();
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('🆕 Dibujando una zona nueva · «' + anterior + '» queda guardada');
         }
+        return;
     }
+
+    // ── Sin cupo (típico plan free: 1 zona) o sin sesión ──
+    // No se puede crear otra, así que la única vía es reemplazar la actual.
+    // Se dice explícitamente, con el plan y lo que se pierde.
+    var n = _nAnalisisZona();
+    var msg;
+    if (window._sbUserId) {
+        msg = 'Tu plan ' + cuota.plan + ' permite ' + cuota.max +
+              (cuota.max === 1 ? ' zona de estudio' : ' zonas de estudio') +
+              ' y ya la estás usando.\n\n' +
+              'Para dibujar una nueva hay que reemplazar «' + (WorkspaceState.zonaNombre || 'la actual') + '»' +
+              (n ? ', y se perderán sus ' + n + ' análisis guardados' : '') + '.\n\n' +
+              '¿Reemplazar la zona actual?';
+    } else {
+        msg = 'Dibujar reemplazará «' + (WorkspaceState.zonaNombre || 'la zona actual') + '»' +
+              (n ? ' y se perderán sus ' + n + ' análisis' : '') + '.\n\n¿Continuar?';
+    }
+    if (!confirm(msg)) return;
+    // Se mantiene zonaId → saveWorkspaceToCloud hace UPDATE (reemplazo)
     _iniciarDibujo();
 }
 
 // Crear una zona NUEVA (workspace adicional) — llamada desde el selector de zonas.
 // NO fuerza el dibujo: solo prepara el estado vacío y abre el panel de herramientas
 // para que el usuario elija si dibujar, usar cuenca, o cargar desde otro lado.
+/**
+ * Deja el estado listo para una zona NUEVA: al anular zonaId,
+ * saveWorkspaceToCloud hará INSERT en vez de UPDATE, así la zona
+ * anterior se conserva intacta en Supabase.
+ */
+function _resetParaZonaNueva() {
+    WorkspaceState.zona       = null;
+    WorkspaceState.zonaGEE    = null;
+    WorkspaceState.zonaHa     = 0;
+    WorkspaceState.zonaId     = null;
+    WorkspaceState.zonaNombre = 'Mi zona de estudio';
+    if (typeof clearAnalysisStateForZoneChange === 'function') {
+        clearAnalysisStateForZoneChange();
+    } else {
+        WorkspaceState.resultados = {};
+    }
+    if (globalDrawnItems) globalDrawnItems.clearLayers();
+    updateZoneUI();
+    renderIndicadorCards();
+}
+
 function startNewZone() {
     closeZoneSelector();
 
     function _prepararNueva() {
-        WorkspaceState.zona       = null;
-        WorkspaceState.zonaGEE    = null;
-        WorkspaceState.zonaHa     = 0;
-        WorkspaceState.zonaId     = null;
-        WorkspaceState.zonaNombre = 'Mi zona de estudio';
-        if (typeof clearAnalysisStateForZoneChange === 'function') {
-            clearAnalysisStateForZoneChange();
-        } else {
-            WorkspaceState.resultados = {};
-        }
-        if (globalDrawnItems) globalDrawnItems.clearLayers();
-        updateZoneUI();
-        renderIndicadorCards();
+        _resetParaZonaNueva();
 
         // Abrir panel de herramientas de dibujo si está colapsado (guía visual)
         var drawWrap   = document.getElementById('draw-tools-wrap');
