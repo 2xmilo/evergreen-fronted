@@ -414,10 +414,20 @@
         row('Densidad drenaje', _fmt(m.densidad_drenaje_km_km2, 2), 'km/km²');
         row('Total streams', _fmt(m.longitud_total_streams_km, 1), 'km');
 
+        // Una sola fila con la unidad legible según la magnitud, en vez de
+        // repetir "Tc Kirpich" tres veces en s / min / h.
         section('Tiempo de concentración');
-        row('Tc Kirpich', _fmtInt(m.tc_kirpich_segundos), 's');
-        row('Tc Kirpich', _fmt(m.tc_kirpich_minutos, 1), 'min');
-        row('Tc Kirpich', _fmt(m.tc_kirpich_horas, 2), 'h');
+        var _tcMin = m.tc_kirpich_minutos;
+        if (_tcMin === null || _tcMin === undefined) {
+            row('Tc Kirpich', '—', '');
+        } else if (_tcMin >= 60) {
+            row('Tc Kirpich', _fmt(m.tc_kirpich_horas, 2), 'h');
+            row('equivale a', _fmt(_tcMin, 0), 'min');
+        } else if (_tcMin >= 1) {
+            row('Tc Kirpich', _fmt(_tcMin, 1), 'min');
+        } else {
+            row('Tc Kirpich', _fmtInt(m.tc_kirpich_segundos), 's');
+        }
 
         tbody.innerHTML = rows;
     }
