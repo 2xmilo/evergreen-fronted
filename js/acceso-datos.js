@@ -580,7 +580,8 @@ function agregarPoligono(coordinates, areaKm2, layer) {
     const id = poligonoIdCounter++;
     const nombre = `Polígono ${id}`;
 
-    layer.bindPopup(`<strong>${nombre}</strong><br>Área: ${areaKm2} km²`);
+    const areaHaPoly = Math.round(parseFloat(areaKm2) * 100);
+    layer.bindPopup(`<strong>${nombre}</strong><br>Área: ${areaHaPoly.toLocaleString('es-CL')} ha`);
 
     poligonos.push({ id, nombre, coordinates, area_km2: parseFloat(areaKm2), layer });
     actualizarListaPoligonos();

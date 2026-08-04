@@ -921,6 +921,11 @@ body.workspace-mode {
   transition:all .15s; font-family:inherit;
 }
 .draw-btn:hover { border-color:var(--accent); background:var(--hover); }
+/* Herramienta activa: verde oscuro sólido + texto blanco.
+   (acceso-datos.css usaba var(--ws-topbar-bg) que no existe → fondo inválido
+   quedaba blanco con texto blanco = ilegible). Color literal para garantizar. */
+.draw-btn.active, .draw-btn.active:hover { background:#1B3A0D; color:#fff; border-color:transparent; }
+.draw-btn.active i { color:#fff; }
 
 .rs-hint-text {
   font-size:11px; color:var(--muted); line-height:1.5;
@@ -1698,6 +1703,8 @@ body.workspace-mode {
 /* ══ BIO POPUP COMPACTO ══════════════════════════════════════ */
 /* Forzar fondo blanco — Leaflet dark theme lo sobreescribe */
 .leaflet-popup-content-wrapper { background: #fff !important; color: #1a1a1a !important; box-shadow: 0 4px 20px rgba(0,0,0,0.18) !important; border-radius: 10px !important; }
+.leaflet-popup-content { color: #1a1a1a !important; }
+.leaflet-popup-content-wrapper .leaflet-popup-close-button { color: #666 !important; }
 .leaflet-popup-tip { background: #fff !important; }
 
 .bio-popup-compact { min-width: 190px; max-width: 230px; font-family: 'Inter',-apple-system,sans-serif; padding: 2px 0; }
