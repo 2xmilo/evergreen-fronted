@@ -509,7 +509,10 @@ function renderAguaSerie(doc) {
         for (var i = periods.length - 1; i >= 0; i--) {
             var p = periods[i];
             var sinDatos = (p.water_ha === null || p.water_ha === undefined);
-            html += '<tr' + (i === periods.length - 1 ? ' class="latest"' : '') + '>' +
+            var _clkS = p.n_images > 0;
+            var _clsS = (i === periods.length - 1 ? 'latest' : '') + (_clkS ? ' serie-row--clickable' : '');
+            html += '<tr' + (_clsS.trim() ? ' class="' + _clsS.trim() + '"' : '') +
+                (_clkS ? ' data-serie-year="' + p.year + '" title="Ver esta capa en el mapa" onclick="serieRowClick(\'agua\',' + p.year + ')"' : '') + '>' +
                 '<td>' + seasonLbl + ' ' + p.year + ' <span style="color:#999;">(' + (SERIE_SEASON_MONTHS[doc.season] || '') + ')</span></td>' +
                 '<td class="ht-num">' + (sinDatos ? 'sin datos' : _serieFmtHa(p.water_ha) + ' ha') + '</td>' +
                 '<td class="ht-num">' + (p.water_pct !== null && p.water_pct !== undefined ? p.water_pct.toFixed(1) + '%' : '—') + '</td>' +
@@ -556,7 +559,10 @@ function renderAguaSerie(doc) {
                 var sinHumedad = hp.mean === null || hp.mean === undefined;
                 var rango = hp.p25 !== null && hp.p25 !== undefined && hp.p75 !== null && hp.p75 !== undefined
                     ? hp.p25.toFixed(3) + ' a ' + hp.p75.toFixed(3) : '—';
-                humedadHtml += '<tr' + (j === periods.length - 1 ? ' class="latest"' : '') + '>' +
+                var _clkH = hp.n_images > 0;
+                var _clsH = (j === periods.length - 1 ? 'latest' : '') + (_clkH ? ' serie-row--clickable' : '');
+                humedadHtml += '<tr' + (_clsH.trim() ? ' class="' + _clsH.trim() + '"' : '') +
+                    (_clkH ? ' data-serie-year="' + hp.year + '" title="Ver esta capa en el mapa" onclick="serieRowClick(\'agua\',' + hp.year + ')"' : '') + '>' +
                     '<td>' + seasonLbl + ' ' + hp.year + '</td>' +
                     '<td class="ht-num">' + (sinHumedad ? 'sin datos' : hp.mean.toFixed(3)) + '</td>' +
                     '<td class="ht-num">' + rango + '</td>' +
@@ -906,7 +912,10 @@ function renderVegSerie(doc) {
             var p = periods[i];
             var sinDatos = (p.mean === null || p.mean === undefined);
             var vTop = _vegClaseHa(p, claseTop.key);
-            html += '<tr' + (i === periods.length - 1 ? ' class="latest"' : '') + '>' +
+            var _clkV = p.n_images > 0;
+            var _clsV = (i === periods.length - 1 ? 'latest' : '') + (_clkV ? ' serie-row--clickable' : '');
+            html += '<tr' + (_clsV.trim() ? ' class="' + _clsV.trim() + '"' : '') +
+                (_clkV ? ' data-serie-year="' + p.year + '" title="Ver esta capa en el mapa" onclick="serieRowClick(\'vegetacion\',' + p.year + ')"' : '') + '>' +
                 '<td>' + seasonLbl + ' ' + p.year + '</td>' +
                 '<td class="ht-num">' + (sinDatos ? 'sin datos' : p.mean.toFixed(3)) + '</td>' +
                 '<td class="ht-num">' + (vTop !== null ? _serieFmtHa(vTop) + ' ha' : '—') + '</td>' +
@@ -1141,6 +1150,33 @@ function _removeSerieTemporalLayer() {
     _serieTemporalLayer = null;
     if (typeof _layerRegistry !== 'undefined') delete _layerRegistry.serie_temporal;
     if (typeof _refreshGeeLayersPanel === 'function') _refreshGeeLayersPanel();
+}
+
+// Click en una fila del listado por año → activa esa capa temporal en el mapa.
+// Reemplaza el flujo de "elegir año en el selector + botón": basta pulsar la fila.
+window.serieRowClick = function(tipo, year) {
+    var ids = _serieMapDomIds(tipo);
+    var select = document.getElementById(ids.year);
+    if (!select) return;
+    var existe = false;
+    for (var i = 0; i < select.options.length; i++) {
+        if (parseInt(select.options[i].value, 10) === year) { existe = true; break; }
+    }
+    if (!existe) return;               // año sin imágenes disponibles → no hay capa
+    select.value = String(year);
+    _highlightSerieRow(tipo, year);
+    loadSeriePeriodMap(tipo);
+};
+
+// Marca visualmente la fila activa del listado por año.
+function _highlightSerieRow(tipo, year) {
+    var cont = document.getElementById(tipo === 'agua' ? 'serie-table' : 'vserie-table');
+    if (!cont) return;
+    var rows = cont.querySelectorAll('tr[data-serie-year]');
+    for (var i = 0; i < rows.length; i++) {
+        rows[i].classList.toggle('serie-row--active',
+            parseInt(rows[i].getAttribute('data-serie-year'), 10) === year);
+    }
 }
 
 function loadSeriePeriodMap(tipo) {

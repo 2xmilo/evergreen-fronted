@@ -2981,6 +2981,10 @@ body.workspace-mode {
 .ap-history-table tbody tr:hover { background: #f0f7ea; }
 .ap-history-table tbody tr.latest td { font-weight: 600; color: #222; }
 .ap-history-table .ht-num { text-align: right; font-variant-numeric: tabular-nums; }
+/* Listado por año de series: fila activa (capa mostrada en el mapa) + hover clickeable */
+.ap-history-table tbody tr.serie-row--clickable:hover { background: #e3f0d6; }
+.ap-history-table tbody tr.serie-row--active { background: var(--accent-light); box-shadow: inset 3px 0 0 var(--accent); }
+.ap-history-table tbody tr.serie-row--active td { color: #1a1a1a; font-weight: 600; }
 
 /* Fix: los <select class=ap-input> heredan color-scheme:dark de
    acceso-datos.css (intocable) y el popup nativo de opciones salia con
