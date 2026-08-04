@@ -536,7 +536,7 @@
         if (data && data.streams && data.streams.features && data.streams.features.length) {
             try {
                 _streamsLayer = L.geoJSON(data.streams, {
-                    style: { color: '#29b6f6', weight: 2.5, opacity: 0.95 },
+                    style: { color: '#2171b5', weight: 1.1, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
                 });
                 partes.push(_streamsLayer);
             } catch (e) { console.warn('[Hidro] streams:', e); }
@@ -545,7 +545,7 @@
         if (data && data.cauce_principal && data.cauce_principal.coordinates && data.cauce_principal.coordinates.length) {
             try {
                 _cauceLayer = L.geoJSON(data.cauce_principal, {
-                    style: { color: '#0d47a1', weight: 4, opacity: 1.0 },
+                    style: { color: '#08306b', weight: 2.4, opacity: 1.0, lineCap: 'round', lineJoin: 'round' },
                 });
                 partes.push(_cauceLayer);   // último = se dibuja sobre la red
             } catch (e) { console.warn('[Hidro] cauce:', e); }

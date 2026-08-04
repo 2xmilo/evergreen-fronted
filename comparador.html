@@ -1170,10 +1170,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
         var sName=sd.name||'streams';
         handles.streams=[];
         if(sd.streams&&sd.streams.features&&sd.streams.features.length){
-          handles.streams.push(L.geoJSON(sd.streams,{style:{color:'#29b6f6',weight:1.6,opacity:0.9}}).bindTooltip(sName,{sticky:true}).addTo(map));
+          handles.streams.push(L.geoJSON(sd.streams,{style:{color:'#2171b5',weight:1.1,opacity:0.9,lineCap:'round',lineJoin:'round'}}).bindTooltip(sName,{sticky:true}).addTo(map));
         }
         if(sd.cauce_principal&&sd.cauce_principal.coordinates&&sd.cauce_principal.coordinates.length){
-          handles.streams.push(L.geoJSON(sd.cauce_principal,{style:{color:'#0d47a1',weight:3,opacity:1}}).addTo(map));
+          handles.streams.push(L.geoJSON(sd.cauce_principal,{style:{color:'#08306b',weight:2.4,opacity:1,lineCap:'round',lineJoin:'round'}}).addTo(map));
         }
         handles.streams.forEach(function(l){try{l.bringToFront();}catch(e){}});
       }catch(e){console.warn('streams draw',e);}
