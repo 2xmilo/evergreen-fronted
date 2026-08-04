@@ -329,7 +329,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
 
 /* map tiles */
-.cz-tiles { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 42vh; min-height: 260px; }
+.cz-tiles { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 50vh; min-height: 320px; }
 .cz-tile {
   display: flex; flex-direction: column;
   background: var(--mat-1); border: 0.5px solid var(--hairline);
@@ -865,9 +865,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .cz-chip:hover { background: rgba(255,255,255,0.10); color: var(--white); }
 .cz-chip.active {
-  background: linear-gradient(180deg, rgba(200,168,130,0.34), rgba(200,168,130,0.22));
-  border-color: rgba(200,168,130,0.5); color: #fff; font-weight: 500;
-  box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.20);
+  background: var(--accent);
+  border-color: var(--accent); color: #fff; font-weight: 600;
+  box-shadow: 0 1px 4px rgba(77,138,31,0.25);
 }
 .cz-chip-sub { font-family: var(--mono); font-size: 8.5px; letter-spacing: .05em; text-transform: uppercase; opacity: .6; }
 /* Puntos que indican en qué zonas existe esa combinación */
