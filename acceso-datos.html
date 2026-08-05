@@ -782,6 +782,10 @@
                                 onclick="loadSeriePeriodMap('vegetacion')" title="Ver periodo seleccionado en el mapa">
                             <i class="fas fa-map-marked-alt"></i>
                         </button>
+                        <button type="button" class="ap-scale-btn" onclick="guardarSerieTodosLosAnios('vegetacion')"
+                                title="Guardar imagen en color natural de todos los años (para el Comparador)">
+                            <i class="fas fa-images"></i>
+                        </button>
                     </div>
                     <p class="ap-note" id="vserie-map-status" style="display:none; margin-top:6px;"></p>
 
@@ -1018,6 +1022,10 @@
                         <button type="button" class="ap-scale-btn" id="btn-serie-map"
                                 onclick="loadSeriePeriodMap('agua')" title="Ver periodo seleccionado en el mapa">
                             <i class="fas fa-map-marked-alt"></i>
+                        </button>
+                        <button type="button" class="ap-scale-btn" onclick="guardarSerieTodosLosAnios('agua')"
+                                title="Guardar imagen en color natural de todos los años (para el Comparador)">
+                            <i class="fas fa-images"></i>
                         </button>
                     </div>
                     <p class="ap-note" id="serie-map-status" style="display:none; margin-top:6px;"></p>
@@ -2007,7 +2015,7 @@
 <script src="js/workspace-map.js?v=11"></script>
 <script src="js/workspace-bosque.js?v=9"></script>
 <script src="js/workspace-summary.js?v=16"></script>
-<script src="js/workspace-gee-modules.js?v=20"></script>
+<script src="js/workspace-gee-modules.js?v=21"></script>
 <script src="js/workspace-zones.js?v=12"></script>
 <script src="js/workspace-biodiversidad.js?v=10"></script>
 <script src="js/workspace-dmc.js?v=7"></script>
