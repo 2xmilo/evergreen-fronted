@@ -759,7 +759,7 @@ function restoreAguaSerieUI() {
 // ---------------------------------------------------------
 var _vegSerieData      = null;
 var _vegSerieChart     = null;
-var _vegSerieChartMode = 'vigor';
+var _vegSerieChartMode = 'indice';
 
 // Paleta por familia de clases (orden c0→c3, de menor a mayor valor del índice).
 // Las etiquetas las envía el backend en class_labels — dependen del índice.
@@ -934,7 +934,7 @@ function renderVegSerie(doc) {
             [doc.class_family || 'vigor'] || 'Clases';
     }
 
-    setVegSerieChartMode('vigor');
+    setVegSerieChartMode('indice');
     _renderSerieMapPicker('vegetacion', doc);
     var res = document.getElementById('vserie-resultados');
     if (res) res.style.display = 'block';

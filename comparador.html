@@ -930,8 +930,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* Leaflet dark tweaks */
 .leaflet-container { background: var(--mapbg); font-family: var(--mono); }
-.leaflet-control-zoom a { background: rgba(4,14,4,0.88) !important; color: var(--w70) !important; border-color: var(--border) !important; }
-.leaflet-control-zoom a:hover { background: rgba(15,28,14,0.95) !important; color: var(--white) !important; }
+.leaflet-control-zoom a { background: rgba(4,14,4,0.88) !important; color: #e8ede8 !important; border-color: rgba(255,255,255,0.18) !important; }
+.leaflet-control-zoom a:hover { background: rgba(15,28,14,0.98) !important; color: #ffffff !important; }
 .leaflet-control-attribution { background: rgba(4,14,4,0.7) !important; color: var(--w40) !important; font-size: 9px !important; }
 
 @media (max-width: 1100px) { .cz-kpis { grid-template-columns: repeat(2,1fr); } .cz-metrics-row { grid-template-columns: repeat(2,1fr); } }
@@ -2682,7 +2682,7 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
   // Índices disponibles dentro de la estación elegida
   const indices=useMemo(()=>combos.filter(c=>c.estacion===estacionSel),[combos,estacionSel]);
 
-  const defaultView=tipo==='agua'?'superficie':'clases';
+  const defaultView=tipo==='agua'?'superficie':'indice';
   useEffect(()=>{
     const validas=tipo==='agua'?['superficie','indice','anomalias']:['clases','indice','anomalias'];
     if(!view||!validas.includes(view)) setView(defaultView);
@@ -2716,9 +2716,10 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
   },[activeView,selKey]);
 
   const viewOptions=tipo==='agua'
-    ?[{id:'superficie',label:'Superficie'},{id:'indice',label:'Índice'},{id:'anomalias',label:'Anomalías'}]
-    :[{id:'clases',label:(docA||docB)?.class_family==='humedad'?'Humedad':(docA||docB)?.class_family==='quemado'?'Cobertura':'Vigor'},
-      {id:'indice',label:'Índice'},{id:'anomalias',label:'Anomalías'}];
+    ?[{id:'indice',label:'Índice'},{id:'superficie',label:'Superficie'},{id:'anomalias',label:'Anomalías'}]
+    :[{id:'indice',label:'Índice'},
+      {id:'clases',label:(docA||docB)?.class_family==='humedad'?'Humedad':(docA||docB)?.class_family==='quemado'?'Cobertura':'Vigor'},
+      {id:'anomalias',label:'Anomalías'}];
 
   if(!combos.length) return null;   // sin series: la sección no aparece
 
@@ -2735,26 +2736,25 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
   return(
     <div className="cz-series" style={{marginTop:14}}>
       <div className="cz-series-bar" style={{alignItems:'flex-start',flexDirection:'column',gap:10}}>
-        <div style={{display:'flex',alignItems:'center',gap:12,width:'100%',flexWrap:'wrap'}}>
-          <span className="cz-detail-eyebrow"><i className="fa-solid fa-chart-line"/>Serie estacional</span>
-          <div className="cz-seg" ref={segRef}>
-            <span className="cz-seg-chip" ref={chipRef}/>
-            {viewOptions.map(o=>(
-              <button key={o.id} className={'cz-seg-btn'+(activeView===o.id?' active':'')}
-                      onClick={()=>setView(o.id)}>{o.label}</button>
+        <span className="cz-detail-eyebrow"><i className="fa-solid fa-chart-line"/>Serie estacional</span>
+
+        {/* Selección: primero QUÉ (índice), luego CUÁNDO (estación), al final CÓMO (vista) */}
+        {indices.length>1&&(
+          <div className="cz-chiprow">
+            <span className="cz-chiprow-lbl">Índice</span>
+            {indices.map(c=>(
+              <button key={c.key} className={'cz-chip'+(c.key===selKey?' active':'')}
+                      onClick={()=>setSelKey(c.key)}>
+                {c.indice}
+                <span className="cz-chip-dots">
+                  <span className={'cz-chip-dot cz-chip-dot--a'+(c.enA?' on--a':'')}/>
+                  <span className={'cz-chip-dot cz-chip-dot--b'+(c.enB?' on--b':'')}/>
+                </span>
+              </button>
             ))}
           </div>
-          {(activeView==='superficie'||activeView==='clases')&&(
-            <button className="cz-chip" style={{marginLeft:'auto'}}
-                    onClick={()=>setEscala(e=>e==='compartida'?'propia':'compartida')}
-                    title="Con escala compartida ambos paneles usan el mismo eje y son comparables a simple vista; con escala propia cada zona se ajusta a su magnitud.">
-              <i className={'fa-solid '+(escala==='compartida'?'fa-link':'fa-link-slash')} style={{fontSize:10}}/>
-              {escala==='compartida'?'Misma escala':'Escala propia'}
-            </button>
-          )}
-        </div>
+        )}
 
-        {/* Selección amigable: estación primero, índice después */}
         <div className="cz-chiprow">
           <span className="cz-chiprow-lbl">Estación</span>
           {estaciones.map(es=>{
@@ -2773,21 +2773,25 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
             );
           })}
         </div>
-        {indices.length>1&&(
-          <div className="cz-chiprow">
-            <span className="cz-chiprow-lbl">Índice</span>
-            {indices.map(c=>(
-              <button key={c.key} className={'cz-chip'+(c.key===selKey?' active':'')}
-                      onClick={()=>setSelKey(c.key)}>
-                {c.indice}
-                <span className="cz-chip-dots">
-                  <span className={'cz-chip-dot cz-chip-dot--a'+(c.enA?' on--a':'')}/>
-                  <span className={'cz-chip-dot cz-chip-dot--b'+(c.enB?' on--b':'')}/>
-                </span>
-              </button>
+
+        <div className="cz-chiprow">
+          <span className="cz-chiprow-lbl">Vista</span>
+          <div className="cz-seg" ref={segRef}>
+            <span className="cz-seg-chip" ref={chipRef}/>
+            {viewOptions.map(o=>(
+              <button key={o.id} className={'cz-seg-btn'+(activeView===o.id?' active':'')}
+                      onClick={()=>setView(o.id)}>{o.label}</button>
             ))}
           </div>
-        )}
+          {(activeView==='superficie'||activeView==='clases')&&(
+            <button className="cz-chip" style={{marginLeft:'auto'}}
+                    onClick={()=>setEscala(e=>e==='compartida'?'propia':'compartida')}
+                    title="Con escala compartida ambos paneles usan el mismo eje y son comparables a simple vista; con escala propia cada zona se ajusta a su magnitud.">
+              <i className={'fa-solid '+(escala==='compartida'?'fa-link':'fa-link-slash')} style={{fontSize:10}}/>
+              {escala==='compartida'?'Misma escala':'Escala propia'}
+            </button>
+          )}
+        </div>
       </div>
 
       {avisos.map((a,i)=>(
