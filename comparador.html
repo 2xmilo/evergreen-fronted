@@ -1049,7 +1049,33 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
       area:parseFloat(ws.zona_ha)||0, lat:c.lat, lng:c.lng, zoom:11, poly:poly, bounds:bounds,
     };
   }
-  window.CZ={ZONES:[],MODULES,COLORMAPS,wsToZone};
+  // Paletas por índice — MISMAS que el backend (VIZ_PALETTES) / workspace (IND_PALETTES).
+  // La leyenda del mapa usa el índice REAL de cada panel para que coincida con la imagen.
+  const INDEX_PALETTES={
+    vegetacion_NDVI:{colors:['#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'],minLbl:'Sin vegetación',maxLbl:'Densa'},
+    vegetacion_EVI:{colors:['#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'],minLbl:'Sin vegetación',maxLbl:'Densa'},
+    vegetacion_EVI2:{colors:['#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'],minLbl:'Sin vegetación',maxLbl:'Densa'},
+    vegetacion_SAVI:{colors:['#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'],minLbl:'Suelo desnudo',maxLbl:'Vegetación'},
+    vegetacion_LAI:{colors:['#fff7bc','#fec44f','#fe9929','#ec7014','#cc4c02','#8c2d04'],minLbl:'0',maxLbl:'8 m²/m²'},
+    vegetacion_VARI:{colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],minLbl:'Sin follaje',maxLbl:'Verde vivo'},
+    vegetacion_NDMI:{colors:['#d7191c','#fdae61','#ffffbf','#abd9e9','#2c7bb6'],minLbl:'Estrés hídrico',maxLbl:'Húmedo'},
+    vegetacion_MSI:{colors:['#2c7bb6','#abd9e9','#ffffbf','#fdae61','#d7191c'],minLbl:'Húmedo',maxLbl:'Estrés'},
+    vegetacion_NDWI:{colors:['#8c510a','#bf812d','#d4a96a','#f5f5dc','#9ecae1','#2166ac','#084081'],minLbl:'Tierra',maxLbl:'Agua'},
+    vegetacion_MNDWI:{colors:['#7a4f1d','#a97e3c','#c7a46b','#faf0dc','#74b9d4','#1a6aaa','#053061'],minLbl:'Tierra',maxLbl:'Agua'},
+    vegetacion_NBR:{colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],minLbl:'Quemado',maxLbl:'Vegetación'},
+    vegetacion_NBR2:{colors:['#d73027','#f46d43','#fdae61','#ffffbf','#a6d96a','#1a9850','#006837'],minLbl:'Afectado',maxLbl:'Recuperado'},
+    vegetacion_NDDI:{colors:['#2c7bb6','#abd9e9','#ffffbf','#fdae61','#d7191c'],minLbl:'Sin déficit',maxLbl:'Déficit'},
+    vegetacion_BSI:{colors:['#1a9850','#ffffbf','#d73027'],minLbl:'Vegetado',maxLbl:'Suelo'},
+    vegetacion_NDSI:{colors:['#f7fbff','#c6dbef','#6baed6','#2171b5','#084594'],minLbl:'Sin nieve',maxLbl:'Nieve/Hielo'},
+    agua_NDWI:{colors:['#8c510a','#bf812d','#d4a96a','#f5f5dc','#9ecae1','#2166ac','#084081'],minLbl:'Tierra',maxLbl:'Agua'},
+    agua_MNDWI:{colors:['#7a4f1d','#a97e3c','#c7a46b','#faf0dc','#74b9d4','#1a6aaa','#053061'],minLbl:'Tierra',maxLbl:'Agua'},
+    agua_NDMI:{colors:['#d7191c','#fdae61','#ffffbf','#abd9e9','#2c7bb6'],minLbl:'Seco',maxLbl:'Húmedo'},
+    dem_Elevacion:{colors:['#440154','#3b528b','#21918c','#5ec962','#fde725'],minLbl:'Bajo',maxLbl:'Alto (m)'},
+    dem_Pendiente:{colors:['#ffffcc','#c7e9b4','#7fcdbb','#1d91c0','#225ea8','#253494'],minLbl:'0°',maxLbl:'60°'},
+    dnbr_Severidad:{colors:['#1a9850','#a6d96a','#dddddd','#ffffbf','#fdae61','#f46d43','#a50026'],minLbl:'Rebrote',maxLbl:'Severidad alta'},
+    bosque:{colors:['#ffffcc','#ffeda0','#fed976','#feb24c','#fd8d3c','#fc4e2a','#e31a1c','#bd0026','#800026'],minLbl:'2001',maxLbl:'2023'},
+  };
+  window.CZ={ZONES:[],MODULES,COLORMAPS,INDEX_PALETTES,wsToZone};
 })();
 </script>
 
@@ -1559,13 +1585,22 @@ function KpiCard({kpi,dataA,dataB}){
 }
 
 /* ── legend ── */
-function MapLegend({mod}){
-  if(!mod||!mod.cmap) return null;
+function MapLegend({mod,data}){
+  if(!mod||mod.type!=='map') return null;
+  // Índice REAL del panel (el que se calculó), no el default del módulo.
+  var indice=(data&&data.indice)||mod.index;
+  var pfx=mod.id==='elevacion'?'dem':mod.id;
+  var pal=CZ.INDEX_PALETTES[pfx+'_'+indice]||CZ.INDEX_PALETTES[pfx+'_'+mod.index]||CZ.INDEX_PALETTES[mod.id];
+  var grad=pal
+    ? 'linear-gradient(90deg,'+pal.colors.map(function(c,i){return c+' '+Math.round(i/(pal.colors.length-1)*100)+'%';}).join(',')+')'
+    : (mod.cmap?CZMap.legendGradient(mod.cmap):'transparent');
+  var minLbl=pal?pal.minLbl:mod.legendMin;
+  var maxLbl=pal?pal.maxLbl:mod.legendMax;
   return(
     <div className="cz-legend">
-      <div className="cz-legend-title">{mod.index}</div>
-      <div className="cz-legend-bar" style={{background:CZMap.legendGradient(mod.cmap)}}/>
-      <div className="cz-legend-scale"><span>{mod.legendMin}</span><span>{mod.legendMax}</span></div>
+      <div className="cz-legend-title">{indice||mod.label}</div>
+      <div className="cz-legend-bar" style={{background:grad}}/>
+      <div className="cz-legend-scale"><span>{minLbl}</span><span>{maxLbl}</span></div>
     </div>
   );
 }
@@ -3110,7 +3145,7 @@ function MapTile({side,zone,mod,zoneData,syncGate,baseMapId}){
           </div>
         )}
         <div className="cz-map" ref={elRef} style={{display:zone?undefined:'none'}}/>
-        {zone&&hasMap&&hasData&&<MapLegend mod={mod}/>}
+        {zone&&hasMap&&hasData&&<MapLegend mod={mod} data={zoneData[mod.id]}/>}
       </div>
     </section>
   );
