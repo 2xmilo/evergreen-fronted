@@ -877,6 +877,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-chip-dot--b { border-color: var(--zb); }
 .cz-chip-dot.on--a { background: var(--za); }
 .cz-chip-dot.on--b { background: var(--zb); }
+/* Visor de imágenes año a año — selector de año por panel */
+.cz-imgrow { border-top: 0.5px dashed var(--hairline-soft); padding-top: 8px; margin-top: 2px; }
+.cz-imgyear { display: inline-flex; align-items: center; gap: 5px; }
+.cz-imgyear select { font-family: var(--mono); font-size: 11px; padding: 4px 8px; border-radius: 8px; border: 0.5px solid var(--hairline); background: #fff; color: var(--white); cursor: pointer; }
 
 /* Tarjetas de tendencia por zona (lista agrupada tipo Ajustes de iOS) */
 .cz-series-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -2669,7 +2673,21 @@ function czSeriesClassHa(period,key){
    comparador mantiene el mismo modelo mental que el Monitor.
    Cada zona tiene su propio panel, lado a lado (igual que Severidad):
    superponer dos zonas con magnitudes distintas era ilegible. */
-function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
+// Selector de año para el visor de imágenes (por panel).
+function YearPick({side,years,value,onChange}){
+  return(
+    <label className="cz-imgyear">
+      <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
+      <select value={value==null?'':value}
+              onChange={e=>onChange(e.target.value===''?null:parseInt(e.target.value,10))}>
+        <option value="">Año…</option>
+        {years.slice().sort((a,b)=>a-b).map(y=><option key={y} value={y}>{y}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
   const seriesA=useMemo(()=>{
     const o={},s=(dataA&&dataA._series)||{};
     Object.keys(s).forEach(k=>{if(parseSerieKey(k).tipo===tipo)o[k]=s[k];});
@@ -2697,6 +2715,11 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
   const[view,setView]=useState(null);
   const[escala,setEscala]=useState('compartida');
   const chipRef=useRef(null),segRef=useRef(null);
+  // Visor de imágenes año a año (color natural / índice)
+  const[imgMode,setImgMode]=useState('natural');
+  const[imgYearA,setImgYearA]=useState(null);
+  const[imgYearB,setImgYearB]=useState(null);
+  const imgOverlaysRef=useRef({a:null,b:null});
 
   useEffect(()=>{
     const ks=combos.map(c=>c.key);
@@ -2706,6 +2729,37 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
 
   const info=selKey?parseSerieKey(selKey):null;
   const docA=selKey?seriesA[selKey]:null, docB=selKey?seriesB[selKey]:null;
+
+  // ── Visor de imágenes año a año ──
+  const imgPathField=imgMode==='natural'?'naturalPath':'indicePath';
+  const imgBoundsField=imgMode==='natural'?'naturalBounds':'indiceBounds';
+  const imgYearsA=useMemo(()=>((docA&&docA.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docA,imgPathField]);
+  const imgYearsB=useMemo(()=>((docB&&docB.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docB,imgPathField]);
+  useEffect(()=>{ if(imgYearA!=null&&!imgYearsA.includes(imgYearA)) setImgYearA(null); },[imgYearsA]);
+  useEffect(()=>{ if(imgYearB!=null&&!imgYearsB.includes(imgYearB)) setImgYearB(null); },[imgYearsB]);
+  useEffect(()=>{
+    let cancel=false;
+    async function drawSide(side,doc,year){
+      const map=syncGate&&syncGate.getMap&&syncGate.getMap(side);
+      const ov=imgOverlaysRef.current;
+      if(ov[side]){ try{ map&&map.removeLayer(ov[side]); }catch(e){} ov[side]=null; }
+      if(!map||!doc||year==null) return;
+      const p=(doc.periods||[]).find(x=>x.year===year);
+      if(!p||!p[imgPathField]||!p[imgBoundsField]) return;
+      const res=await supabase.storage.from('result-previews').createSignedUrl(p[imgPathField],3600);
+      if(cancel||!res.data||!res.data.signedUrl) return;
+      const layer=L.imageOverlay(res.data.signedUrl,p[imgBoundsField],{opacity:1,interactive:false,zIndex:450});
+      layer.addTo(map); imgOverlaysRef.current[side]=layer;
+      try{ map.fitBounds(p[imgBoundsField],{padding:[16,16],animate:false}); }catch(e){}
+    }
+    drawSide('a',docA,imgYearA);
+    drawSide('b',docB,imgYearB);
+    return()=>{cancel=true;};
+  },[imgYearA,imgYearB,imgMode,selKey,docA,docB]);
+  useEffect(()=>()=>{
+    const ov=imgOverlaysRef.current;
+    ['a','b'].forEach(s=>{ const m=syncGate&&syncGate.getMap&&syncGate.getMap(s); if(ov[s]&&m){try{m.removeLayer(ov[s]);}catch(e){}} imgOverlaysRef.current[s]=null; });
+  },[]);
 
   // Estaciones disponibles, en orden natural del año
   const ORDEN=['DJF','MAM','JJA','SON'];
@@ -2827,6 +2881,18 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB}){
             </button>
           )}
         </div>
+
+        {(imgYearsA.length>0||imgYearsB.length>0)?(
+          <div className="cz-chiprow cz-imgrow">
+            <span className="cz-chiprow-lbl">Imagen</span>
+            <button className={'cz-chip'+(imgMode==='natural'?' active':'')} onClick={()=>setImgMode('natural')}>Color natural</button>
+            <button className={'cz-chip'+(imgMode==='indice'?' active':'')} onClick={()=>setImgMode('indice')}>Índice</button>
+            <YearPick side="a" years={imgYearsA} value={imgYearA} onChange={setImgYearA}/>
+            <YearPick side="b" years={imgYearsB} value={imgYearB} onChange={setImgYearB}/>
+          </div>
+        ):(
+          <div className="cz-series-note" style={{marginTop:2}}><i className="fa-solid fa-circle-info"/><span>Para ver la imagen real año a año, genera la serie en el workspace y pulsa «Guardar todos los años».</span></div>
+        )}
       </div>
 
       {avisos.map((a,i)=>(
@@ -3243,6 +3309,7 @@ function App({session,plan,zones}){
   const [syncOn,setSyncOn]=useState(false);
   const syncGate=useMemo(()=>({
     enabled:false,  // se sobrescribe abajo con useEffect
+    getMap:(side)=>syncMapsRef.current[side],
     setMap:(side,map)=>{
       syncMapsRef.current[side]=map;
       if(syncMapsRef.current.unlink){syncMapsRef.current.unlink();syncMapsRef.current.unlink=null;}
@@ -3342,7 +3409,7 @@ function App({session,plan,zones}){
                       {mod.id==='dnbr'&&<DnbrCompare zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>}
                       {/* La serie estacional vive dentro de su módulo temático */}
                       {(mod.id==='vegetacion'||mod.id==='agua')&&(
-                        <SeriesSection tipo={mod.id} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>
+                        <SeriesSection tipo={mod.id} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} syncGate={syncGate}/>
                       )}
                     </>
                   )
