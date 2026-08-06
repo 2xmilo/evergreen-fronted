@@ -1237,7 +1237,7 @@ function loadSeriePeriodMap(tipo) {
         }
 
         // Cachear el PNG color-natural de este año en Storage (para el Comparador)
-        _cacheSerieNatural(tipo, data);
+        _cacheSeriePreviews(tipo, data);
 
         if (status) {
             status.textContent = 'Capa temporal cargada: ' + data.n_images + ' imagen(es). Si expira, vuelve a cargar este periodo.';
@@ -1264,11 +1264,9 @@ function loadSeriePeriodMap(tipo) {
 // Sube el PNG color-natural de un año a Supabase Storage y guarda su ruta dentro
 // del período de la serie. Ruta bajo {userId}/{workspaceId}/ → se limpia sola al
 // borrar la zona (deletePreviewsFromStorage). result_data va como [doc] por el CHECK.
-async function _cacheSerieNatural(tipo, data) {
+async function _cacheSeriePreviews(tipo, data) {
     try {
-        if (!data || !data.natural) return false;
-        var src = data.natural.preview_data_url || data.natural.preview_url;
-        if (!src) return false;
+        if (!data) return false;
         if (typeof _sb === 'undefined' || !_sb || !window._sbUserId || !WorkspaceState.zonaId) return false;
 
         var doc = _serieDocForMap(tipo);
@@ -1276,42 +1274,55 @@ async function _cacheSerieNatural(tipo, data) {
         var key = (tipo === 'agua' ? 'agua_serie_' : 'vegetacion_serie_') + data.indice + '_' + data.season;
         var period = doc.periods.find(function(p) { return p.year === data.year; });
         if (!period) return false;
-        if (period.naturalPath) return true;   // ya cacheado
 
-        var filePath = window._sbUserId + '/' + WorkspaceState.zonaId + '/' +
-                       key + '_' + data.year + '_natural.png';
+        var changed = false;
 
-        var resp = await fetch(src);
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        var blob = await resp.blob();
-        var up = await _sb.storage.from('result-previews')
-            .upload(filePath, blob, { contentType: 'image/png', upsert: true });
-        if (up && up.error) { console.warn('[SerieNat] upload:', up.error); return false; }
-
-        period.naturalPath = filePath;
-        period.naturalBounds = data.natural.preview_bounds || null;
-        if (typeof saveWorkspaceState === 'function') saveWorkspaceState();
-        if (typeof saveResultsToCloud === 'function') {
-            await saveResultsToCloud(window._sbUserId, key, [doc]);
+        // Sube un PNG (natural o índice) y registra su ruta en el período.
+        async function _up(payload, suffix, pathField, boundsField) {
+            if (!payload) return;
+            if (period[pathField]) return;   // ya cacheado
+            var src = payload.preview_data_url || payload.preview_url;
+            if (!src) return;
+            var filePath = window._sbUserId + '/' + WorkspaceState.zonaId + '/' +
+                           key + '_' + data.year + '_' + suffix + '.png';
+            var resp = await fetch(src);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            var blob = await resp.blob();
+            var upr = await _sb.storage.from('result-previews')
+                .upload(filePath, blob, { contentType: 'image/png', upsert: true });
+            if (upr && upr.error) { console.warn('[SeriePrev] upload:', upr.error); return; }
+            period[pathField]   = filePath;
+            period[boundsField] = payload.preview_bounds || null;
+            changed = true;
         }
-        console.log('[SerieNat] guardado', filePath);
-        return true;
+
+        await _up(data.natural,    'natural', 'naturalPath', 'naturalBounds');
+        await _up(data.indice_img, 'indice',  'indicePath',  'indiceBounds');
+
+        if (changed) {
+            if (typeof saveWorkspaceState === 'function') saveWorkspaceState();
+            if (typeof saveResultsToCloud === 'function') {
+                await saveResultsToCloud(window._sbUserId, key, [doc]);
+            }
+            console.log('[SeriePrev] guardado', key, data.year);
+        }
+        return changed;
     } catch (e) {
-        console.warn('[SerieNat]', e);
+        console.warn('[SeriePrev]', e);
         return false;
     }
 }
 
-// Recorre todos los años de la serie activa y cachea su color natural (opción A:
-// una request por año, sin riesgo de timeout). Muestra progreso en el status.
+// Recorre todos los años de la serie activa y cachea sus imágenes (índice +
+// color natural). Opción A: una request por año, sin riesgo de timeout.
 window.guardarSerieTodosLosAnios = async function(tipo) {
     var doc = _serieDocForMap(tipo);
     if (!doc || !doc.periods || !WorkspaceState.zonaGEE) return;
     var ids = _serieMapDomIds(tipo);
     var status = document.getElementById(ids.status);
-    var pend = doc.periods.filter(function(p) { return p.n_images > 0 && !p.naturalPath; });
+    var pend = doc.periods.filter(function(p) { return p.n_images > 0 && (!p.naturalPath || !p.indicePath); });
     if (!pend.length) {
-        if (status) { status.textContent = 'Todas las imágenes de color natural ya están guardadas.'; status.style.display = 'block'; }
+        if (status) { status.textContent = 'Todas las imágenes ya están guardadas.'; status.style.display = 'block'; }
         return;
     }
     var done = 0;
@@ -1322,10 +1333,10 @@ window.guardarSerieTodosLosAnios = async function(tipo) {
                 geojson: WorkspaceState.zonaGEE.geometry, tipo: tipo, indice: doc.indice, season: doc.season, year: pend[i].year
             });
             var d = await r.json();
-            if (!d.error) { if (await _cacheSerieNatural(tipo, d)) done++; }
-        } catch (e) { console.warn('[SerieNat batch]', e); }
+            if (!d.error) { if (await _cacheSeriePreviews(tipo, d)) done++; }
+        } catch (e) { console.warn('[SeriePrev batch]', e); }
     }
-    if (status) status.textContent = 'Imágenes de color natural guardadas: ' + done + '/' + pend.length + '.';
+    if (status) status.textContent = 'Imágenes guardadas: ' + done + '/' + pend.length + '.';
 };
 
 // Almacena las 3 URLs de tiles del DEM para alternar sin re-procesar
