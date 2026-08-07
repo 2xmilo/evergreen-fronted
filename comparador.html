@@ -2737,6 +2737,17 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
   const imgYearsB=useMemo(()=>((docB&&docB.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docB,imgPathField]);
   useEffect(()=>{ if(imgYearA!=null&&!imgYearsA.includes(imgYearA)) setImgYearA(null); },[imgYearsA]);
   useEffect(()=>{ if(imgYearB!=null&&!imgYearsB.includes(imgYearB)) setImgYearB(null); },[imgYearsB]);
+  // ¿Hay imágenes en CUALQUIER modo? (para mostrar el control aunque el modo actual esté vacío)
+  const hasAnyImg=useMemo(()=>{
+    const any=d=>((d&&d.periods)||[]).some(p=>p.naturalPath||p.indicePath);
+    return any(docA)||any(docB);
+  },[docA,docB]);
+  // Auto-seleccionar el modo que tenga imágenes (evita quedar atrapado en un modo vacío)
+  useEffect(()=>{
+    const has=f=>(((docA&&docA.periods)||[]).some(p=>p[f]))||(((docB&&docB.periods)||[]).some(p=>p[f]));
+    if(imgMode==='natural'&&!has('naturalPath')&&has('indicePath')) setImgMode('indice');
+    else if(imgMode==='indice'&&!has('indicePath')&&has('naturalPath')) setImgMode('natural');
+  },[docA,docB]);
   useEffect(()=>{
     let cancel=false;
     async function drawSide(side,doc,year){
@@ -2882,7 +2893,7 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
           )}
         </div>
 
-        {(imgYearsA.length>0||imgYearsB.length>0)?(
+        {hasAnyImg?(
           <div className="cz-chiprow cz-imgrow">
             <span className="cz-chiprow-lbl">Imagen</span>
             <button className={'cz-chip'+(imgMode==='natural'?' active':'')} onClick={()=>setImgMode('natural')}>Color natural</button>
