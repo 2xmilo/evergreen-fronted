@@ -886,6 +886,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-serie-lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--w55); }
 .cz-serie-sel { font-family: var(--mono); font-size: 12px; padding: 6px 9px; border-radius: 8px; border: 0.5px solid var(--hairline); background: #fff; color: var(--white); cursor: pointer; width: 100%; }
 .cz-serie-divider { border-top: 0.5px dashed var(--hairline-soft); margin: 3px 0; width: 100%; max-width: 470px; }
+/* Stepper de año en la cabecera de cada mapa (serie histórica) */
+.cz-yearstep { margin-left:auto; display:inline-flex; align-items:center; gap:2px; background:#fff; border:0.5px solid var(--border); border-radius:999px; padding:2px 3px; flex:none; }
+.cz-yearstep-btn { width:22px; height:22px; border:none; background:none; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--w70); font-size:11px; }
+.cz-yearstep-btn:hover:not(:disabled) { background:var(--bg); color:var(--white); }
+.cz-yearstep-btn:disabled { opacity:.3; cursor:default; }
+.cz-yearstep-val { font-family:var(--mono); font-size:12px; font-weight:500; color:var(--white); min-width:32px; text-align:center; }
 
 /* Tarjetas de tendencia por zona (lista agrupada tipo Ajustes de iOS) */
 .cz-series-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -2692,7 +2698,7 @@ function YearPick({side,years,value,onChange}){
   );
 }
 
-function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
+function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,serieKey,setSerieKey}){
   const seriesA=useMemo(()=>{
     const o={},s=(dataA&&dataA._series)||{};
     Object.keys(s).forEach(k=>{if(parseSerieKey(k).tipo===tipo)o[k]=s[k];});
@@ -2716,14 +2722,10 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
     });
   },[seriesA,seriesB]);
 
-  const[selKey,setSelKey]=useState(null);
+  const selKey=serieKey, setSelKey=setSerieKey;   // serie compartida (subida a la App)
   const[view,setView]=useState(null);
   const[escala,setEscala]=useState('compartida');
   const chipRef=useRef(null),segRef=useRef(null);
-  // Visor de serie histórica: índice año a año en el mapa
-  const[imgYearA,setImgYearA]=useState(null);
-  const[imgYearB,setImgYearB]=useState(null);
-  const imgOverlaysRef=useRef({a:null,b:null});
 
   useEffect(()=>{
     const ks=combos.map(c=>c.key);
@@ -2733,40 +2735,6 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
 
   const info=selKey?parseSerieKey(selKey):null;
   const docA=selKey?seriesA[selKey]:null, docB=selKey?seriesB[selKey]:null;
-
-  // ── Visor de imágenes año a año ──
-  const imgPathField='indicePath', imgBoundsField='indiceBounds';
-  const imgYearsA=useMemo(()=>((docA&&docA.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docA]);
-  const imgYearsB=useMemo(()=>((docB&&docB.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docB]);
-  useEffect(()=>{ if(imgYearA!=null&&!imgYearsA.includes(imgYearA)) setImgYearA(null); },[imgYearsA]);
-  useEffect(()=>{ if(imgYearB!=null&&!imgYearsB.includes(imgYearB)) setImgYearB(null); },[imgYearsB]);
-  const hasAnyImg=useMemo(()=>{
-    const any=d=>((d&&d.periods)||[]).some(p=>p.indicePath);
-    return any(docA)||any(docB);
-  },[docA,docB]);
-  useEffect(()=>{
-    let cancel=false;
-    async function drawSide(side,doc,year){
-      const map=syncGate&&syncGate.getMap&&syncGate.getMap(side);
-      const ov=imgOverlaysRef.current;
-      if(ov[side]){ try{ map&&map.removeLayer(ov[side]); }catch(e){} ov[side]=null; }
-      if(!map||!doc||year==null) return;
-      const p=(doc.periods||[]).find(x=>x.year===year);
-      if(!p||!p[imgPathField]||!p[imgBoundsField]) return;
-      const res=await supabase.storage.from('result-previews').createSignedUrl(p[imgPathField],3600);
-      if(cancel||!res.data||!res.data.signedUrl) return;
-      const layer=L.imageOverlay(res.data.signedUrl,p[imgBoundsField],{opacity:1,interactive:false,zIndex:450});
-      layer.addTo(map); imgOverlaysRef.current[side]=layer;
-      try{ map.fitBounds(p[imgBoundsField],{padding:[16,16],animate:false}); }catch(e){}
-    }
-    drawSide('a',docA,imgYearA);
-    drawSide('b',docB,imgYearB);
-    return()=>{cancel=true;};
-  },[imgYearA,imgYearB,selKey,docA,docB]);
-  useEffect(()=>()=>{
-    const ov=imgOverlaysRef.current;
-    ['a','b'].forEach(s=>{ const m=syncGate&&syncGate.getMap&&syncGate.getMap(s); if(ov[s]&&m){try{m.removeLayer(ov[s]);}catch(e){}} imgOverlaysRef.current[s]=null; });
-  },[]);
 
   // Estaciones disponibles, en orden natural del año
   const ORDEN=['DJF','MAM','JJA','SON'];
@@ -2874,20 +2842,6 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
             <i className={'fa-solid '+(escala==='compartida'?'fa-link':'fa-link-slash')} style={{fontSize:10}}/>
             {escala==='compartida'?'Misma escala':'Escala propia'}
           </button>
-        )}
-
-        <div className="cz-serie-divider"/>
-
-        {hasAnyImg?(
-          <div className="cz-serie-grid">
-            <label className="cz-serie-lbl">Ver año</label>
-            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-              <YearPick side="a" years={imgYearsA} value={imgYearA} onChange={setImgYearA}/>
-              <YearPick side="b" years={imgYearsB} value={imgYearB} onChange={setImgYearB}/>
-            </div>
-          </div>
-        ):(
-          <div className="cz-series-note" style={{marginTop:2}}><i className="fa-solid fa-circle-info"/><span>Para ver el índice año a año en el mapa, genera la serie en el workspace y pulsa «Guardar todos los años».</span></div>
         )}
       </div>
 
@@ -3143,7 +3097,7 @@ function DnbrCompare({zoneA,zoneB,dataA,dataB}){
   );
 }
 
-function MapTile({side,zone,mod,zoneData,syncGate,baseMapId}){
+function MapTile({side,zone,mod,zoneData,syncGate,baseMapId,serieKey,year,setYear}){
   const elRef=useRef(null);
   const mapRef=useRef(null);
   const handlesRef=useRef({});
@@ -3183,6 +3137,37 @@ function MapTile({side,zone,mod,zoneData,syncGate,baseMapId}){
     })();
   },[zone?.id,mod?.id,zoneData]);
 
+  // ── Serie histórica: año a año del índice en este mapa ──
+  const serieDoc=(mod&&(mod.id==='vegetacion'||mod.id==='agua')&&zoneData&&zoneData._series&&serieKey)
+    ? zoneData._series[serieKey] : null;
+  const availYears=useMemo(()=> serieDoc
+    ? (serieDoc.periods||[]).filter(p=>p.indicePath).map(p=>p.year).sort((a,b)=>a-b)
+    : [], [serieDoc]);
+  // Al aparecer imágenes, arranca en el año más reciente; si no hay, limpia.
+  useEffect(()=>{
+    if(availYears.length){ if(year==null||!availYears.includes(year)) setYear(availYears[availYears.length-1]); }
+    else if(year!=null) setYear(null);
+  },[availYears]);
+  // Dibuja el PNG del índice del año elegido (encima del ráster del módulo).
+  useEffect(()=>{
+    if(!mapRef.current||!built.current) return;
+    let cancel=false;
+    const h=handlesRef.current;
+    if(h.yearOverlay){ try{mapRef.current.removeLayer(h.yearOverlay);}catch(e){} h.yearOverlay=null; }
+    if(!serieDoc||year==null){ return; }
+    const p=(serieDoc.periods||[]).find(x=>x.year===year);
+    if(!p||!p.indicePath||!p.indiceBounds) return;
+    (async()=>{
+      const res=await supabase.storage.from('result-previews').createSignedUrl(p.indicePath,3600);
+      if(cancel||!res.data||!res.data.signedUrl||!mapRef.current) return;
+      const layer=L.imageOverlay(res.data.signedUrl,p.indiceBounds,{opacity:1,interactive:false,zIndex:450});
+      layer.addTo(mapRef.current); handlesRef.current.yearOverlay=layer;
+      try{ mapRef.current.fitBounds(p.indiceBounds,{padding:[16,16],animate:false}); }catch(e){}
+    })();
+    return()=>{cancel=true;};
+  },[year,serieKey,serieDoc,zone?.id]);
+  const _yi=availYears.indexOf(year);
+
   const hasMap=mod&&mod.type==='map';
   const hasData=zoneData&&mod&&zoneData[mod.id];
 
@@ -3191,7 +3176,15 @@ function MapTile({side,zone,mod,zoneData,syncGate,baseMapId}){
       <header className={'cz-tile-head cz-tile-head--'+side}>
         <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
         <span className="cz-tile-name">{zone?zone.name:'Sin zona seleccionada'}</span>
-        {zone&&<span className="cz-tile-meta">{zone.area.toLocaleString('es-CL')} ha · {zone.date}</span>}
+        {zone&&hasMap&&availYears.length>0 ? (
+          <span className="cz-yearstep" title="Año de la serie histórica">
+            <button className="cz-yearstep-btn" aria-label="Año anterior" disabled={_yi<=0}
+                    onClick={()=>{if(_yi>0) setYear(availYears[_yi-1]);}}><i className="fa-solid fa-chevron-left"/></button>
+            <span className="cz-yearstep-val">{year||'—'}</span>
+            <button className="cz-yearstep-btn" aria-label="Año siguiente" disabled={_yi>=availYears.length-1}
+                    onClick={()=>{if(_yi<availYears.length-1) setYear(availYears[_yi+1]);}}><i className="fa-solid fa-chevron-right"/></button>
+          </span>
+        ) : (zone&&<span className="cz-tile-meta">{zone.area.toLocaleString('es-CL')} ha · {zone.date}</span>)}
       </header>
       <div className="cz-tile-body">
         {!zone&&(
@@ -3221,6 +3214,10 @@ function App({session,plan,zones}){
   const[dataCache,setDataCache]=useState({});
   const[baseMapId,setBaseMapId]=useState('satelite');
   const syncMapsRef=useRef({a:null,b:null,unlink:null});
+  // Serie histórica: serie elegida (índice+estación) compartida + año por panel
+  const[serieKey,setSerieKey]=useState(null);
+  const[yearA,setYearA]=useState(null);
+  const[yearB,setYearB]=useState(null);
 
   const zoneA=useMemo(()=>zones.find(z=>z.id===zoneAId)||null,[zoneAId,zones]);
   const zoneB=useMemo(()=>zones.find(z=>z.id===zoneBId)||null,[zoneBId,zones]);
@@ -3382,8 +3379,8 @@ function App({session,plan,zones}){
           <div className="cz-stage">
             {isMapMode&&(
               <div className="cz-tiles">
-                <MapTile side="a" zone={zoneA} mod={mod} zoneData={dataA} syncGate={syncGate} baseMapId={baseMapId}/>
-                <MapTile side="b" zone={zoneB} mod={mod} zoneData={dataB} syncGate={syncGate} baseMapId={baseMapId}/>
+                <MapTile side="a" zone={zoneA} mod={mod} zoneData={dataA} syncGate={syncGate} baseMapId={baseMapId} serieKey={serieKey} year={yearA} setYear={setYearA}/>
+                <MapTile side="b" zone={zoneB} mod={mod} zoneData={dataB} syncGate={syncGate} baseMapId={baseMapId} serieKey={serieKey} year={yearB} setYear={setYearB}/>
               </div>
             )}
 
@@ -3405,7 +3402,7 @@ function App({session,plan,zones}){
                       {mod.id==='dnbr'&&<DnbrCompare zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>}
                       {/* La serie estacional vive dentro de su módulo temático */}
                       {(mod.id==='vegetacion'||mod.id==='agua')&&(
-                        <SeriesSection tipo={mod.id} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} syncGate={syncGate}/>
+                        <SeriesSection tipo={mod.id} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} serieKey={serieKey} setSerieKey={setSerieKey}/>
                       )}
                     </>
                   )
