@@ -2715,8 +2715,7 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
   const[view,setView]=useState(null);
   const[escala,setEscala]=useState('compartida');
   const chipRef=useRef(null),segRef=useRef(null);
-  // Visor de imágenes año a año (color natural / índice)
-  const[imgMode,setImgMode]=useState('natural');
+  // Visor de serie histórica: índice año a año en el mapa
   const[imgYearA,setImgYearA]=useState(null);
   const[imgYearB,setImgYearB]=useState(null);
   const imgOverlaysRef=useRef({a:null,b:null});
@@ -2731,22 +2730,14 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
   const docA=selKey?seriesA[selKey]:null, docB=selKey?seriesB[selKey]:null;
 
   // ── Visor de imágenes año a año ──
-  const imgPathField=imgMode==='natural'?'naturalPath':'indicePath';
-  const imgBoundsField=imgMode==='natural'?'naturalBounds':'indiceBounds';
-  const imgYearsA=useMemo(()=>((docA&&docA.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docA,imgPathField]);
-  const imgYearsB=useMemo(()=>((docB&&docB.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docB,imgPathField]);
+  const imgPathField='indicePath', imgBoundsField='indiceBounds';
+  const imgYearsA=useMemo(()=>((docA&&docA.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docA]);
+  const imgYearsB=useMemo(()=>((docB&&docB.periods)||[]).filter(p=>p[imgPathField]).map(p=>p.year),[docB]);
   useEffect(()=>{ if(imgYearA!=null&&!imgYearsA.includes(imgYearA)) setImgYearA(null); },[imgYearsA]);
   useEffect(()=>{ if(imgYearB!=null&&!imgYearsB.includes(imgYearB)) setImgYearB(null); },[imgYearsB]);
-  // ¿Hay imágenes en CUALQUIER modo? (para mostrar el control aunque el modo actual esté vacío)
   const hasAnyImg=useMemo(()=>{
-    const any=d=>((d&&d.periods)||[]).some(p=>p.naturalPath||p.indicePath);
+    const any=d=>((d&&d.periods)||[]).some(p=>p.indicePath);
     return any(docA)||any(docB);
-  },[docA,docB]);
-  // Auto-seleccionar el modo que tenga imágenes (evita quedar atrapado en un modo vacío)
-  useEffect(()=>{
-    const has=f=>(((docA&&docA.periods)||[]).some(p=>p[f]))||(((docB&&docB.periods)||[]).some(p=>p[f]));
-    if(imgMode==='natural'&&!has('naturalPath')&&has('indicePath')) setImgMode('indice');
-    else if(imgMode==='indice'&&!has('indicePath')&&has('naturalPath')) setImgMode('natural');
   },[docA,docB]);
   useEffect(()=>{
     let cancel=false;
@@ -2766,7 +2757,7 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
     drawSide('a',docA,imgYearA);
     drawSide('b',docB,imgYearB);
     return()=>{cancel=true;};
-  },[imgYearA,imgYearB,imgMode,selKey,docA,docB]);
+  },[imgYearA,imgYearB,selKey,docA,docB]);
   useEffect(()=>()=>{
     const ov=imgOverlaysRef.current;
     ['a','b'].forEach(s=>{ const m=syncGate&&syncGate.getMap&&syncGate.getMap(s); if(ov[s]&&m){try{m.removeLayer(ov[s]);}catch(e){}} imgOverlaysRef.current[s]=null; });
@@ -2895,14 +2886,12 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
 
         {hasAnyImg?(
           <div className="cz-chiprow cz-imgrow">
-            <span className="cz-chiprow-lbl">Imagen</span>
-            <button className={'cz-chip'+(imgMode==='natural'?' active':'')} onClick={()=>setImgMode('natural')}>Color natural</button>
-            <button className={'cz-chip'+(imgMode==='indice'?' active':'')} onClick={()=>setImgMode('indice')}>Índice</button>
+            <span className="cz-chiprow-lbl">Ver año en mapa</span>
             <YearPick side="a" years={imgYearsA} value={imgYearA} onChange={setImgYearA}/>
             <YearPick side="b" years={imgYearsB} value={imgYearB} onChange={setImgYearB}/>
           </div>
         ):(
-          <div className="cz-series-note" style={{marginTop:2}}><i className="fa-solid fa-circle-info"/><span>Para ver la imagen real año a año, genera la serie en el workspace y pulsa «Guardar todos los años».</span></div>
+          <div className="cz-series-note" style={{marginTop:2}}><i className="fa-solid fa-circle-info"/><span>Para ver el índice año a año en el mapa, genera la serie en el workspace y pulsa «Guardar todos los años».</span></div>
         )}
       </div>
 

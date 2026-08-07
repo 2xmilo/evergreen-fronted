@@ -1296,8 +1296,7 @@ async function _cacheSeriePreviews(tipo, data) {
             changed = true;
         }
 
-        await _up(data.natural,    'natural', 'naturalPath', 'naturalBounds');
-        await _up(data.indice_img, 'indice',  'indicePath',  'indiceBounds');
+        await _up(data.indice_img, 'indice', 'indicePath', 'indiceBounds');
 
         if (changed) {
             if (typeof saveWorkspaceState === 'function') saveWorkspaceState();
@@ -1320,7 +1319,7 @@ window.guardarSerieTodosLosAnios = async function(tipo) {
     if (!doc || !doc.periods || !WorkspaceState.zonaGEE) return;
     var ids = _serieMapDomIds(tipo);
     var status = document.getElementById(ids.status);
-    var pend = doc.periods.filter(function(p) { return p.n_images > 0 && (!p.naturalPath || !p.indicePath); });
+    var pend = doc.periods.filter(function(p) { return p.n_images > 0 && !p.indicePath; });
     if (!pend.length) {
         if (status) { status.textContent = 'Todas las imágenes ya están guardadas.'; status.style.display = 'block'; }
         return;
