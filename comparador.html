@@ -881,6 +881,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-imgrow { border-top: 0.5px dashed var(--hairline-soft); padding-top: 8px; margin-top: 2px; }
 .cz-imgyear { display: inline-flex; align-items: center; gap: 5px; }
 .cz-imgyear select { font-family: var(--mono); font-size: 11px; padding: 4px 8px; border-radius: 8px; border: 0.5px solid var(--hairline); background: #fff; color: var(--white); cursor: pointer; }
+/* Panel ordenado de serie estacional (índice / estación / vista como listas) */
+.cz-serie-grid { display: grid; grid-template-columns: 88px minmax(0,1fr); gap: 9px 12px; align-items: center; width: 100%; max-width: 470px; }
+.cz-serie-lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--w55); }
+.cz-serie-sel { font-family: var(--mono); font-size: 12px; padding: 6px 9px; border-radius: 8px; border: 0.5px solid var(--hairline); background: #fff; color: var(--white); cursor: pointer; width: 100%; }
+.cz-serie-divider { border-top: 0.5px dashed var(--hairline-soft); margin: 3px 0; width: 100%; max-width: 470px; }
 
 /* Tarjetas de tendencia por zona (lista agrupada tipo Ajustes de iOS) */
 .cz-series-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -2812,6 +2817,21 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
       {id:'clases',label:(docA||docB)?.class_family==='humedad'?'Humedad':(docA||docB)?.class_family==='quemado'?'Cobertura':'Vigor'},
       {id:'anomalias',label:'Anomalías'}];
 
+  // Opciones para los dropdowns del panel, con disponibilidad A/B agregada
+  const indicesInfo=useMemo(()=>{
+    const m={};
+    combos.forEach(c=>{ if(!m[c.indice]) m[c.indice]={indice:c.indice,enA:false,enB:false}; m[c.indice].enA=m[c.indice].enA||c.enA; m[c.indice].enB=m[c.indice].enB||c.enB; });
+    return Object.values(m);
+  },[combos]);
+  const estacionesInfo=useMemo(()=>{
+    const m={};
+    combos.forEach(c=>{ if(!m[c.estacion]) m[c.estacion]={estacion:c.estacion,enA:false,enB:false}; m[c.estacion].enA=m[c.estacion].enA||c.enA; m[c.estacion].enB=m[c.estacion].enB||c.enB; });
+    return ORDEN.filter(o=>m[o]).map(o=>m[o]);
+  },[combos]);
+  const _avail=o=>o.enA&&o.enB?'  ·  A·B':o.enA?'  ·  solo A':o.enB?'  ·  solo B':'';
+  const _pickIndice=ind=>{ const c=combos.find(x=>x.indice===ind&&x.estacion===estacionSel)||combos.find(x=>x.indice===ind); if(c) setSelKey(c.key); };
+  const _pickEstacion=es=>{ const c=(info&&combos.find(x=>x.estacion===es&&x.indice===info.indice))||combos.find(x=>x.estacion===es); if(c) setSelKey(c.key); };
+
   if(!combos.length) return null;   // sin series: la sección no aparece
 
   const avisos=[];
@@ -2829,66 +2849,42 @@ function SeriesSection({tipo,zoneA,zoneB,dataA,dataB,syncGate}){
       <div className="cz-series-bar" style={{alignItems:'flex-start',flexDirection:'column',gap:10}}>
         <span className="cz-detail-eyebrow"><i className="fa-solid fa-chart-line"/>Serie estacional</span>
 
-        {/* Selección: primero QUÉ (índice), luego CUÁNDO (estación), al final CÓMO (vista) */}
-        {indices.length>1&&(
-          <div className="cz-chiprow">
-            <span className="cz-chiprow-lbl">Índice</span>
-            {indices.map(c=>(
-              <button key={c.key} className={'cz-chip'+(c.key===selKey?' active':'')}
-                      onClick={()=>setSelKey(c.key)}>
-                {c.indice}
-                <span className="cz-chip-dots">
-                  <span className={'cz-chip-dot cz-chip-dot--a'+(c.enA?' on--a':'')}/>
-                  <span className={'cz-chip-dot cz-chip-dot--b'+(c.enB?' on--b':'')}/>
-                </span>
-              </button>
-            ))}
-          </div>
+        {/* Panel ordenado: Índice · Estación · Vista como listas alineadas */}
+        <div className="cz-serie-grid">
+          <label className="cz-serie-lbl">Índice</label>
+          <select className="cz-serie-sel" value={info?info.indice:''} onChange={e=>_pickIndice(e.target.value)}>
+            {indicesInfo.map(o=><option key={o.indice} value={o.indice}>{o.indice+_avail(o)}</option>)}
+          </select>
+
+          <label className="cz-serie-lbl">Estación</label>
+          <select className="cz-serie-sel" value={estacionSel||''} onChange={e=>_pickEstacion(e.target.value)}>
+            {estacionesInfo.map(o=><option key={o.estacion} value={o.estacion}>{(SERIE_ESTACION[o.estacion]||o.estacion)+' · '+(SERIE_MESES[o.estacion]||'')+_avail(o)}</option>)}
+          </select>
+
+          <label className="cz-serie-lbl">Vista</label>
+          <select className="cz-serie-sel" value={activeView} onChange={e=>setView(e.target.value)}>
+            {viewOptions.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}
+          </select>
+        </div>
+
+        {(activeView==='superficie'||activeView==='clases')&&(
+          <button className="cz-chip" style={{alignSelf:'flex-start'}}
+                  onClick={()=>setEscala(e=>e==='compartida'?'propia':'compartida')}
+                  title="Con escala compartida ambos paneles usan el mismo eje y son comparables a simple vista; con escala propia cada zona se ajusta a su magnitud.">
+            <i className={'fa-solid '+(escala==='compartida'?'fa-link':'fa-link-slash')} style={{fontSize:10}}/>
+            {escala==='compartida'?'Misma escala':'Escala propia'}
+          </button>
         )}
 
-        <div className="cz-chiprow">
-          <span className="cz-chiprow-lbl">Estación</span>
-          {estaciones.map(es=>{
-            const enEsta=combos.filter(c=>c.estacion===es);
-            const activo=es===estacionSel;
-            return(
-              <button key={es} className={'cz-chip'+(activo?' active':'')}
-                      onClick={()=>{const c=enEsta[0]; if(c) setSelKey(c.key);}}>
-                {SERIE_ESTACION[es]||es}
-                <span className="cz-chip-sub">{SERIE_MESES[es]||''}</span>
-                <span className="cz-chip-dots">
-                  <span className={'cz-chip-dot cz-chip-dot--a'+(enEsta.some(c=>c.enA)?' on--a':'')}/>
-                  <span className={'cz-chip-dot cz-chip-dot--b'+(enEsta.some(c=>c.enB)?' on--b':'')}/>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="cz-chiprow">
-          <span className="cz-chiprow-lbl">Vista</span>
-          <div className="cz-seg" ref={segRef}>
-            <span className="cz-seg-chip" ref={chipRef}/>
-            {viewOptions.map(o=>(
-              <button key={o.id} className={'cz-seg-btn'+(activeView===o.id?' active':'')}
-                      onClick={()=>setView(o.id)}>{o.label}</button>
-            ))}
-          </div>
-          {(activeView==='superficie'||activeView==='clases')&&(
-            <button className="cz-chip" style={{marginLeft:'auto'}}
-                    onClick={()=>setEscala(e=>e==='compartida'?'propia':'compartida')}
-                    title="Con escala compartida ambos paneles usan el mismo eje y son comparables a simple vista; con escala propia cada zona se ajusta a su magnitud.">
-              <i className={'fa-solid '+(escala==='compartida'?'fa-link':'fa-link-slash')} style={{fontSize:10}}/>
-              {escala==='compartida'?'Misma escala':'Escala propia'}
-            </button>
-          )}
-        </div>
+        <div className="cz-serie-divider"/>
 
         {hasAnyImg?(
-          <div className="cz-chiprow cz-imgrow">
-            <span className="cz-chiprow-lbl">Ver año en mapa</span>
-            <YearPick side="a" years={imgYearsA} value={imgYearA} onChange={setImgYearA}/>
-            <YearPick side="b" years={imgYearsB} value={imgYearB} onChange={setImgYearB}/>
+          <div className="cz-serie-grid">
+            <label className="cz-serie-lbl">Ver año</label>
+            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+              <YearPick side="a" years={imgYearsA} value={imgYearA} onChange={setImgYearA}/>
+              <YearPick side="b" years={imgYearsB} value={imgYearB} onChange={setImgYearB}/>
+            </div>
           </div>
         ):(
           <div className="cz-series-note" style={{marginTop:2}}><i className="fa-solid fa-circle-info"/><span>Para ver el índice año a año en el mapa, genera la serie en el workspace y pulsa «Guardar todos los años».</span></div>
