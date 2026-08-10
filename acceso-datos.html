@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="css/acceso-datos.css">
     <link rel="stylesheet" href="css/workspace.css?v=44">
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -371,6 +373,13 @@
                     <button class="draw-btn" id="btn-draw-polygon" onclick="startDrawingZone()">
                         <i class="fas fa-pen-alt"></i> Dibujar zona
                     </button>
+                    <button class="draw-btn" id="btn-import-kml"
+                            onclick="document.getElementById('kml-file-input').click()"
+                            title="Cargar un archivo KML o KMZ como zona de estudio (máx 50.000 ha)">
+                        <i class="fas fa-file-upload"></i> Importar KML/KMZ
+                    </button>
+                    <input type="file" id="kml-file-input" accept=".kml,.kmz" style="display:none"
+                           onchange="importZonaKmlKmz(this.files[0]); this.value='';">
                     <button class="draw-btn" onclick="usarCuencaEnWorkspace()">
                         <i class="fas fa-water"></i> Usar cuenca
                     </button>
@@ -2025,6 +2034,7 @@
 <script src="js/workspace-resize.js?v=1"></script>
 <script src="js/workspace-layers-ui.js?v=3"></script>
 <script src="js/workspace-tour.js?v=3"></script>
+<script src="js/workspace-import.js?v=1"></script>
 
 <!-- CONTACTO -->
 <script>
