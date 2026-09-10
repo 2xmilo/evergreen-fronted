@@ -909,6 +909,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cz-yearstep-btn:hover:not(:disabled) { background:var(--bg); color:var(--white); }
 .cz-yearstep-btn:disabled { opacity:.3; cursor:default; }
 .cz-yearstep-val { font-family:var(--mono); font-size:12px; font-weight:500; color:var(--white); min-width:32px; text-align:center; }
+/* Modo períodos: barra de índice compartido + selector de estación en la cabecera del mapa */
+.cz-periodos-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; padding:9px 12px; background:var(--card); border:0.5px solid var(--hairline-soft); border-radius:var(--r-sm); }
+.cz-tile-season { margin-left:auto; margin-right:6px; width:auto !important; min-width:98px; padding:3px 8px !important; font-size:11px !important; }
 
 /* Tarjetas de tendencia por zona (lista agrupada tipo Ajustes de iOS) */
 .cz-series-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -1129,8 +1132,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   }
   const BASE_MAPS = {
     satelite: {label:'Satélite', icon:'fa-satellite', url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution:'Tiles © Esri'},
-    claro:    {label:'Claro analítico', icon:'fa-sun', url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attribution:'© OpenStreetMap contributors © CARTO', subdomains:'abcd'},
-    oscuro:   {label:'Oscuro analítico', icon:'fa-moon', url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution:'© OpenStreetMap contributors © CARTO', subdomains:'abcd'}
+    claro:    {label:'Claro analítico', icon:'fa-sun', url:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', attribution:'Tiles © Esri', maxNativeZoom:16},
+    oscuro:   {label:'Oscuro analítico', icon:'fa-moon', url:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', attribution:'Tiles © Esri', maxNativeZoom:16}
   };
   function setBaseMap(map,baseId){
     if(!map||!map._czBaseLayers) return;
@@ -1193,7 +1196,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     Object.keys(BASE_MAPS).forEach(function(id){
       if(id==='satelite') return;
       var cfg=BASE_MAPS[id];
-      map._czBaseLayers[id]=L.tileLayer(cfg.url,{attribution:cfg.attribution,subdomains:cfg.subdomains,maxZoom:18});
+      // Solo incluir subdomains/maxNativeZoom si están definidos: pasar
+      // `subdomains:undefined` rompe Leaflet (hace subdomains.length en un
+      // tile URL sin {s}, como los de ESRI Canvas).
+      var _lopts={attribution:cfg.attribution,maxZoom:18};
+      if(cfg.subdomains) _lopts.subdomains=cfg.subdomains;
+      if(cfg.maxNativeZoom) _lopts.maxNativeZoom=cfg.maxNativeZoom;
+      map._czBaseLayers[id]=L.tileLayer(cfg.url,_lopts);
     });
     map._czLabels=initialLabels;
     map._czBaseId='satelite';
@@ -3114,7 +3123,7 @@ function DnbrCompare({zoneA,zoneB,dataA,dataB}){
   );
 }
 
-function MapTile({side,zone,mod,zoneData,syncGate,baseMapId,serieKey,year,setYear,titleOverride}){
+function MapTile({side,zone,mod,zoneData,syncGate,baseMapId,serieKey,year,setYear,titleOverride,seasonSel}){
   const elRef=useRef(null);
   const mapRef=useRef(null);
   const handlesRef=useRef({});
@@ -3193,6 +3202,14 @@ function MapTile({side,zone,mod,zoneData,syncGate,baseMapId,serieKey,year,setYea
       <header className={'cz-tile-head cz-tile-head--'+side}>
         <span className={'cz-zchip cz-zchip--'+side}>{side.toUpperCase()}</span>
         <span className="cz-tile-name">{titleOverride||(zone?zone.name:'Sin zona seleccionada')}</span>
+        {seasonSel && (
+          <select className="cz-tile-season cz-serie-sel" value={seasonSel.value||''}
+                  onChange={e=>seasonSel.onChange(e.target.value)} title="Estación">
+            {seasonSel.options.length
+              ? seasonSel.options.map(s=><option key={s} value={s}>{SERIE_ESTACION[s]||s}</option>)
+              : <option value="">—</option>}
+          </select>
+        )}
         {zone&&hasMap&&availYears.length>0 ? (
           <span className="cz-yearstep" title="Año de la serie histórica">
             <button className="cz-yearstep-btn" aria-label="Año anterior" disabled={_yi<=0}
@@ -3245,6 +3262,65 @@ function App({session,plan,zones}){
   const mod=useMemo(()=>CZ.MODULES.find(m=>m.id===modId),[modId]);
   const dataA=zoneAId?dataCache[zoneAId]?.data||null:null;
   const dataB=zoneBIdEff?dataCache[zoneBIdEff]?.data||null:null;
+
+  // ── Modo períodos: catálogo de series estacionales (solo veg/agua) ──
+  // Las series viven en dataA._series con clave `<mod>_serie_<INDICE>_<ESTACION>`.
+  // Períodos comparte el ÍNDICE y cada lado elige ESTACIÓN + AÑO (su propia imagen).
+  const[pIndice,setPIndice]=useState(null);
+  const[seasonA,setSeasonA]=useState(null);
+  const[seasonB,setSeasonB]=useState(null);
+  const serieCat=useMemo(()=>{
+    const s=(dataA&&dataA._series)||{}, pref=modId+'_serie_', by={};
+    Object.keys(s).forEach(k=>{
+      if(k.indexOf(pref)!==0) return;
+      // Solo series que tengan imágenes por año (indicePath); si solo tienen
+      // stats, no hay nada que mostrar lado a lado en el modo períodos.
+      const hasImg=((s[k]&&s[k].periods)||[]).some(p=>p&&p.indicePath);
+      if(!hasImg) return;
+      const parts=k.slice(pref.length).split('_'), est=parts.pop(), idx=parts.join('_');
+      (by[idx]=by[idx]||new Set()).add(est);
+    });
+    return by;
+  },[dataA,modId]);
+  // Índices disponibles, ordenados por nº de imágenes (el más rico primero,
+  // así abre en un índice con años para comparar, no en uno con 1 sola imagen).
+  const pIndices=useMemo(()=>{
+    const s=(dataA&&dataA._series)||{}, pref=modId+'_serie_', score={};
+    Object.keys(serieCat).forEach(idx=>{
+      let n=0;
+      serieCat[idx].forEach(est=>{ n+=(((s[pref+idx+'_'+est]||{}).periods)||[]).filter(p=>p&&p.indicePath).length; });
+      score[idx]=n;
+    });
+    return Object.keys(serieCat).sort((a,b)=>score[b]-score[a]);
+  },[serieCat,dataA,modId]);
+  const seasonsAvail=useMemo(()=>pIndice&&serieCat[pIndice]?[...serieCat[pIndice]]:[],[serieCat,pIndice]);
+  const serieKeyA=(compareMode==='periodos'&&pIndice&&seasonA)?(modId+'_serie_'+pIndice+'_'+seasonA):null;
+  const serieKeyB=(compareMode==='periodos'&&pIndice&&seasonB)?(modId+'_serie_'+pIndice+'_'+seasonB):null;
+  const _yearsOf=(sk)=>{ const d=sk&&dataA&&dataA._series?dataA._series[sk]:null; return d?(d.periods||[]).filter(p=>p&&p.indicePath).map(p=>p.year).sort((a,b)=>a-b):[]; };
+  // Defaults al entrar a períodos / cambiar de módulo o zona. seasonB parte en
+  // otra estación (si hay) para que abra mostrando una comparación real, no la misma.
+  useEffect(()=>{
+    if(compareMode!=='periodos') return;
+    if(!pIndice||!pIndices.includes(pIndice)) setPIndice(pIndices[0]||null);
+  },[pIndices,compareMode]);
+  useEffect(()=>{
+    if(compareMode!=='periodos'||!pIndice) return;
+    const seas=serieCat[pIndice]?[...serieCat[pIndice]]:[];
+    if(!seas.includes(seasonA)) setSeasonA(seas[0]||null);
+    if(!seas.includes(seasonB)) setSeasonB(seas.length>1?seas[1]:(seas[0]||null));
+  },[pIndice,serieCat,compareMode]);
+  // Defaults de año: A = más reciente, B = penúltimo → abre mostrando una comparación real.
+  useEffect(()=>{
+    if(compareMode!=='periodos') return;
+    const ys=_yearsOf(serieKeyA);
+    if(ys.length) setYearA(ys[ys.length-1]);
+  },[serieKeyA,dataA,compareMode]);
+  useEffect(()=>{
+    if(compareMode!=='periodos') return;
+    const ys=_yearsOf(serieKeyB);
+    if(ys.length>=2) setYearB(ys[ys.length-2]);
+    else if(ys.length) setYearB(ys[ys.length-1]);
+  },[serieKeyB,dataA,compareMode]);
 
   // load zone results from Supabase
   const loadZoneData=useCallback(async(wsId)=>{
@@ -3399,13 +3475,13 @@ function App({session,plan,zones}){
             <div className="cz-side-group">
               <div className="cz-side-label">Zona de estudio</div>
               <ZoneSelect side="a" zone={zoneA} otherId={null} onPick={setZoneAId} zones={zones}/>
-              <div className="cz-mode-hint">Compara dos períodos de <strong>la misma zona</strong>. Elige la serie abajo y usa el año en cada mapa.</div>
+              <div className="cz-mode-hint">Compara dos imágenes de <strong>la misma zona</strong>: elige el índice, y en cada mapa la <strong>estación y el año</strong>.</div>
             </div>
           )}
           <div className="cz-side-divider"/>
           <nav className="cz-modrail">
             <div className="cz-side-label">Módulo de análisis</div>
-            {CZ.MODULES.map(m=>(
+            {CZ.MODULES.filter(m=>compareMode==='zonas'||m.id==='vegetacion'||m.id==='agua').map(m=>(
               <button key={m.id} className={'cz-modtab'+(m.id===modId?' active':'')} onClick={()=>setModId(m.id)}>
                 <span className="cz-modtab-radio"/>
                 <i className={'fa-solid '+m.icon}/>
@@ -3424,10 +3500,30 @@ function App({session,plan,zones}){
 
           {/* Stage */}
           <div className="cz-stage">
+            {compareMode==='periodos' && isMapMode && (
+              <div className="cz-periodos-bar">
+                <span className="cz-serie-lbl">Índice</span>
+                <select className="cz-serie-sel" style={{width:'auto',minWidth:'120px'}} value={pIndice||''}
+                        onChange={e=>setPIndice(e.target.value)} disabled={!pIndices.length}>
+                  {pIndices.length?pIndices.map(i=><option key={i} value={i}>{i}</option>):<option value="">—</option>}
+                </select>
+                <span className="cz-mode-hint" style={{marginTop:0,flex:1}}>
+                  {pIndices.length
+                    ? 'En cada mapa elige la estación y el año para comparar las imágenes.'
+                    : 'Esta zona no tiene serie estacional calculada. Genera la serie en el Monitor para poder comparar por períodos.'}
+                </span>
+              </div>
+            )}
             {isMapMode&&(
               <div className="cz-tiles">
-                <MapTile side="a" zone={zoneA} mod={mod} zoneData={dataA} syncGate={syncGate} baseMapId={baseMapId} serieKey={serieKey} year={yearA} setYear={setYearA} titleOverride={compareMode==='periodos'?'Período A':null}/>
-                <MapTile side="b" zone={zoneB} mod={mod} zoneData={dataB} syncGate={syncGate} baseMapId={baseMapId} serieKey={serieKey} year={yearB} setYear={setYearB} titleOverride={compareMode==='periodos'?'Período B':null}/>
+                <MapTile side="a" zone={zoneA} mod={mod} zoneData={dataA} syncGate={syncGate} baseMapId={baseMapId}
+                  serieKey={compareMode==='periodos'?serieKeyA:serieKey} year={yearA} setYear={setYearA}
+                  titleOverride={compareMode==='periodos'?'Período A':null}
+                  seasonSel={compareMode==='periodos'&&pIndices.length?{value:seasonA,onChange:setSeasonA,options:seasonsAvail}:null}/>
+                <MapTile side="b" zone={zoneB} mod={mod} zoneData={dataB} syncGate={syncGate} baseMapId={baseMapId}
+                  serieKey={compareMode==='periodos'?serieKeyB:serieKey} year={yearB} setYear={setYearB}
+                  titleOverride={compareMode==='periodos'?'Período B':null}
+                  seasonSel={compareMode==='periodos'&&pIndices.length?{value:seasonB,onChange:setSeasonB,options:seasonsAvail}:null}/>
               </div>
             )}
 
@@ -3436,25 +3532,24 @@ function App({session,plan,zones}){
                 ?<ArclimDashboard mod={mod} zoneA={zoneA} zoneB={zoneB}/>
                 :isBio
                   ?<BioCompare mod={mod} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} onReanalyze={goReanalyze}/>
-                  :(
-                    <>
-                      <div className="cz-detail-head">
-                        <span className="cz-detail-eyebrow">
-                          <i className={'fa-solid '+mod.icon}/>{mod.label}{mod.index?' · '+mod.index:''}
-                        </span>
-                        <span className="cz-detail-note">{compareMode==='periodos'?'Comparación temporal · misma zona':'Δ = Zona B − Zona A'}</span>
-                      </div>
-                      {compareMode==='periodos'
-                        ? <div className="cz-mode-hint" style={{margin:'2px 0 12px'}}>Cada mapa muestra un <strong>año distinto</strong> de la serie de <strong>{zoneA?zoneA.name:'la zona'}</strong>. La evolución cuantitativa (media por año) está en el gráfico de abajo.</div>
-                        : <MetricsCompareSection mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>}
-                      {compareMode==='zonas'&&mod.id==='vegetacion'&&<PisoStrip dataA={dataA} dataB={dataB}/>}
-                      {compareMode==='zonas'&&mod.id==='dnbr'&&<DnbrCompare zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>}
-                      {/* La serie estacional vive dentro de su módulo temático */}
-                      {(mod.id==='vegetacion'||mod.id==='agua')&&(
-                        <SeriesSection tipo={mod.id} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} serieKey={serieKey} setSerieKey={setSerieKey}/>
-                      )}
-                    </>
-                  )
+                  :compareMode==='periodos'
+                    ?null
+                    :(
+                      <>
+                        <div className="cz-detail-head">
+                          <span className="cz-detail-eyebrow">
+                            <i className={'fa-solid '+mod.icon}/>{mod.label}{mod.index?' · '+mod.index:''}
+                          </span>
+                          <span className="cz-detail-note">Δ = Zona B − Zona A</span>
+                        </div>
+                        <MetricsCompareSection mod={mod} dataA={dataA} dataB={dataB} zoneA={zoneA} zoneB={zoneB}/>
+                        {mod.id==='vegetacion'&&<PisoStrip dataA={dataA} dataB={dataB}/>}
+                        {mod.id==='dnbr'&&<DnbrCompare zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB}/>}
+                        {(mod.id==='vegetacion'||mod.id==='agua')&&(
+                          <SeriesSection tipo={mod.id} zoneA={zoneA} zoneB={zoneB} dataA={dataA} dataB={dataB} serieKey={serieKey} setSerieKey={setSerieKey}/>
+                        )}
+                      </>
+                    )
               }
             </div>
           </div>
