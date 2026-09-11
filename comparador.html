@@ -2216,9 +2216,19 @@ function _normalizarTxt(s){
   return String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 }
 
+/* Los endpoints /api/arclim/* del backend pasan por require_supabase_user().
+   Sin el Bearer token responden 401 en cuanto REQUIRE_SUPABASE_AUTH este activo,
+   y ademas la llamada queda sin atribuir a ningun usuario. */
+async function _arclimHeaders(){
+  try{
+    const{data:{session}}=await supabase.auth.getSession();
+    return session&&session.access_token?{'Authorization':'Bearer '+session.access_token}:{};
+  }catch(e){ return {}; }
+}
+
 async function fetchArclimComunas(){
   if(_arclimCache.comunas) return _arclimCache.comunas;
-  const r=await fetch(ARCLIM_BASE+'/api/arclim/comunas');
+  const r=await fetch(ARCLIM_BASE+'/api/arclim/comunas',{headers:await _arclimHeaders()});
   const j=await r.json();
   _arclimCache.comunas=j.comunas||[];
   return _arclimCache.comunas;
@@ -2246,7 +2256,7 @@ async function fetchArclimSerie(indId, arclimId){
   const key=indId+'|'+arclimId;
   if(_arclimCache.series[key]) return _arclimCache.series[key];
   const url=ARCLIM_BASE+'/api/arclim/serie?id='+indId+'&key='+arclimId+'&scenario=ssp585&season=annual';
-  const r=await fetch(url);
+  const r=await fetch(url,{headers:await _arclimHeaders()});
   if(!r.ok) throw new Error('arclim '+r.status);
   const j=await r.json();
   _arclimCache.series[key]=j;

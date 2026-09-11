@@ -8,6 +8,13 @@ window._sbUserEmail = null;
 window._sbUserPlan  = 'free';
 window._sbUserZones = [];
 
+// Sesión Supabase expuesta para los módulos que arman sus headers de forma
+// SÍNCRONA (workspace-arclim.js y workspace-hidro.js leen window._supabaseSession).
+// Sin esto ambos llamaban al backend SIN Authorization → sus análisis nunca
+// quedaban registrados en analysis_usage y no contaban para la cuota.
+// Se mantiene fresca con onAuthStateChange (el access_token expira en ~1 h).
+window._supabaseSession = null;
+
 // PLAN_LIMITS — debe coincidir con private.enforce_workspace_zone_quota() en Supabase
 var PLAN_LIMITS = { 'free': 1, 'pro': 3, 'enterprise': 10, 'admin': Infinity };
 
@@ -145,6 +152,17 @@ async function initAuth() {
 
         window._sbUserId    = session.user.id;
         window._sbUserEmail = session.user.email;
+        window._supabaseSession = session;
+
+        // Mantener la sesión al día: el access_token vive ~1 h y los módulos que
+        // leen window._supabaseSession enviarían un token vencido (401) sin esto.
+        try {
+            _sb.auth.onAuthStateChange(function (_event, newSession) {
+                window._supabaseSession = newSession || null;
+            });
+        } catch (e) {
+            console.warn('[Auth] onAuthStateChange no disponible:', e);
+        }
 
         var emailEl = document.getElementById('user-email-display');
         if (emailEl) emailEl.textContent = session.user.email;

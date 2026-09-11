@@ -53,13 +53,26 @@ function requestBosque() {
         buffer_km: bufferKm
     };
 
-    var request = (typeof fetchBackendJson === 'function')
-        ? fetchBackendJson('https://evergreen-backend-awv1.onrender.com/api/bosque', payload)
-        : fetch('https://evergreen-backend-awv1.onrender.com/api/bosque', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+    // El fallback ANTES iba sin Authorization: si fetchBackendJson no estaba
+    // cargado, /api/bosque salia anonimo (sin cuota, sin atribucion) y en
+    // silencio. getBackendAuthHeaders vive en auth.js, que carga antes que este
+    // archivo, asi que el fallback tambien manda el token.
+    var BOSQUE_URL = 'https://evergreen-backend-awv1.onrender.com/api/bosque';
+    var request;
+    if (typeof fetchBackendJson === 'function') {
+        request = fetchBackendJson(BOSQUE_URL, payload);
+    } else if (typeof getBackendAuthHeaders === 'function') {
+        request = getBackendAuthHeaders({ 'Content-Type': 'application/json' })
+            .then(function (headers) {
+                return fetch(BOSQUE_URL, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+            });
+    } else {
+        request = Promise.reject(new Error('Sesion no disponible: recarga la pagina.'));
+    }
 
     request
     .then(function(r) { return r.json(); })

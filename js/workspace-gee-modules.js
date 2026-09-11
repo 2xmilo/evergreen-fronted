@@ -52,6 +52,26 @@ function actualizarInfoVegSerie() {
     if (sel) _setIndiceHelp('vserie-index-tip', sel.value);
 }
 
+/* Etiqueta de la tendencia estacional.
+   El backend ajusta Sen/Mann-Kendall SOLO con períodos confiables (n≥3 imágenes
+   y cobertura≥85%) y manda `trend_basis` con el detalle. Decir nada más que
+   "significativa" esconde con cuántos años se ajustó y cuáles quedaron fuera. */
+function _serieTrendLabel(doc) {
+    var b = doc && doc.trend_basis;
+    if (!doc || !doc.trend) {
+        if (b && b.reason) return b.reason;
+        return 'Tendencia (mín. 4 períodos confiables)';
+    }
+    var txt = doc.trend.significant ? 'Tendencia · significativa' : 'Tendencia · no significativa';
+    if (b && b.periods_used) {
+        txt += ' · ' + b.periods_used + ' de ' + b.periods_total + ' períodos';
+        if (b.periods_excluded > 0) {
+            txt += ' (excluye ' + (b.years_excluded || []).join(', ') + ' por baja confiabilidad)';
+        }
+    }
+    return txt;
+}
+
 var vegLayer = null;
 var demLayer = null;
 
@@ -485,13 +505,11 @@ function renderAguaSerie(doc) {
             var s = doc.trend.sen_slope_ha;
             trendEl.textContent = (s > 0 ? '+' : '') + s.toFixed(2) + ' ha/año';
             trendEl.style.color = s < 0 ? '#c0392b' : (s > 0 ? '#1e6ea0' : '');
-            if (trendLbl) trendLbl.textContent = doc.trend.significant
-                ? 'Tendencia · significativa'
-                : 'Tendencia · no significativa';
+            if (trendLbl) trendLbl.textContent = _serieTrendLabel(doc);
         } else {
             trendEl.textContent = '—';
             trendEl.style.color = '';
-            if (trendLbl) trendLbl.textContent = 'Tendencia (mín. 4 años con datos)';
+            if (trendLbl) trendLbl.textContent = _serieTrendLabel(doc);
         }
     }
 
@@ -543,11 +561,11 @@ function renderAguaSerie(doc) {
                 var humedadSlope = doc.trend.sen_slope;
                 trendEl.textContent = (humedadSlope > 0 ? '+' : '') + humedadSlope.toFixed(4) + '/ano';
                 trendEl.style.color = humedadSlope < 0 ? '#c0392b' : (humedadSlope > 0 ? '#1e6ea0' : '');
-                if (trendLbl) trendLbl.textContent = doc.trend.significant ? 'Tendencia · significativa' : 'Tendencia · no significativa';
+                if (trendLbl) trendLbl.textContent = _serieTrendLabel(doc);
             } else {
                 trendEl.textContent = '—';
                 trendEl.style.color = '';
-                if (trendLbl) trendLbl.textContent = 'Tendencia (min. 4 anos con datos)';
+                if (trendLbl) trendLbl.textContent = _serieTrendLabel(doc);
             }
         }
         if (cont) {
@@ -890,11 +908,10 @@ function renderVegSerie(doc) {
             var s = (doc.trend.sen_slope !== undefined) ? doc.trend.sen_slope : doc.trend.sen_slope_ha;
             trendEl.textContent = (s > 0 ? '+' : '') + s.toFixed(4) + '/año';
             trendEl.style.color = s < 0 ? '#c0392b' : (s > 0 ? '#1a6b32' : '');
-            if (trendLbl) trendLbl.textContent = doc.trend.significant
-                ? 'Tendencia · significativa' : 'Tendencia · no significativa';
+            if (trendLbl) trendLbl.textContent = _serieTrendLabel(doc);
         } else {
             trendEl.textContent = '—'; trendEl.style.color = '';
-            if (trendLbl) trendLbl.textContent = 'Tendencia (mín. 4 años con datos)';
+            if (trendLbl) trendLbl.textContent = _serieTrendLabel(doc);
         }
     }
 
