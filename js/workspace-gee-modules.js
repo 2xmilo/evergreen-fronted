@@ -146,7 +146,7 @@ function requestVegetacion() {
         // Guardar en dashboard Resumen (n_imagenes va en stats para el historial)
         if (data.stats && data.n_imagenes) data.stats.n_imagenes = data.n_imagenes;
         var vegTs = saveResultado('vegetacion', payload.indice, data.stats, data.tiles,
-                      payload.fecha_inicio, payload.fecha_fin);
+                      payload.fecha_inicio, payload.fecha_fin, null, data.mask);
         if (typeof uploadAnalysisPreviewFromPayload === 'function') {
             uploadAnalysisPreviewFromPayload('vegetacion_' + payload.indice, vegTs, data);
         }
@@ -307,7 +307,7 @@ function requestAgua() {
         // Guardar en dashboard de Resumen (n_imagenes va en stats para el historial)
         if (data.stats && data.n_imagenes) data.stats.n_imagenes = data.n_imagenes;
         var aguaTs = saveResultado('agua', indice, data.stats, data.tiles,
-                      payload.fecha_inicio, payload.fecha_fin);
+                      payload.fecha_inicio, payload.fecha_fin, null, data.mask);
         if (typeof uploadAnalysisPreviewFromPayload === 'function') {
             uploadAnalysisPreviewFromPayload('agua_' + indice, aguaTs, data);
         }

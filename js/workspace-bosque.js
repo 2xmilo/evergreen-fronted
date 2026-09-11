@@ -285,7 +285,8 @@ function requestDnbr() {
                 data.tiles, preIni, postFin,
                 { clases: data.clases,
                   periodos: { pre_inicio: preIni, pre_fin: preFin,
-                              post_inicio: postIni, post_fin: postFin } });
+                              post_inicio: postIni, post_fin: postFin } },
+                data.mask);
             if (typeof uploadAnalysisPreviewFromPayload === 'function') {
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando capa...';
                 btn.disabled = true;

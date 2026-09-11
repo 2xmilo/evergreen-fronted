@@ -287,7 +287,11 @@ var _indicadorLayer  = null;
  *        re-renderizar nítido a cualquier tamaño. Las imágenes se reservan
  *        para los previews de ráster GEE, cuyos tiles expiran a las ~24h.
  */
-function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin, figuras) {
+/* `meta` (8º parámetro, opcional): cómo se calculó el resultado — hoy la versión
+   del enmascarado que devuelve el backend en `data.mask`. Sin esto, dos análisis
+   calculados con pipelines distintos quedaban indistinguibles en la misma tabla
+   `results` y el Comparador los superponía como si fueran comparables. */
+function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin, figuras, meta) {
     var key = tipo + '_' + indice;
     var ts  = Date.now();
 
@@ -307,6 +311,7 @@ function saveResultado(tipo, indice, stats, tilesUrl, fechaInicio, fechaFin, fig
         fechaInicio: fechaInicio, fechaFin: fechaFin, ts: ts
     };
     if (figuras) entrada.figuras = figuras;
+    if (meta) entrada.meta = meta;
     WorkspaceState.resultados[key].push(entrada);
 
     // Máximo 12 mediciones por índice — eliminar la más antigua
