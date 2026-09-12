@@ -59,6 +59,14 @@ async function fetchUsers() {
     }
 }
 
+/* Última actividad real. `last_sign_in` solo cambia con un login explícito, no
+   al renovar el token: alguien con la sesión abierta figuraba sin acceso desde
+   hace semanas aunque usara la app hoy. El backend combina el login con el
+   análisis más reciente en `last_activity`; si aún no lo envía, se usa el login. */
+function lastActivity(u) {
+    return u.last_activity || u.last_sign_in || '';
+}
+
 /* ── Stats cards ─────────────────────────────────────────────────────────── */
 function renderStats(users) {
     var now = Date.now();
@@ -66,7 +74,8 @@ function renderStats(users) {
 
     var total      = users.length;
     var activeWeek = users.filter(function(u) {
-        return u.last_sign_in && (now - new Date(u.last_sign_in).getTime()) < weekMs;
+        var ult = lastActivity(u);
+        return ult && (now - new Date(ult).getTime()) < weekMs;
     }).length;
     var nFree       = users.filter(function(u) { return u.plan === 'free'; }).length;
     var nPro        = users.filter(function(u) { return u.plan === 'pro'; }).length;
@@ -101,8 +110,9 @@ function renderTable(users) {
             ? '<span class="status-dot suspended">Suspendido</span>'
             : '<span class="status-dot active">Activo</span>';
 
-        var lastLogin = u.last_sign_in
-            ? formatDate(u.last_sign_in)
+        var ult = lastActivity(u);
+        var lastLogin = ult
+            ? formatDate(ult)
             : '<span style="color:#d1d5db;">Nunca</span>';
 
         var planSelect = buildPlanSelect(u.id, u.plan, suspended);
